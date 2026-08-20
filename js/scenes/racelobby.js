@@ -70,9 +70,10 @@ DZ.Scenes.racelobby = (function () {
       if (isBet) Px.frame(ctx, x + 2, ry, w - 4, 20, PAL.gold);
       Px.rect(ctx, x + 3, ry + 1, 3, 18, r.col);
       T.draw(ctx, String(i + 1), x + 9, ry + 6, PAL.dim, { size: 7 });
-      const drawObj = r.mine ? r.dolphin : { pal: { '1': r.col, '2': Px.shade(r.col, -0.35), '3': Px.shade(r.col, 0.5) },
-        evil: r.evil, traits: [], skills: {}, base: r.stats };
-      DZ.Dolphin.draw(ctx, drawObj, x + 30, ry + 10, { center: true, scale: 1, noHat: !r.evil });
+      const drawObj = r.mine ? r.dolphin : (r._obj = r._obj || { id: 'lb' + i,
+        pal: { '1': r.col, '2': Px.shade(r.col, -0.35), '3': Px.shade(r.col, 0.5) },
+        evil: r.evil, traits: [], skills: {}, base: r.stats });
+      DZ.Dolphin.draw(ctx, drawObj, x + 32, ry + 10, { center: true, scale: 0.95, speed: 0.3, tag: 'lob' + i });
       T.draw(ctx, r.name + (r.mine ? ' (YOU)' : ''), x + 46, ry + 2, r.mine ? PAL.cyan : PAL.text, { size: 7, bold: true });
       T.draw(ctx, 'Lv' + r.lvl + (r.evil ? '  EVIL' : '') + (r.trait ? '  ' + (DZ.Names.TRAITS[r.trait] || {}).name : ''),
         x + 46, ry + 11, r.evil ? PAL.evil : PAL.dim, { size: 7 });

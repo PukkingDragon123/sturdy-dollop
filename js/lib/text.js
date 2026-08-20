@@ -13,7 +13,9 @@ DZ.Text = (function () {
   const metrics = {};
   const FONT = (s, bold) => (bold ? 'bold ' : '') + s + 'px "Courier New", "DejaVu Sans Mono", monospace';
 
-  function charW(size, bold) {
+  const SC = () => (DZ.SC || 1);
+  // native pixel width of one character cell at a design-space size
+  function charWnative(size, bold) {
     const k = size + (bold ? 'b' : '');
     if (metrics[k] === undefined) {
       sctx.font = FONT(size, bold);
@@ -21,10 +23,11 @@ DZ.Text = (function () {
     }
     return metrics[k];
   }
+  function charW(size, bold) { return charWnative((size || 8) * SC(), bold) / SC(); }
   function width(str, size, bold) { return String(str).length * charW(size || 8, bold); }
 
   function bake(str, size, color, bold) {
-    const cw = charW(size, bold);
+    const cw = charWnative(size, bold);
     const w = Math.max(1, str.length * cw + 2);
     const h = size + 4;
     scratch.width = w; scratch.height = h;
@@ -71,20 +74,33 @@ DZ.Text = (function () {
     opts = opts || {};
     const size = opts.size || 8;
     const bold = !!opts.bold;
-    const bm = bitmap(str, size, color || '#ffffff', bold);
-    let px = Math.round(x);
-    if (opts.align === 'center') px = Math.round(x - bm.width / 2);
-    else if (opts.align === 'right') px = Math.round(x - bm.width);
-    const py = Math.round(y);
+    const sc = SC();
+    const bm = bitmap(str, size * sc, color || '#ffffff', bold);
+    const dw = bm.width / sc;
+    let px = x;
+    if (opts.align === 'center') px = x - dw / 2;
+    else if (opts.align === 'right') px = x - dw;
     const a = opts.alpha === undefined ? 1 : opts.alpha;
     if (a !== 1) ctx.globalAlpha = a;
-    if (opts.shadow) {
-      const sh = bitmap(str, size, opts.shadow === true ? '#04121f' : opts.shadow, bold);
-      ctx.drawImage(sh, px + 1, py + 1);
+    // blit at 1:1 device pixels so glyphs stay razor sharp, but keep whatever
+    // camera translation the scene has applied
+    const T = ctx.getTransform ? ctx.getTransform() : null;
+    if (T) {
+      const dx = Math.round(T.a * px + T.c * y + T.e);
+      const dy = Math.round(T.b * px + T.d * y + T.f);
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      if (opts.shadow) {
+        const sh = bitmap(str, size * sc, opts.shadow === true ? '#04121f' : opts.shadow, bold);
+        ctx.drawImage(sh, dx + sc, dy + sc);
+      }
+      ctx.drawImage(bm, dx, dy);
+      ctx.restore();
+    } else {
+      ctx.drawImage(bm, Math.round(px), Math.round(y), dw, bm.height / sc);
     }
-    ctx.drawImage(bm, px, py);
     if (a !== 1) ctx.globalAlpha = 1;
-    return bm.width;
+    return dw;
   }
 
   return { draw, width, charW, bitmap };

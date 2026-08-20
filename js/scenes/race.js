@@ -320,7 +320,7 @@ DZ.Scenes.race = (function () {
       const cy = 18 + (i % 3) * 8;
       const bounce = Math.sin(t * 6 + i) > 0.6 ? -2 : 0;
       const sp = DZ.Species.list[i % DZ.Species.list.length];
-      Px.draw(ctx, 'fish_s', cx, cy + bounce, { recolor: sp.pal, alpha: 0.85 });
+      DZ.Fish.draw(ctx, sp, cx, cy + bounce, { scale: 0.55, alpha: 0.9, speed: 0.2, tag: 'cr' + i });
     }
     Px.rect(ctx, 0, TOP - 4, DZ.W, 3, '#0d3d58');
     DZ.Water.surfaceLine(ctx, TOP - 8);
@@ -379,10 +379,11 @@ DZ.Scenes.race = (function () {
           Px.draw(ctx, 'dolphin', x - k * 5, y, { center: true, flash: '#bfeaff', alpha: 0.3 / k });
         ctx.globalAlpha = 1;
       }
-      const dObj = r.dolphin || { pal: { '1': r.col, '2': Px.shade(r.col, -0.4), '3': Px.shade(r.col, 0.55) },
-        evil: r.evil, traits: [], skills: {} };
-      DZ.Dolphin.draw(ctx, dObj, x, y, { center: true, scale: 1, frame: Math.floor(r.frame) % 2,
-        sx: stretch, sy: 1 / stretch });
+      const dObj = r.dolphin || (r._obj = r._obj || { id: 'rc' + r.lane,
+        pal: { '1': r.col, '2': Px.shade(r.col, -0.4), '3': Px.shade(r.col, 0.55) },
+        evil: r.evil, traits: [], skills: {} });
+      DZ.Dolphin.draw(ctx, dObj, x, y, { center: true, scale: 1.25, speed: 0.4 + r.v / 60,
+        sx: stretch, sy: 1 / stretch, tag: 'race' + r.lane });
       if (r.mine) {
         Px.rect(ctx, x - 1, y - 16, 3, 3, PAL.gold);
         T.draw(ctx, 'YOU', x, y - 25, PAL.gold, { size: 7, align: 'center', shadow: true });

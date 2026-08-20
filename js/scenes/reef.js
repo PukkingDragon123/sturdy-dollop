@@ -15,12 +15,24 @@ DZ.Scenes.reef = (function () {
   let bagCap = 12, gear = {};
 
   /* ---------------- lifecycle ---------------- */
+  let cameFrom = 'ranch';
   function enter(args) {
     t = 0;
+    cameFrom = (args && args.from) || 'ranch';
     if (args && args.zone !== undefined) { zone = args.zone; start(); }
     else { phase = 'select'; zone = Math.min(maxZone(), zone); }
   }
   function maxZone() { return Math.min(3, DZ.State.S.gear.tank); }
+  const ZONE_PLACE = ['shallows', 'kelp', 'colonnade', 'abyss'];
+  function zoneBlock(i) {
+    const S = DZ.State.S;
+    if (i > maxZone()) return { why: 'NEEDS', what: DZ.Items.GEAR.tank.tiers[i].name };
+    if (!DZ.Places.unlocked(S, ZONE_PLACE[i])) {
+      const pl = DZ.Places.byId[ZONE_PLACE[i]];
+      return { why: 'TALK TO', what: pl.npc ? pl.npc.name : 'someone', map: true };
+    }
+    return null;
+  }
 
   function start() {
     const S = DZ.State.S;
@@ -262,7 +274,7 @@ DZ.Scenes.reef = (function () {
       l.x += l.vx * dt; l.y += l.vy * dt;
       if (l.y > FLOOR - 2 && l.delay > 0) { l.y = FLOOR - 2; l.vy = -Math.abs(l.vy) * 0.2; }
       l.rot += l.spin * dt;
-      if (d < 12) { collect(l); loot.splice(i, 1); continue; }
+      if (d < 15) { collect(l); loot.splice(i, 1); continue; }
       if (l.life <= 0) loot.splice(i, 1);
     }
 
@@ -343,7 +355,7 @@ DZ.Scenes.reef = (function () {
       case 'chase':
         if (d < 190) {
           ax += (p.x - f.x) * 2.4; ay += (p.y - f.y) * 2.4;
-          if (d < 14 && f.bite <= 0) { biteMe(f); f.bite = 1.4; }
+          if (d < 17 && f.bite <= 0) { biteMe(f); f.bite = 1.4; }
         } else {
           f.retarget -= dt;
           if (f.retarget <= 0) { f.tx = U.rnd(20, WORLD_W - 20); f.ty = U.rnd(40, FLOOR - 20); f.retarget = U.rnd(2, 4); }
@@ -426,7 +438,7 @@ DZ.Scenes.reef = (function () {
 
   function doNet() {
     const r = gear.net.radius;
-    const nx = p.x + Math.cos(p.aim) * 13, ny = p.y + Math.sin(p.aim) * 13;
+    const nx = p.x + Math.cos(p.aim) * 16, ny = p.y + Math.sin(p.aim) * 16;
     DZ.Audio.play('net');
     DZ.FX.ringWave(nx, ny, r * 0.4, r, '#dff6ff', 0.3);
     DZ.FX.bubbles(nx, ny, 6);
@@ -500,7 +512,7 @@ DZ.Scenes.reef = (function () {
       const spd = 84 + Math.min(60, caughtN * 2);
       g.vx = U.damp(g.vx, Math.cos(a) * spd, 0.2, dt);
       g.vy = U.damp(g.vy, Math.sin(a) * spd, 0.2, dt);
-      if (U.dist(g.x, g.y, p.x, p.y) < 18 && g.munch <= 0) {
+      if (U.dist(g.x, g.y, p.x, p.y) < 21 && g.munch <= 0) {
         g.munch = 2.2;
         const steal = Math.min(caughtN, U.rndInt(1, 3));
         if (steal > 0) {
@@ -619,7 +631,8 @@ DZ.Scenes.reef = (function () {
         ctx.globalAlpha = 1;
         Px.ring(ctx, l.x, l.y + bob, 7, PAL.gold);
       } else {
-        Px.draw(ctx, l.sp.sprite, l.x, l.y + bob, { center: true, recolor: l.sp.pal, rot: l.rot, alpha: l.live ? 1 : 0.85, flipY: !l.live });
+        DZ.Fish.draw(ctx, l.sp, l.x, l.y + bob, { scale: 1.05, rot: l.rot, alpha: l.live ? 1 : 0.8,
+          dead: !l.live, speed: l.live ? 1.4 : 0.15, tag: 'loot' + (l.sp.id || '') });
         if (l.live) { ctx.globalAlpha = 0.5; Px.ring(ctx, l.x, l.y + bob, 8, PAL.kelp); ctx.globalAlpha = 1; }
       }
     }
@@ -636,11 +649,15 @@ DZ.Scenes.reef = (function () {
         Px.disc(ctx, f.x, f.y, 11, f.sp.flags.glow);
         ctx.globalAlpha = 1;
       }
-      Px.draw(ctx, f.sp.sprite, f.x, f.y, {
-        center: true, recolor: f.sp.pal, flipX: f.dir < 0,
-        sx: sq, sy: 1 / sq, rot: wob + (f.vy / 300),
-        flash: f.flash > 0 ? '#ffffff' : null
+      DZ.Fish.draw(ctx, f.sp, f.x, f.y, {
+        scale: 1.15, flipX: f.dir < 0, rot: wob * 0.5 + (f.vy / 400),
+        speed: 0.4 + Math.abs(f.vx) / 60, tag: f.id
       });
+      if (f.flash > 0) {
+        ctx.globalAlpha = 0.75;
+        Px.disc(ctx, f.x, f.y, hitRadius(f) * 0.8, '#ffffff');
+        ctx.globalAlpha = 1;
+      }
       if (f.panic > 0 && U.chance(0.04)) DZ.FX.bubbles(f.x, f.y, 1);
     }
 
@@ -693,29 +710,22 @@ DZ.Scenes.reef = (function () {
 
   function drawDiver(ctx) {
     const spd = Math.hypot(p.vx, p.vy);
-    const frame = Math.floor(p.kick) % 2;
     // floor shadow keeps you readable against open water
     const sh = U.clamp(1 - (FLOOR - p.y) / 150, 0, 1);
-    if (sh > 0) { ctx.globalAlpha = sh * 0.3; Px.disc(ctx, p.x, FLOOR - 1, Math.round(3 + sh * 4), '#000000'); ctx.globalAlpha = 1; }
-    // 1px dark outline
-    const name = frame ? 'diver2' : 'diver';
-    for (const o of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
-      Px.draw(ctx, name, p.x + o[0], p.y + o[1], { center: true, flipX: p.dir < 0, flash: '#031018', alpha: 0.85 });
-    }
-    const rot = U.clamp(p.vy / 260, -0.5, 0.5) + (p.dir < 0 ? 0 : 0);
+    if (sh > 0) { ctx.globalAlpha = sh * 0.3; Px.disc(ctx, p.x, FLOOR - 1, Math.round(4 + sh * 5), '#000000'); ctx.globalAlpha = 1; }
     if (p.dashT > 0) {
-      ctx.globalAlpha = 0.4;
-      Px.draw(ctx, frame ? 'diver2' : 'diver', p.x - p.vx * 0.04, p.y - p.vy * 0.04, { center: true, flipX: p.dir < 0, rot, flash: '#bfeaff' });
+      ctx.globalAlpha = 0.3;
+      DZ.Rig.hero.draw(ctx, p.x - p.vx * 0.05, p.y - p.vy * 0.05,
+        { scale: 1.1, mode: 'swim', vx: p.vx, vy: p.vy, dir: p.dir, tag: 'ghost' });
       ctx.globalAlpha = 1;
     }
-    Px.draw(ctx, frame ? 'diver2' : 'diver', p.x, p.y, {
-      center: true, flipX: p.dir < 0, rot,
-      sx: 1 + Math.min(0.2, spd / 800), sy: 1 - Math.min(0.15, spd / 900),
-      flash: hurtT > 0.6 ? '#ffffff' : null
+    DZ.Rig.hero.draw(ctx, p.x, p.y, {
+      scale: 1.1, mode: 'swim', vx: p.vx, vy: p.vy, dir: p.dir,
+      dash: p.dashT > 0, tag: 'diver'
     });
     // aim reticle line
-    const ax = p.x + Math.cos(p.aim) * 14, ay = p.y + Math.sin(p.aim) * 14;
-    ctx.globalAlpha = 0.5;
+    const ax = p.x + Math.cos(p.aim) * 16, ay = p.y + Math.sin(p.aim) * 16;
+    ctx.globalAlpha = 0.55;
     Px.rect(ctx, ax, ay, 2, 2, spearCd > 0 ? '#7f9bab' : '#ffffff');
     ctx.globalAlpha = 1;
   }
@@ -807,7 +817,8 @@ DZ.Scenes.reef = (function () {
     for (let i = 0; i < 4; i++) {
       const Z = DZ.ZONES[i];
       const x = 8 + i * 97, y = 22, w = 92, h = 150;
-      const locked = i > mz;
+      const block = zoneBlock(i);
+      const locked = !!block;
       Px.vgrad(ctx, x, y, w, h, Z.top, Z.bot, 6);
       Px.frame(ctx, x, y, w, h, zone === i ? PAL.gold : PAL.line);
       T.draw(ctx, Z.name.toUpperCase(), x + w / 2, y + 4, '#ffffff', { align: 'center', size: 7, bold: true, shadow: true });
@@ -815,7 +826,7 @@ DZ.Scenes.reef = (function () {
       const pool = DZ.Species.forZone(i);
       pool.slice(0, 5).forEach((sp, k) => {
         const fy = y + 20 + k * 15;
-        Px.draw(ctx, sp.sprite, x + 6, fy + Math.sin(t * 2 + k) * 1.5, { recolor: sp.pal });
+        DZ.Fish.draw(ctx, sp, x + 12, fy + 4 + Math.sin(t * 2 + k) * 1.5, { scale: 0.85, tag: 'zp' + i + k });
         T.draw(ctx, sp.name, x + 24, fy, '#dff6ff', { size: 7, shadow: true });
         T.draw(ctx, sp.value + 'c', x + w - 5, fy, sp.flags.rare ? PAL.gold : '#bfeaff', { size: 7, align: 'right', shadow: true });
       });
@@ -824,13 +835,14 @@ DZ.Scenes.reef = (function () {
       if (locked) {
         ctx.globalAlpha = 0.72; Px.rect(ctx, x, y, w, h, '#020a12'); ctx.globalAlpha = 1;
         Px.draw(ctx, 'skull', x + w / 2 - 2, y + h / 2 - 20, { scale: 2, center: true });
-        const need = DZ.Items.GEAR.tank.tiers[i].name;
-        T.draw(ctx, 'NEEDS', x + w / 2, y + h / 2, PAL.coral, { align: 'center', size: 7 });
-        U.wrap(need, 13).forEach((l, k) => T.draw(ctx, l, x + w / 2, y + h / 2 + 9 + k * 8, PAL.text, { align: 'center', size: 7 }));
+        T.draw(ctx, block.why, x + w / 2, y + h / 2, PAL.coral, { align: 'center', size: 7 });
+        U.wrap(block.what, 13).forEach((l, k) => T.draw(ctx, l, x + w / 2, y + h / 2 + 9 + k * 8, PAL.text, { align: 'center', size: 7 }));
+        if (block.map) T.draw(ctx, 'on the MAP', x + w / 2, y + h / 2 + 26, PAL.cyan, { align: 'center', size: 7 });
       }
-      if (DZ.UI.button(ctx, x + 8, y + h - 18, w - 16, 14, locked ? 'LOCKED' : 'DIVE!',
-          { tone: locked ? 'dark' : 'gold', size: 8, disabled: locked, id: 'z' + i })) {
-        zone = i; start();
+      if (DZ.UI.button(ctx, x + 8, y + h - 18, w - 16, 14, locked ? (block.map ? 'GO TALK' : 'LOCKED') : 'DIVE!',
+          { tone: locked ? (block.map ? 'blue' : 'dark') : 'gold', size: 8, disabled: locked && !block.map, id: 'z' + i })) {
+        if (locked) DZ.Game.go('worldmap', { at: ZONE_PLACE[i] });
+        else { zone = i; start(); }
       }
     }
     // consumables you can burn on this dive
@@ -864,7 +876,7 @@ DZ.Scenes.reef = (function () {
       DZ.Items.gearTier('bag', g.bag).name
     ];
     T.draw(ctx, 'GEAR: ' + bits.join('  |  '), DZ.W / 2, DZ.H - 12, PAL.dim, { align: 'center', size: 7 });
-    T.draw(ctx, 'buy better gear at GEAR SHED - a better tank lets you dive deeper', DZ.W / 2, DZ.H - 22, PAL.dim2, { align: 'center', size: 7 });
+    T.draw(ctx, 'better tank = deeper water. new water also needs someone\'s permission - go TRAVEL.', DZ.W / 2, DZ.H - 22, PAL.dim2, { align: 'center', size: 7 });
   }
 
   /* ---------------- summary ---------------- */
@@ -909,8 +921,9 @@ DZ.Scenes.reef = (function () {
     if (DZ.UI.button(ctx, px + 8, py + h - 18, (pw - 22) / 2, 14, 'DIVE AGAIN', { tone: 'blue', size: 8 })) {
       phase = 'select';
     }
-    if (DZ.UI.button(ctx, px + pw / 2 + 3, py + h - 18, (pw - 22) / 2, 14, 'TO THE RANCH', { tone: 'gold', size: 8, key: 'Enter' })) {
-      DZ.Game.go('ranch');
+    if (DZ.UI.button(ctx, px + pw / 2 + 3, py + h - 18, (pw - 22) / 2, 14,
+        cameFrom === 'worldmap' ? 'BACK TO SEA' : 'TO THE RANCH', { tone: 'gold', size: 8, key: 'Enter' })) {
+      DZ.Game.go(cameFrom === 'worldmap' ? 'worldmap' : 'ranch');
     }
   }
 

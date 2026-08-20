@@ -17,7 +17,8 @@ DZ.Scenes.ranch = (function () {
     { id: 'staff', sprite: 'bunk',       x: 210, sc: 2, label: 'STAFF',   sub: 'hire help',    scene: 'staff',     col: '#8fd8ff' },
     { id: 'breed', sprite: 'clam_shell',  x: 252, sc: 3, label: 'BREED',   sub: 'more dolphins',scene: 'breed',     col: '#ff6f9d', need: 'lagoon' },
     { id: 'vat',   sprite: 'vat',        x: 288, sc: 2, label: 'VAT',     sub: 'make evil',    scene: 'vat',       col: '#a86bff', need: 'vat' },
-    { id: 'race',  sprite: 'starttower', x: 330, sc: 2, label: 'RACE',    sub: 'bet & win',    scene: 'racelobby', col: '#ff6f6f' }
+    { id: 'race',  sprite: 'starttower', x: 330, sc: 2, label: 'RACE',    sub: 'bet & win',    scene: 'racelobby', col: '#ff6f6f', place: 'downs' },
+    { id: 'travel',sprite: 'gate',       x: 364, sc: 2, label: 'TRAVEL',  sub: 'ride the trident', scene: 'worldmap', col: '#7ff0ff' }
   ];
 
   function enter(args) {
@@ -29,7 +30,7 @@ DZ.Scenes.ranch = (function () {
       S0.tutorial = 1;
       DZ.State.toast('Welcome to your ranch!', DZ.PAL.gold);
       DZ.State.toast('1. DIVE for fish  2. FEED your dolphin', DZ.PAL.cyan);
-      DZ.State.toast('3. spend SP in SKILLS  4. RACE and bet', DZ.PAL.kelp);
+      DZ.State.toast('3. spend SP in SKILLS  4. TRAVEL (M) to find races', DZ.PAL.kelp);
     }
     deco = [];
     for (let i = 0; i < 14; i++) {
@@ -150,7 +151,8 @@ DZ.Scenes.ranch = (function () {
       const sz = Px.size(b.sprite);
       const w = sz.w * b.sc, h = sz.h * b.sc;
       const y = SAND - h + 2 + Math.round(Math.sin(t * 1.1 + b.x) * 0.5);
-      const locked = b.need && DZ.Upgrades.value(S, b.need) < 1;
+      const locked = (b.need && DZ.Upgrades.value(S, b.need) < 1) ||
+                     (b.place && !DZ.Places.unlocked(S, b.place));
       const hot = DZ.UI.hover(b.x, y - 8, w, h + 8) && !overlay;
       if (hot) hoverB = b;
       if (hot) { ctx.globalAlpha = 1; Px.draw(ctx, b.sprite, b.x, y - 1, { scale: b.sc, flash: '#ffffff' }); }
@@ -166,7 +168,10 @@ DZ.Scenes.ranch = (function () {
       T.draw(ctx, b.label, b.x + w / 2, SAND + 4, hot ? '#ffffff' : b.col, { align: 'center', size: 7 });
       if (hot && DZ.Input.mouse.click && !DZ.UI.blocked()) {
         DZ.Input.mouse.click = false;
-        if (locked) { DZ.Audio.play('deny'); DZ.State.toast('Build it first: GEAR > RANCH tab', PAL.coral); }
+        if (locked && b.place) {
+          DZ.Audio.play('deny');
+          DZ.State.toast('Find ' + DZ.Places.byId[b.place].npc.name + ' out at sea first (TRAVEL)', PAL.coral);
+        } else if (locked) { DZ.Audio.play('deny'); DZ.State.toast('Build it first: GEAR > RANCH tab', PAL.coral); }
         else if (b.action === 'feed') { overlay = 'feed'; DZ.Audio.play('blip'); }
         else { DZ.Audio.play('click'); DZ.Game.go(b.scene); }
       }
@@ -175,7 +180,8 @@ DZ.Scenes.ranch = (function () {
     // decorative fish
     for (const f of deco) {
       const y = f.y + Math.sin(t * 3 + f.ph) * 1.5;
-      Px.draw(ctx, f.sp.sprite, f.x, y, { recolor: f.sp.pal, flipX: f.dir < 0, center: true, alpha: 0.9 });
+      DZ.Fish.draw(ctx, f.sp, f.x, y, { scale: 1, flipX: f.dir < 0, alpha: 0.95,
+        speed: 0.3 + Math.abs(f.v) / 30, tag: 'rd' + deco.indexOf(f) });
     }
     // splash puffs
     for (const s of splashes) {
@@ -203,14 +209,15 @@ DZ.Scenes.ranch = (function () {
       const isSel = sel && sel.id === d.id;
       if (isSel) {
         ctx.globalAlpha = 0.5 + Math.sin(t * 4) * 0.2;
-        Px.ring(ctx, e.x, y, 17, PAL.gold);
+        Px.ring(ctx, e.x, y, 20, PAL.gold);
         ctx.globalAlpha = 1;
       }
-      DZ.Dolphin.draw(ctx, d, e.x, y, { center: true, flipX: e.dir < 0, frame, rot, scale: 1 });
+      DZ.Dolphin.draw(ctx, d, e.x, y, { center: true, flipX: e.dir < 0, rot, scale: 1.2,
+        speed: e.jump > 0 ? 2.2 : U.clamp(Math.hypot(e.vx, e.vy) / 26, 0.15, 2), tag: 'r' + d.id });
       if (d.hunger > 1) T.draw(ctx, 'x', e.x + 6, y - 14, PAL.coral, { size: 8, align: 'center' });
       if (d.sp > 0) Px.draw(ctx, 'star', e.x - 3, y - 16, {});
       // click to select
-      if (!overlay && DZ.UI.hover(e.x - 13, y - 9, 26, 18)) {
+      if (!overlay && DZ.UI.hover(e.x - 17, y - 11, 34, 22)) {
         DZ.UI.tooltip(d.name + ' - lvl ' + DZ.Dolphin.level(d) + (d.evil ? ' (EVIL)' : ''));
         if (DZ.Input.mouse.click && !DZ.UI.blocked()) {
           DZ.Input.mouse.click = false;
@@ -236,7 +243,11 @@ DZ.Scenes.ranch = (function () {
     bottomBar(ctx);
     if (hoverB && !overlay) {
       const r = hoverB._r;
-      const label = hoverB.label + ' - ' + hoverB.sub;
+      const lockedNow = (hoverB.need && DZ.Upgrades.value(S, hoverB.need) < 1) ||
+                        (hoverB.place && !DZ.Places.unlocked(S, hoverB.place));
+      const label = hoverB.label + ' - ' + (lockedNow
+        ? (hoverB.place ? 'locked: go TRAVEL and talk' : 'locked: build it in GEAR')
+        : hoverB.sub);
       const w = T.width(label, 7) + 8;
       const x = U.clamp(r.x + r.w / 2 - w / 2, 2, DZ.W - w - 2);
       Px.rect(ctx, x, r.y - 13, w, 11, '#041420');
@@ -310,8 +321,8 @@ DZ.Scenes.ranch = (function () {
         sub: d.sp ? '+' + d.sp : '', tip: 'Stats, skill tree, abilities (T)' })) DZ.Game.go('dolphinview');
     if (DZ.UI.button(ctx, 344, BAR + 3, 52, 15, 'DIVE', { tone: 'gold', size: 8, key: 'KeyR',
         tip: 'Go hunt fish (R)' })) DZ.Game.go('reef');
-    if (DZ.UI.button(ctx, 344, BAR + 21, 52, 15, 'RACE', { tone: 'red', size: 8,
-        tip: 'Enter a race and place bets' })) DZ.Game.go('racelobby');
+    if (DZ.UI.button(ctx, 344, BAR + 21, 52, 15, 'TRAVEL', { tone: 'blue', size: 8, key: 'KeyM',
+        tip: 'Ride your trident out into the ocean (M)', bold: true })) DZ.Game.go('worldmap');
   }
 
   /* ---------------- feed overlay ---------------- */

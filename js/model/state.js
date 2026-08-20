@@ -28,6 +28,10 @@ DZ.State = (function () {
       vatDolphin: null,       // dolphin currently marinating in evil
       marketMult: 1,
       unlockedZone: 0,
+      unlocked: {},
+      talked: {},
+      mapPos: null,
+      place: 'ranch',
       totals: { caught: 0, sold: 0, clamsEarned: 0, races: 0, wins: 0, betWon: 0, bestCombo: 0, sharkPunches: 0, bred: 0, evil: 0 },
       seen: {},
       log: [],
@@ -59,6 +63,8 @@ DZ.State = (function () {
       S.ranch = Object.assign({ pens: 0, trough: 0, reef: 0, lagoon: 0, stall: 0, vat: 0, bunk: 0, sonar: 0, spa: 0 }, o.ranch || {});
       S.gear = Object.assign({ spear: 0, net: 0, fins: 0, tank: 0, bag: 0 }, o.gear || {});
       S.inv = Object.assign({ fish: {}, food: {}, use: {} }, o.inv || {});
+      S.unlocked = o.unlocked || {};
+      S.talked = o.talked || {};
       if (!S.rivals || !S.rivals.length) S.rivals = DZ.Races.makeStable(8);
       DZ.Quests.refresh(S);
       return true;

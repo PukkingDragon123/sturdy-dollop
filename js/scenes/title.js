@@ -3,7 +3,7 @@
    ============================================================ */
 DZ.Scenes.title = (function () {
   const U = DZ.Util, Px = DZ.Pixel, T = DZ.Text, W = DZ.Water;
-  let t = 0, dolph = [], help = false, taglineI = 0, tagT = 0;
+  let t = 0, dolph = [], help = false, taglineI = 0, tagT = 0, rider = null;
   const TAGLINES = [
     'raise dolphins • hunt fish • commit betting',
     'now with 100% more moisture',
@@ -14,12 +14,13 @@ DZ.Scenes.title = (function () {
 
   function enter() {
     t = 0; help = false;
+    rider = { x: -40, y: 150, vx: 74, vy: 0, ph: 0 };
     dolph = [];
     for (let i = 0; i < 4; i++) {
       dolph.push({
-        x: U.rnd(-40, DZ.W), y: U.rnd(96, 180), sp: U.rnd(26, 52), dir: U.chance(0.5) ? 1 : -1,
-        ph: U.rnd(0, 9), pal: DZ.Util.pick(DZ.Dolphin.SKINS).p, sc: U.chance(0.3) ? 1 : 1,
-        jump: 0, nextJump: U.rnd(2, 7)
+        x: U.rnd(-40, DZ.W), y: U.rnd(100, 178), sp: U.rnd(26, 52), dir: U.chance(0.5) ? 1 : -1,
+        ph: U.rnd(0, 9), fake: { id: 'ttl' + i, pal: DZ.Util.pick(DZ.Dolphin.SKINS).p, traits: [], skills: {} },
+        sc: 1.1 + U.rnd(0, 0.7), jump: 0, nextJump: U.rnd(2, 7)
       });
     }
   }
@@ -28,6 +29,11 @@ DZ.Scenes.title = (function () {
     t += dt; tagT += dt;
     W.tick(dt);
     if (tagT > 4) { tagT = 0; taglineI = (taglineI + 1) % TAGLINES.length; }
+    rider.ph += dt;
+    rider.vy = Math.sin(rider.ph * 1.3) * 26;
+    rider.x += rider.vx * dt; rider.y += rider.vy * dt;
+    if (rider.x > DZ.W + 60) { rider.x = -60; rider.y = U.rnd(120, 175); }
+    if (U.chance(dt * 12)) DZ.FX.bubbles(rider.x - 14, rider.y + 6, 1);
     for (const d of dolph) {
       d.x += d.sp * d.dir * dt;
       if (d.x > DZ.W + 40) { d.x = -40; d.dir = 1; }
@@ -67,10 +73,13 @@ DZ.Scenes.title = (function () {
     for (const d of dolph) {
       const jy = d.jump > 0 ? -Math.sin((1.1 - d.jump) / 1.1 * Math.PI) * 46 : 0;
       const y = d.y + jy + Math.sin(t * 2 + d.ph) * 3;
-      const frame = Math.floor(t * 6 + d.ph) % 2;
       const rot = d.jump > 0 ? (0.5 - (1.1 - d.jump) / 1.1) * -1.4 * d.dir : 0;
-      Px.draw(ctx, frame ? 'dolphin2' : 'dolphin', d.x, y, { recolor: d.pal, flipX: d.dir < 0, center: true, rot });
+      DZ.Rig.dolphin.draw(ctx, d.fake, d.x, y, {
+        center: true, scale: d.sc, flipX: d.dir < 0, rot,
+        speed: d.jump > 0 ? 2 : 0.6, tag: 'ttl' + dolph.indexOf(d)
+      });
     }
+    DZ.Rig.hero.draw(ctx, rider.x, rider.y, { scale: 1.5, mode: 'ride', vx: rider.vx, vy: rider.vy, dir: 1, tag: 'ttlhero' });
     W.marineSnow(ctx, 0, 0, 1 / 60);
     // floor
     W.ground(ctx, 205, DZ.W, '#0f4463', '#0a2f45');
@@ -105,23 +114,24 @@ DZ.Scenes.title = (function () {
     if (DZ.UI.button(ctx, bx, by, bw, 14, help ? 'HIDE CONTROLS' : 'HOW TO PLAY', { tone: 'blue', size: 8 })) help = !help;
 
     if (help) {
-      const p = DZ.UI.panel(ctx, 40, 84, DZ.W - 80, 118, 'HOW TO RANCH A DOLPHIN', { alpha: 0.96 });
+      const p = DZ.UI.panel(ctx, 30, 78, DZ.W - 60, 126, 'HOW TO RANCH A DOLPHIN', { alpha: 0.96 });
       const lines = [
-        ['DIVE', 'WASD/arrows swim, mouse aims. Click = spear.'],
-        ['', 'Right-click or E = net (catches fish ALIVE, worth more).'],
-        ['', 'SPACE = dash. Watch your air. Bag full = go home.'],
-        ['FEED', 'Fish + food = EXP. EXP = levels = skill points.'],
-        ['SKILLS', 'Spend points in the tree. Unlock race abilities.'],
+        ['TRAVEL', 'M opens the ocean. Fly your trident like a broom,'],
+        ['', 'WASD + SPACE to boost. Press E at a place to enter it.'],
+        ['', 'Locked places have someone standing in front. Talk to them.'],
+        ['DIVE', 'WASD swim, mouse aims, click = spear, E = net (live fish'],
+        ['', 'are worth more). SPACE dashes. Watch your air.'],
+        ['FEED', 'Fish + food = EXP = levels = skill points.'],
+        ['SKILLS', 'Four branches. Stat nodes and race abilities.'],
         ['RACE', 'Bet on your dolphin OR a rival. Hold SPACE to surge,'],
-        ['', '1/2/3 fire abilities. Winning pays. Betting pays more.'],
-        ['CLAMS', 'Sell fish, upgrade gear, hire staff, breed dolphins,'],
-        ['', 'and yes, you can make an evil dolphin. You should.'],
-        ['ESC', 'goes back. M mutes. The game saves itself.']
+        ['', '1/2/3 fire abilities. Charm shortens your odds.'],
+        ['CLAMS', 'Gear, buildings, staff, breeding, and one Abyssal Vat.'],
+        ['ESC', 'goes back. F1 mutes. The game saves itself.']
       ];
       lines.forEach((l, i) => {
-        const y = p.cy + i * 10;
-        T.draw(ctx, l[0], 46, y, DZ.PAL.gold, { size: 7, bold: true });
-        T.draw(ctx, l[1], 76, y, DZ.PAL.text, { size: 7 });
+        const y = p.cy + i * 9.6;
+        T.draw(ctx, l[0], 36, y, DZ.PAL.gold, { size: 7, bold: true });
+        T.draw(ctx, l[1], 68, y, DZ.PAL.text, { size: 7 });
       });
     }
     T.draw(ctx, 'made of pixels and questionable marine science', cx, DZ.H - 10, '#4f88a8', { align: 'center', size: 7 });

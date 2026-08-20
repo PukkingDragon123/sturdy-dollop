@@ -6,8 +6,12 @@ window.DZ = window.DZ || {};
 
 DZ.Scenes = {};
 
-DZ.W = 400;   // base pixel resolution
+/* Scenes lay out in a 400x225 "design space"; everything is drawn through a
+   global x2 transform, so the real canvas is 800x450 and text/shapes render at
+   full native resolution without a single layout needing to change. */
+DZ.W = 400;
 DZ.H = 225;
+DZ.SC = 2;
 
 DZ.Util = (function () {
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);

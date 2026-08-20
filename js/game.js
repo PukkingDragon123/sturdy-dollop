@@ -12,14 +12,17 @@ DZ.Game = (function () {
   let debug = false;
 
   function fit() {
-    const pad = 26;
+    const pad = 24;
+    const nw = DZ.W * DZ.SC, nh = DZ.H * DZ.SC;
     const sw = window.innerWidth - pad, sh = window.innerHeight - pad * 2;
-    scale = Math.max(1, Math.min(Math.floor(sw / DZ.W), Math.floor(sh / DZ.H)));
-    canvas.style.width = (DZ.W * scale) + 'px';
-    canvas.style.height = (DZ.H * scale) + 'px';
+    // prefer whole-number scaling of the native buffer, fall back to halves
+    let s = Math.min(sw / nw, sh / nh);
+    scale = s >= 1 ? Math.floor(s) : Math.max(0.34, Math.floor(s * 4) / 4);
+    canvas.style.width = Math.round(nw * scale) + 'px';
+    canvas.style.height = Math.round(nh * scale) + 'px';
     const r = canvas.getBoundingClientRect();
     ox = r.left; oy = r.top;
-    DZ.Input.setTransform(scale, ox, oy);
+    DZ.Input.setTransform(scale * DZ.SC, ox, oy);
   }
 
   function go(name, args) {
@@ -27,6 +30,10 @@ DZ.Game = (function () {
     transTo = name; transArgs = args || {}; trans = 0.001;
   }
   function swap(name, args) {
+    if (DZ.State.S) {
+      if (args && args.from) DZ.State.S.lastFrom = args.from;
+      else if (name === 'ranch' || name === 'worldmap' || name === 'title') DZ.State.S.lastFrom = null;
+    }
     if (cur && cur.exit) cur.exit();
     cur = DZ.Scenes[name];
     curName = name;
@@ -37,6 +44,8 @@ DZ.Game = (function () {
 
   function boot() {
     canvas = document.getElementById('game');
+    canvas.width = DZ.W * DZ.SC;
+    canvas.height = DZ.H * DZ.SC;
     ctx = canvas.getContext('2d', { alpha: false });
     ctx.imageSmoothingEnabled = false;
     DZ.Input.attach(canvas);
@@ -65,12 +74,14 @@ DZ.Game = (function () {
     if (fpsT > 0.5) { fps = Math.round(frames / fpsT); frames = 0; fpsT = 0; }
 
     // global keys
-    if (DZ.Input.isPressed('KeyM')) {
+    if (DZ.Input.isPressed('F1')) {
       const m = DZ.Audio.toggleMute();
       DZ.State.toast(m ? 'Muted' : 'Sound on', DZ.PAL.dim);
     }
     if (DZ.Input.isPressed('F3')) debug = !debug;
+    if (DZ.Input.isPressed('F2') && curName !== 'rigtest') go('rigtest');
     DZ.Audio.tick(dt);
+    if (DZ.Rig) { if (DZ.Rig.dolphin) DZ.Rig.dolphin.dt = dt; if (DZ.Rig.hero) DZ.Rig.hero.dt = dt; if (DZ.Rig.npc) DZ.Rig.npc.dt = dt; if (DZ.Rig.fish) DZ.Rig.fish.dt = dt; }
     DZ.State.updateToasts(dt);
     DZ.UI.begin(dt);
 
@@ -84,6 +95,7 @@ DZ.Game = (function () {
     DZ.FX.update(dt);
 
     // ---- draw ----
+    ctx.setTransform(DZ.SC, 0, 0, DZ.SC, 0, 0);
     ctx.imageSmoothingEnabled = false;
     if (cur && cur.draw) cur.draw(ctx, dt);
     else { DZ.Pixel.rect(ctx, 0, 0, DZ.W, DZ.H, '#062033'); }
@@ -123,8 +135,10 @@ DZ.Game = (function () {
     DZ.Text.draw(ctx, fc + '/' + DZ.Items.gearTier('bag', S.gear.bag).cap, 118, 3, fc >= DZ.Items.gearTier('bag', S.gear.bag).cap ? DZ.PAL.coral : DZ.PAL.text, { size: 8 });
     if (opts.title) DZ.Text.draw(ctx, opts.title, DZ.W / 2 + 30, 3, DZ.PAL.text, { size: 8, align: 'center', bold: true });
     // mute + back
-    if (DZ.UI.button(ctx, DZ.W - 15, 1, 13, 11, DZ.Audio.isMuted() ? 'x' : '~', { tone: 'dark', size: 7, tip: 'Mute (M)' })) DZ.Audio.toggleMute();
-    if (opts.back !== false && DZ.UI.button(ctx, DZ.W - 46, 1, 29, 11, 'BACK', { tone: 'dark', size: 7, key: 'Escape' })) go(opts.back || 'ranch');
+    if (DZ.UI.button(ctx, DZ.W - 15, 1, 13, 11, DZ.Audio.isMuted() ? 'x' : '~', { tone: 'dark', size: 7, tip: 'Mute (F1)' })) DZ.Audio.toggleMute();
+    const backTo = DZ.State.S && DZ.State.S.lastFrom === 'worldmap' ? 'worldmap' : (opts.back || 'ranch');
+    if (opts.back !== false && DZ.UI.button(ctx, DZ.W - 46, 1, 29, 11, backTo === 'worldmap' ? 'SEA' : 'BACK',
+        { tone: 'dark', size: 7, key: 'Escape' })) go(backTo);
     return 14;
   }
 
