@@ -1,0 +1,20 @@
+[
+  ["wait", 700], ["shot", "01-title"],
+  ["click", 200, 128], ["wait", 900], ["shot", "02-ranch"],
+  ["key", "KeyR"], ["wait", 600], ["shot", "03-zone-select"],
+  ["click", 54, 164], ["wait", 900],
+  ["move", 280, 130], ["click", 280, 130], ["wait", 300],
+  ["move", 140, 100], ["click", 140, 100], ["wait", 300],
+  ["rclick", 200, 120], ["wait", 400], ["shot", "04-dive"],
+  ["key", "Escape"], ["wait", 600], ["shot", "05-dive-summary"],
+  ["key", "Enter"], ["wait", 700],
+  ["key", "KeyT"], ["wait", 600], ["shot", "06-skills"],
+  ["key", "Escape"], ["wait", 500],
+  ["click", 150, 160], ["wait", 600], ["shot", "07-market"],
+  ["key", "Escape"], ["wait", 500],
+  ["click", 345, 213], ["wait", 700], ["shot", "08-race-lobby"],
+  ["key", "Enter"], ["wait", 3500],
+  ["hold", "Space", 2000], ["wait", 1000], ["shot", "09-race"],
+  ["key", "Escape"], ["wait", 400],
+  ["key", "KeyN"], ["wait", 800], ["shot", "10-morning-report"]
+]
