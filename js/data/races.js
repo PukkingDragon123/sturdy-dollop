@@ -5,17 +5,23 @@ DZ.Races = (function () {
   const U = DZ.Util;
 
   const TIERS = [
-    { id: 0, name: 'Puddle Cup',        entry: 20,   purse: [130, 55, 20],        minLvl: 1,  len: 440,  col: '#40d492',
+    { id: 0, name: 'Puddle Cup',        entry: 20,   purse: [130, 55, 20, 20],        minLvl: 1,  len: 440,  col: '#40d492',
       blurb: 'Mostly children and one confused eel.' },
-    { id: 1, name: 'Reef Rumble',       entry: 85,   purse: [640, 250, 95],       minLvl: 3,  len: 640,  col: '#7ff0ff',
+    { id: 1, name: 'Reef Rumble',       entry: 85,   purse: [640, 250, 95, 85],       minLvl: 4,  len: 640,  col: '#7ff0ff',
       blurb: 'Contact is discouraged but common.' },
-    { id: 2, name: 'Colonnade Classic', entry: 320,  purse: [2800, 1050, 420],    minLvl: 6,  len: 850,  col: '#ffd24a',
+    { id: 2, name: 'Colonnade Classic', entry: 320,  purse: [2800, 1050, 420, 320],    minLvl: 8,  len: 850,  col: '#ffd24a',
       blurb: 'Raced between actual ruins. Very prestigious.' },
-    { id: 3, name: 'Abyss Grand Prix',  entry: 1300, purse: [13000, 4800, 1700],  minLvl: 10, len: 1080, col: '#a86bff',
+    { id: 3, name: 'Abyss Grand Prix',  entry: 1300, purse: [13000, 4800, 1700, 1300],  minLvl: 13, len: 1080, col: '#a86bff',
       blurb: 'Sponsored by something with too many eyes.' },
-    { id: 4, name: 'Poseidon Trophy',   entry: 5200, purse: [58000, 19000, 7200], minLvl: 15, len: 1320, col: '#ff6f6f',
+    { id: 4, name: 'Poseidon Trophy',   entry: 5200, purse: [58000, 19000, 7200, 5200], minLvl: 20, len: 1320, col: '#ff6f6f',
       blurb: 'The big one. Gods watch. Gods bet.' }
   ];
+
+  /* Absolute difficulty of each tier, in "power" units. The field is anchored
+     70% to the player and 30% to this, so a tier is a real wall when you are
+     under-levelled and a victory lap once you have outgrown it - which is what
+     makes stat investment worth anything. */
+  const TIER_POWER = [30, 46, 66, 92, 118];
 
   const COLS = ['#ff6f6f', '#ffb347', '#c8ff4a', '#40d492', '#7ff0ff', '#9ec5ff', '#ff9ed2', '#a86bff', '#e9d9a8', '#ff9a3c'];
 
@@ -87,8 +93,9 @@ DZ.Races = (function () {
     // Normalise the field around the player's actual power so every tier is a
     // real contest: some rivals a bit weaker, some a bit scarier, none hopeless.
     const mine = entrant ? DZ.Dolphin.power(entrant, state) : 40;
+    const anchor = U.lerp(TIER_POWER[tierId] || 30, mine, 0.7);
     picks.forEach((r, i) => {
-      const want = mine * (0.78 + i * 0.09 + Math.random() * 0.12) * (1 + tierId * 0.02);
+      const want = anchor * (0.74 + i * 0.085 + Math.random() * 0.10);
       const cur = power(r) || 1;
       const f = U.clamp(want / cur, 0.35, 3.2);
       for (const k in r.stats) r.stats[k] = Math.max(1, Math.round(r.stats[k] * f));
@@ -120,5 +127,5 @@ DZ.Races = (function () {
     { txt: 'ANCIENT PLUMBING ERUPTS', col: '#ff9ed2', kind: 'fast' }
   ];
 
-  return { TIERS, COLS, makeRival, makeStable, trainStable, power, fieldFor, odds, statBlock, EVENTS };
+  return { TIERS, TIER_POWER, COLS, makeRival, makeStable, trainStable, power, fieldFor, odds, statBlock, EVENTS };
 })();

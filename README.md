@@ -99,8 +99,24 @@ cached — a bitmap font without shipping font data.
 ### Dev tools
 
 ```
-node tools/showsprites.js [name...]   # ASCII-dump sprites in the terminal
-node tools/smoke.js                   # headless Chromium run: drives the game,
-                                      # screenshots to tools/shots, fails on any
-                                      # console error  (needs: npm i -D playwright)
+npm run check                # syntax-check every source; verify index.html loads them all
+node tools/showsprites.js    # ASCII-dump sprite art in the terminal (optional name filter)
+node tools/smoke.js          # headless Chromium: drives the game through tools/script.json,
+                             # screenshots each scene to tools/shots, fails on console errors
+node tools/persist.js        # verifies the save survives a reload, and that file:// boots
+node tools/balance.js        # drives the real model for 25 in-game days and prints the
+                             # progression table (clams / level / zone / race placings)
 ```
+
+The browser tools need `npm i -D playwright`. If the bundled Chromium version
+does not match, point at it explicitly:
+`PW_EXEC=/opt/pw-browsers/chromium-*/chrome-linux/chrome node tools/smoke.js`
+
+### Balance notes
+
+Race fields are generated per tier by anchoring rival power 70% to your own
+dolphin and 30% to an absolute per-tier difficulty (`DZ.Races.TIER_POWER`). That
+keeps every race close enough to be decided by surging and ability timing, while
+still punishing you for entering the Poseidon Trophy with a level 20 pup —
+which is what makes stat investment mean anything. Fourth place refunds roughly
+the entry fee, so a competent race is never a pure loss.

@@ -62,7 +62,7 @@ DZ.Scenes.racelobby = (function () {
     Px.frame(ctx, x, y, w, h, '#123246');
     T.draw(ctx, T0.name.toUpperCase() + '  -  ' + T0.len + 'm  -  entry ' + U.fmt(T0.entry) + 'c',
       x + 4, y + 3, PAL.gold, { size: 7, bold: true });
-    T.draw(ctx, 'purse ' + T0.purse.map((p) => U.fmt(p)).join(' / '), x + w - 4, y + 3, PAL.kelp, { size: 7, align: 'right' });
+    T.draw(ctx, 'purse ' + T0.purse.slice(0, 3).map((p) => U.fmt(p)).join('/') + ' (4th ' + U.fmt(T0.purse[3]) + ')', x + w - 4, y + 3, PAL.kelp, { size: 7, align: 'right' });
     field.forEach((r, i) => {
       const ry = y + 14 + i * 22;
       const isBet = betOn === i;
