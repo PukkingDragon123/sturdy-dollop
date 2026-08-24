@@ -1,131 +1,57 @@
 /* ============================================================
-   races.js - race tiers, the rival stable, and the bookmaker.
+   races.js - mount racing: tiers, rivals, odds.
    ============================================================ */
-DZ.Races = (function () {
-  const U = DZ.Util;
-
+KA.Races = (function () {
+  const U = KA.U;
   const TIERS = [
-    { id: 0, name: 'Puddle Cup',        entry: 20,   purse: [130, 55, 20, 20],        minLvl: 1,  len: 440,  col: '#40d492',
-      blurb: 'Mostly children and one confused eel.' },
-    { id: 1, name: 'Reef Rumble',       entry: 85,   purse: [640, 250, 95, 85],       minLvl: 4,  len: 640,  col: '#7ff0ff',
-      blurb: 'Contact is discouraged but common.' },
-    { id: 2, name: 'Colonnade Classic', entry: 320,  purse: [2800, 1050, 420, 320],    minLvl: 8,  len: 850,  col: '#ffd24a',
-      blurb: 'Raced between actual ruins. Very prestigious.' },
-    { id: 3, name: 'Abyss Grand Prix',  entry: 1300, purse: [13000, 4800, 1700, 1300],  minLvl: 13, len: 1080, col: '#a86bff',
-      blurb: 'Sponsored by something with too many eyes.' },
-    { id: 4, name: 'Poseidon Trophy',   entry: 5200, purse: [58000, 19000, 7200, 5200], minLvl: 20, len: 1320, col: '#ff6f6f',
-      blurb: 'The big one. Gods watch. Gods bet.' }
+    { id: 0, name: 'Puddle Cup',    entry: 20,   purse: [140, 60, 25, 20],        minLvl: 1,  len: 1500, col: '#3fd18b',
+      blurb: 'Local, damp, mostly children.' },
+    { id: 1, name: 'Reef Cup',      entry: 90,   purse: [700, 280, 110, 90],      minLvl: 4,  len: 2100, col: '#7fe8ff',
+      blurb: 'Proper racing. Barry keeps a fragment on this one.' },
+    { id: 2, name: 'Colonnade Cup', entry: 350,  purse: [3000, 1100, 450, 350],   minLvl: 8,  len: 2700, col: '#ffc94a',
+      blurb: 'Raced between the old columns. Very grand.' },
+    { id: 3, name: 'Trench Cup',    entry: 1400, purse: [14000, 5000, 1800, 1400],minLvl: 14, len: 3300, col: '#a86bff',
+      blurb: 'Dark, deep, sponsored by something with teeth.' },
+    { id: 4, name: 'Atlantic Grand',entry: 5000, purse: [60000, 20000, 7500, 5000],minLvl: 20, len: 3900, col: '#ff6f74',
+      blurb: 'The big one. Your old subjects will be watching.' }
   ];
+  const TIER_POWER = [26, 44, 68, 100, 140];
+  const NAMES = ['Barnacle Bill', 'Miss Fintastic', 'Chad Wavedeep', 'Kelpy Ken Jr', 'Turbo Tim',
+    'Duchess Bubbles', 'Old Man Mackerel', 'Baron Von Blowhole', 'Salty Sue', 'Foam Boy',
+    'Reef Rick', 'Wet Bandit', 'Count Splashula', 'Brine Brad', 'Admiral Wiggles'];
+  const COLS = ['#ff6f74', '#ffb347', '#c8ff4a', '#3fd18b', '#7fe8ff', '#9ec5ff', '#ff9ed2', '#a86bff'];
 
-  /* Absolute difficulty of each tier, in "power" units. The field is anchored
-     70% to the player and 30% to this, so a tier is a real wall when you are
-     under-levelled and a victory lap once you have outgrown it - which is what
-     makes stat investment worth anything. */
-  const TIER_POWER = [30, 46, 66, 92, 118];
-
-  const COLS = ['#ff6f6f', '#ffb347', '#c8ff4a', '#40d492', '#7ff0ff', '#9ec5ff', '#ff9ed2', '#a86bff', '#e9d9a8', '#ff9a3c'];
-
-  function statBlock(lvl, spread, seedR) {
-    const R = seedR || Math.random;
-    const base = 6 + lvl * 1.9;
-    const s = {};
-    ['speed', 'stamina', 'burst', 'agility', 'charm', 'luck'].forEach((k) => {
-      s[k] = Math.max(1, Math.round(base * (0.72 + R() * 0.56) + (spread || 0) * (R() - 0.5) * 6));
-    });
-    return s;
-  }
-
-  function makeRival(name, lvl, opts) {
-    opts = opts || {};
-    const evil = opts.evil || (lvl > 6 && U.chance(0.16));
-    const st = statBlock(lvl, 1, opts.rng);
-    if (evil) { st.speed += 3; st.burst += 3; st.charm = Math.max(1, st.charm - 6); }
-    return {
-      id: U.uid(), name, lvl, evil,
-      stats: st,
-      col: opts.col || U.pick(COLS),
-      trait: DZ.Names.randTrait(),
-      quip: U.pick(DZ.Names.quipsRace),
-      wins: 0, races: 0, npc: true
-    };
-  }
-
-  function makeStable(n) {
-    const names = U.shuffle(DZ.Names.rival).slice(0, n);
-    return names.map((nm, i) => makeRival(nm, 1 + U.rndInt(0, 2), { col: COLS[i % COLS.length] }));
-  }
-
-  /* rivals train too - called on every new day */
-  function trainStable(state) {
-    for (const r of state.rivals) {
-      if (U.chance(0.42)) {
-        r.lvl++;
-        const k = U.pick(['speed', 'stamina', 'burst', 'agility', 'charm', 'luck']);
-        r.stats[k] += U.rndInt(1, 3);
-        if (U.chance(0.5)) r.stats[U.pick(['speed', 'stamina'])] += 1;
-      }
-      if (!r.evil && r.lvl > 8 && U.chance(0.05)) {
-        r.evil = true; r.stats.speed += 3; r.stats.charm = Math.max(1, r.stats.charm - 5);
-      }
-    }
-    // retire the weakest, sign a rookie, keeps the pool interesting
-    if (state.rivals.length > 3 && U.chance(0.25)) {
-      state.rivals.sort((a, b) => power(a) - power(b));
-      state.rivals.shift();
-      const used = state.rivals.map((r) => r.name);
-      const nm = U.pick(DZ.Names.rival.filter((n) => !used.includes(n))) || 'Nameless Fin';
-      state.rivals.push(makeRival(nm, 2 + Math.floor(state.day / 3), { col: U.pick(COLS) }));
-    }
-  }
-
-  function power(r) {
-    const s = r.stats;
-    return s.speed * 1.25 + s.stamina * 0.8 + s.burst * 0.7 + s.agility * 0.55 + s.luck * 0.3;
-  }
-
-  /* a field is [player entrant, ...rivals] - the lobby inserts the entrant */
-  function fieldFor(state, tierId, entrant) {
+  function field(tierId, myPower, n) {
     const tier = TIERS[tierId];
-    const target = entrant ? DZ.Dolphin.level(entrant) : tier.minLvl + 1;
-    const pool = state.rivals.slice().sort((a, b) =>
-      Math.abs(a.lvl - target) - Math.abs(b.lvl - target));
-    const picks = pool.slice(0, 5).map((r) => Object.assign({}, r, { stats: Object.assign({}, r.stats) }));
-    // Normalise the field around the player's actual power so every tier is a
-    // real contest: some rivals a bit weaker, some a bit scarier, none hopeless.
-    const mine = entrant ? DZ.Dolphin.power(entrant, state) : 40;
-    const anchor = U.lerp(TIER_POWER[tierId] || 30, mine, 0.7);
-    picks.forEach((r, i) => {
-      const want = anchor * (0.74 + i * 0.085 + Math.random() * 0.10);
-      const cur = power(r) || 1;
-      const f = U.clamp(want / cur, 0.35, 3.2);
-      for (const k in r.stats) r.stats[k] = Math.max(1, Math.round(r.stats[k] * f));
-      r.lvl = Math.max(1, Math.round(r.lvl * U.clamp(f, 0.5, 2)));
+    const anchor = U.lerp(TIER_POWER[tierId] || 26, myPower, 0.68);
+    const names = U.shuffle(NAMES).slice(0, n || 5);
+    const specs = KA.Pets.SPECIES.filter((s) => s.tier <= Math.min(6, tierId + 2));
+    return names.map((nm, i) => {
+      const sp = U.pick(specs);
+      const want = anchor * (0.76 + i * 0.085 + Math.random() * 0.1);
+      const base = KA.Pet.stats({ sp: sp.id, exp: 0, rolled: {}, traits: [] });
+      const cur = base.spd * 1.3 + base.sta * 0.8 + base.pwr * 0.75 + base.gra * 0.5 + base.lck * 0.3;
+      const f = U.clamp(want / (cur || 1), 0.3, 4);
+      const st = {};
+      for (const k in base) st[k] = Math.max(1, Math.round(base[k] * f));
+      return { name: nm, sp: sp.id, stats: st, col: COLS[i % COLS.length],
+        pet: { uid: 'r' + i, sp: sp.id, name: nm, exp: 0, rolled: {}, traits: [] } };
     });
-    return picks;
   }
-
-  /* decimal odds. charm shortens your odds (crowd favourite = worse payout),
-     which is exactly why an evil, unloved dolphin is a money printer. */
-  function odds(field) {
-    const pw = field.map((r) => {
+  function odds(list) {
+    const pw = list.map((r) => {
       const s = r.stats;
-      return Math.max(4, power(r) * (1 + (s.charm || 0) / 55));
+      return Math.max(4, s.spd * 1.3 + s.sta * 0.8 + s.pwr * 0.75 + s.gra * 0.5 + s.lck * 0.3);
     });
-    const total = pw.reduce((a, b) => a + b, 0);
-    return pw.map((p) => {
-      const share = p / total;
-      return Math.max(1.12, Math.min(48, (1 / share) * 0.88));
-    });
+    const tot = pw.reduce((a, b) => a + b, 0);
+    return pw.map((p) => U.clamp((1 / (p / tot)) * 0.86, 1.1, 40));
   }
-
   const EVENTS = [
-    { txt: 'KELP TANGLE!', col: '#40d492', kind: 'slow' },
-    { txt: 'CURRENT BOOST!', col: '#7ff0ff', kind: 'fast' },
-    { txt: 'A CRAB! ON THE TRACK!', col: '#ff6f6f', kind: 'slow' },
-    { txt: 'SOMEONE THREW A FISH', col: '#ffd24a', kind: 'fast' },
-    { txt: 'GARY SIGHTING', col: '#c53a3a', kind: 'scare' },
-    { txt: 'ANCIENT PLUMBING ERUPTS', col: '#ff9ed2', kind: 'fast' }
+    { txt: 'CURRENT BOOST!', col: '#7fe8ff', k: 'fast' },
+    { txt: 'KELP TANGLE!', col: '#3fd18b', k: 'slow' },
+    { txt: 'CRAB ON THE TRACK', col: '#ff6f74', k: 'slow' },
+    { txt: 'SOMEBODY THREW A BEER', col: '#ffb52e', k: 'fast' },
+    { txt: 'SHARK SIGHTING', col: '#c9343f', k: 'scare' }
   ];
-
-  return { TIERS, TIER_POWER, COLS, makeRival, makeStable, trainStable, power, fieldFor, odds, statBlock, EVENTS };
+  return { TIERS, TIER_POWER, field, odds, EVENTS, NAMES, COLS };
 })();

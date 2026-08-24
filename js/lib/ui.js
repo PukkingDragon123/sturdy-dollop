@@ -1,209 +1,220 @@
 /* ============================================================
-   ui.js - immediate-mode pixel UI kit (panels, buttons, bars,
-   scroll regions, tooltips). Everything drawn on the low-res
-   canvas so menus match the game art.
+   ui.js - touch-first UI kit: big rounded buttons, panels with
+   soft shadows, bars, tabs, scrollers, toasts.
    ============================================================ */
-DZ.PAL = {
-  deep:   '#04121f',
-  ink:    '#072335',
-  ink2:   '#0b3049',
-  ink3:   '#12456a',
-  line:   '#1f6b96',
-  lineHi: '#48b6e6',
-  text:   '#dff6ff',
-  dim:    '#79aec9',
-  dim2:   '#487d9a',
-  gold:   '#ffcf4a',
-  gold2:  '#c98f1c',
-  coral:  '#ff6f6f',
-  red:    '#c53a3a',
-  kelp:   '#40d492',
-  kelp2:  '#1e8d5c',
-  evil:   '#a86bff',
-  evil2:  '#5d2b9a',
-  sand:   '#e9d9a8',
-  white:  '#ffffff',
-  cyan:   '#7ff0ff',
-  pink:   '#ff9ed2',
-  orange: '#ff9a3c'
+KA.PAL = {
+  deep:  '#04121d', ink: '#0a2233', ink2: '#0f3247', line: '#1d5c7f',
+  text:  '#eaf7ff', dim: '#9dc4d6', dim2: '#6693a8',
+  gold:  '#ffc94a', gold2: '#c9821c', amber: '#ff9a3c',
+  coral: '#ff6f74', red: '#c9343f',
+  kelp:  '#3fd18b', kelp2: '#1d8b5b',
+  cyan:  '#7fe8ff', blue: '#3d9ad8',
+  pink:  '#ff9ed2', violet: '#a86bff',
+  sand:  '#f0dfb0', beer: '#ffb52e', foam: '#fff3d6'
 };
 
-DZ.UI = (function () {
-  const P = DZ.PAL, U = DZ.Util, T = DZ.Text, Px = DZ.Pixel;
+KA.UI = (function () {
+  const U = KA.U, D = KA.D, T = KA.T, P = KA.PAL;
+  let hoverId = null, lastHover = null, tip = null, blockT = 0, now = 0;
   const scrolls = new Map();
-  let lastHover = null, hoverNow = null;
-  let tip = null, tipT = 0;
-  let clipDepth = 0;
-  let blockUntil = 0, now = 0;
+  const toasts = [];
 
-  function begin(dt) {
-    now += dt;
-    hoverNow = null;
-    tip = null;
-  }
+  function begin(dt) { now += dt; hoverId = null; tip = null; if (blockT > 0) blockT -= dt; }
   function end(ctx) {
-    if (hoverNow !== lastHover) { if (hoverNow) DZ.Audio.play('hover'); lastHover = hoverNow; }
-    if (tip) drawTip(ctx, tip);
+    if (hoverId !== lastHover) { if (hoverId && !KA.touch) KA.A.play('hover'); lastHover = hoverId; }
+    if (tip && !KA.touch) drawTip(ctx, tip);
+    drawToasts(ctx);
   }
-  // swallow clicks for a moment after a scene change so a click doesn't fall through
-  function guard(t) { blockUntil = now + (t || 0.12); }
-  const blocked = () => now < blockUntil;
+  function guard(t) { blockT = t || 0.16; }
+  const blocked = () => blockT > 0;
 
-  function hover(x, y, w, h) {
-    const m = DZ.Input.mouse;
+  function hit(x, y, w, h) {
+    const m = KA.In.mouse;
     return m.x >= x && m.x < x + w && m.y >= y && m.y < y + h;
   }
 
-  function panel(ctx, x, y, w, h, title, opts) {
-    opts = opts || {};
-    const fill = opts.fill || P.ink;
-    ctx.globalAlpha = opts.alpha === undefined ? 1 : opts.alpha;
-    Px.rect(ctx, x, y, w, h, fill);
-    ctx.globalAlpha = 1;
-    Px.frame(ctx, x, y, w, h, opts.border || P.line);
-    Px.rect(ctx, x + 1, y + 1, w - 2, 1, Px.mix(fill, '#ffffff', 0.08));
-    if (title) {
-      Px.rect(ctx, x + 1, y + 1, w - 2, 11, opts.titleFill || P.ink2);
-      Px.rect(ctx, x + 1, y + 12, w - 2, 1, opts.border || P.line);
-      T.draw(ctx, title, x + 5, y + 3, opts.titleCol || P.cyan, { size: 8, bold: true });
-    }
-    return { x, y, w, h, cy: y + (title ? 15 : 3) };
-  }
-
   const TONES = {
-    blue:  { a: '#12557d', b: '#0a3a58', t: P.text, e: P.lineHi },
-    gold:  { a: '#b8811a', b: '#7d5610', t: '#fff6d8', e: P.gold },
-    green: { a: '#1c8a5c', b: '#115c3d', t: '#dcffef', e: P.kelp },
-    red:   { a: '#a83232', b: '#732020', t: '#ffdede', e: P.coral },
-    evil:  { a: '#6a2fb0', b: '#42196f', t: '#f0dcff', e: P.evil },
-    dark:  { a: '#0d3550', b: '#082436', t: P.dim, e: P.line }
+    gold:  { a: '#ffc94a', b: '#c9821c', t: '#3a2402' },
+    blue:  { a: '#3d9ad8', b: '#1d5c8b', t: '#eaf7ff' },
+    green: { a: '#3fd18b', b: '#1d8b5b', t: '#04291b' },
+    red:   { a: '#ff6f74', b: '#a8343f', t: '#2d0509' },
+    violet:{ a: '#a86bff', b: '#5d2b9a', t: '#f2e6ff' },
+    dark:  { a: '#17415c', b: '#0b2839', t: '#cfe8f5' },
+    beer:  { a: '#ffb52e', b: '#c97f10', t: '#3a2402' }
   };
 
-  /* button -> true when clicked this frame */
-  function button(ctx, x, y, w, h, label, opts) {
-    opts = opts || {};
-    const id = opts.id || (label + x + ',' + y);
-    const tone = TONES[opts.tone || 'blue'];
-    const dis = !!opts.disabled;
-    const hot = !dis && hover(x, y, w, h) && clipOK(y, h);
-    if (hot) hoverNow = id;
-    const pressed = hot && DZ.Input.mouse.down;
-    const keyHit = opts.key && !dis && DZ.Input.isPressed(opts.key);
-    const off = pressed ? 1 : 0;
-    // drop shadow
-    Px.rect(ctx, x + 1, y + 2, w, h, '#031018');
-    Px.rect(ctx, x, y + off, w, h, dis ? '#0a2434' : (hot ? Px.mix(tone.a, '#ffffff', 0.14) : tone.a));
-    Px.rect(ctx, x, y + off + h - 2, w, 2, dis ? '#071a26' : tone.b);
-    Px.frame(ctx, x, y + off, w, h, dis ? '#123246' : (hot ? tone.e : Px.mix(tone.b, '#000', 0.2)));
-    const size = opts.size || 8;
-    const ty = y + off + Math.floor((h - size - 1) / 2);
-    let tx = x + w / 2, align = 'center';
-    if (opts.icon) {
-      const isz = Px.size(opts.icon);
-      Px.draw(ctx, opts.icon, x + 4, y + off + Math.floor((h - isz.h) / 2), { alpha: dis ? 0.4 : 1 });
-      tx = x + 6 + isz.w + (w - 6 - isz.w) / 2;
-    }
-    if (opts.align === 'left') { tx = x + 5 + (opts.icon ? Px.size(opts.icon).w + 3 : 0); align = 'left'; }
-    T.draw(ctx, label, tx, ty, dis ? '#3d6a85' : tone.t, { align, size, shadow: dis ? false : '#03131d', bold: !!opts.bold });
-    if (opts.sub) T.draw(ctx, opts.sub, x + w - 4, y + off + h - 9, dis ? '#3d6a85' : Px.mix(tone.t, '#000', 0.25), { align: 'right', size: 7 });
-    if (hot && opts.tip) tip = { text: opts.tip };
+  /* big finger-friendly button */
+  function button(ctx, x, y, w, h, label, o) {
+    o = o || {};
+    const id = o.id || (label + '@' + Math.round(x) + ',' + Math.round(y));
+    const tone = TONES[o.tone || 'blue'];
+    const dis = !!o.disabled;
+    const hot = !dis && hit(x, y, w, h);
+    if (hot) hoverId = id;
+    const held = hot && KA.In.mouse.down;
+    const off = held ? 2 : 0;
+    const r = o.r === undefined ? Math.min(10, h * 0.32) : o.r;
+    D.rr(ctx, x, y + 3, w, h, r, 'rgba(2,12,20,.45)');
+    const top = dis ? '#20465c' : (hot ? D.shade(tone.a, 0.12) : tone.a);
+    const bot = dis ? '#122c3c' : tone.b;
+    D.rr(ctx, x, y + off, w, h - off, r, D.vgrad(ctx, x, y, x, y + h, [[0, top], [1, bot]], 'b' + top + bot + Math.round(h)));
+    D.rr(ctx, x + 2, y + off + 1.5, w - 4, h * 0.42, r * 0.7, 'rgba(255,255,255,.16)');
+    const size = o.size || Math.min(16, h * 0.5);
+    const tx = o.align === 'left' ? x + 10 : x + w / 2;
+    T.draw(ctx, label, tx, y + off + h / 2 - size * 0.62, dis ? '#5d7f92' : tone.t,
+      { size, align: o.align === 'left' ? 'left' : 'center', weight: 800 });
+    if (o.sub) T.draw(ctx, o.sub, x + w / 2, y + off + h - size * 0.52, dis ? '#5d7f92' : D.alpha(tone.t, 0.75),
+      { size: size * 0.62, align: 'center', weight: 700 });
+    if (hot && o.tip) tip = { text: o.tip };
     if (dis) return false;
-    const clicked = (hot && DZ.Input.mouse.click && !blocked()) || keyHit;
-    if (clicked) { DZ.Input.mouse.click = false; DZ.Audio.play(opts.sfx || 'click'); }
+    const key = o.key && KA.In.isPressed(o.key);
+    const clicked = (hot && KA.In.mouse.click && !blocked()) || key;
+    if (clicked) { KA.In.mouse.click = false; KA.A.play(o.sfx || 'click'); }
     return clicked;
   }
 
-  function bar(ctx, x, y, w, h, frac, opts) {
-    opts = opts || {};
+  function panel(ctx, x, y, w, h, title, o) {
+    o = o || {};
+    D.rr(ctx, x, y + 4, w, h, 12, 'rgba(2,10,18,.5)');
+    D.rr(ctx, x, y, w, h, 12, D.vgrad(ctx, x, y, x, y + h,
+      [[0, o.fill || '#0f3247'], [1, o.fill2 || '#08202f']], 'p' + Math.round(h) + (o.fill || '')));
+    D.rr(ctx, x + 1, y + 1, w - 2, h - 2, 11, null, { line: o.border || 'rgba(127,232,255,.28)', lineW: 1.5 });
+    let cy = y + 10;
+    if (title) {
+      /* titleRight reserves room for a top-right button so the two never overlap */
+      T.draw(ctx, title, x + (w - (o.titleRight || 0)) / 2, y + 9, o.titleCol || P.cyan,
+        { size: o.titleSize || 15, align: 'center', weight: 800 });
+      D.rect(ctx, x + 14, y + 30, w - 28, 1.5, 'rgba(127,232,255,.2)');
+      cy = y + 38;
+    }
+    return { x, y, w, h, cy };
+  }
+
+  function bar(ctx, x, y, w, h, frac, o) {
+    o = o || {};
     frac = U.clamp(frac, 0, 1);
-    Px.rect(ctx, x, y, w, h, opts.bg || '#061c2a');
-    Px.frame(ctx, x, y, w, h, opts.border || '#154561');
-    const iw = Math.round((w - 2) * frac);
-    if (iw > 0) {
-      Px.rect(ctx, x + 1, y + 1, iw, h - 2, opts.col || P.kelp);
-      Px.rect(ctx, x + 1, y + 1, iw, 1, Px.mix(opts.col || P.kelp, '#ffffff', 0.35));
+    D.rr(ctx, x, y, w, h, h / 2, o.bg || 'rgba(3,16,26,.75)');
+    const iw = (w - 3) * frac;
+    if (iw > 1) {
+      const c = o.col || P.kelp;
+      D.rr(ctx, x + 1.5, y + 1.5, iw, h - 3, (h - 3) / 2,
+        D.vgrad(ctx, x, y, x, y + h, [[0, D.shade(c, 0.25)], [1, c]], 'bar' + c + Math.round(h)));
     }
-    if (opts.ghost !== undefined && opts.ghost > frac) {
-      const gw = Math.round((w - 2) * U.clamp(opts.ghost, 0, 1));
-      Px.rect(ctx, x + 1 + iw, y + 1, gw - iw, h - 2, Px.mix(opts.col || P.kelp, '#000', 0.55));
-    }
-    if (opts.label) T.draw(ctx, opts.label, x + w / 2, y + Math.floor((h - 7) / 2), opts.labelCol || '#eaffff', { align: 'center', size: 7, shadow: '#03131d' });
+    D.rr(ctx, x, y, w, h, h / 2, null, { line: o.line || 'rgba(255,255,255,.16)', lineW: 1 });
+    if (o.label) T.draw(ctx, o.label, x + w / 2, y + h / 2 - (o.ls || h * 0.42) * 0.55, o.labelCol || '#fff',
+      { size: o.ls || h * 0.72, align: 'center', weight: 800, shadow: true });
   }
 
-  function chip(ctx, x, y, label, col, opts) {
-    opts = opts || {};
-    const w = T.width(label, 7) + 7;
-    Px.rect(ctx, x, y, w, 10, opts.fill || '#08293c');
-    Px.frame(ctx, x, y, w, 10, col);
-    T.draw(ctx, label, x + 4, y + 2, col, { size: 7 });
-    return w + 2;
+  function chip(ctx, x, y, label, col, o) {
+    o = o || {};
+    const s = o.size || 11;
+    const w = T.width(ctx, label, s, 800) + 14;
+    D.rr(ctx, x, y, w, s + 8, (s + 8) / 2, o.fill || D.alpha(col, 0.18));
+    D.rr(ctx, x, y, w, s + 8, (s + 8) / 2, null, { line: D.alpha(col, 0.7), lineW: 1 });
+    T.draw(ctx, label, x + 7, y + 4, col, { size: s, weight: 800 });
+    return w + 4;
   }
 
-  function statRow(ctx, x, y, w, name, val, max, col) {
-    T.draw(ctx, name, x, y, P.dim, { size: 7 });
-    const bw = w - 46;
-    bar(ctx, x + 34, y - 1, bw, 7, val / max, { col: col || P.cyan, bg: '#05202f' });
-    T.draw(ctx, String(Math.round(val)), x + w, y, P.text, { size: 7, align: 'right' });
+  function tabs(ctx, x, y, w, h, items, sel, onPick) {
+    const bw = w / items.length;
+    items.forEach((it, i) => {
+      if (button(ctx, x + i * bw + 2, y, bw - 4, h, it, { tone: sel === i ? 'gold' : 'dark', size: h * 0.42, id: 'tab' + i }))
+        onPick(i);
+    });
   }
 
-  function drawTip(ctx, t) {
-    const m = DZ.Input.mouse;
-    const lines = U.wrap(t.text, 34);
-    const w = Math.min(150, Math.max(...lines.map((l) => T.width(l, 7))) + 8);
-    const h = lines.length * 8 + 6;
-    let x = Math.min(m.x + 6, DZ.W - w - 2), y = m.y - h - 4;
-    if (y < 2) y = m.y + 10;
-    Px.rect(ctx, x, y, w, h, '#020d16');
-    Px.frame(ctx, x, y, w, h, P.line);
-    lines.forEach((l, i) => T.draw(ctx, l, x + 4, y + 3 + i * 8, P.text, { size: 7 }));
-  }
-  function tooltip(text) { if (text) tip = { text }; }
-
-  // ---- scroll region ------------------------------------------
-  function clipOK(y, h) { return true; }
   function scroll(id, ctx, x, y, w, h, contentH, drawFn) {
     let s = scrolls.get(id);
-    if (!s) { s = { off: 0, drag: false }; scrolls.set(id, s); }
+    if (!s) { s = { off: 0, drag: false, last: 0 }; scrolls.set(id, s); }
     const maxOff = Math.max(0, contentH - h);
-    const inside = hover(x, y, w, h);
-    if (inside && DZ.Input.mouse.wheel) s.off += DZ.Input.mouse.wheel * 18;
+    const inside = hit(x, y, w, h);
+    if (inside && KA.In.mouse.wheel) s.off += KA.In.mouse.wheel * 26;
+    // drag-to-scroll (touch + mouse)
+    if (inside && KA.In.mouse.down) {
+      if (!s.drag) { s.drag = true; s.last = KA.In.mouse.y; }
+      else { s.off -= (KA.In.mouse.y - s.last); s.last = KA.In.mouse.y; }
+    }
+    if (!KA.In.mouse.down) s.drag = false;
     s.off = U.clamp(s.off, 0, maxOff);
     ctx.save();
-    ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
-    clipDepth++;
-    drawFn(x, y - Math.round(s.off), w);
-    clipDepth--;
+    ctx.beginPath(); D.rr(ctx, x, y, w, h, 8, null); ctx.clip();
+    drawFn(x, y - s.off, w);
     ctx.restore();
     if (maxOff > 0) {
-      const tw = 3, tx = x + w - tw;
-      Px.rect(ctx, tx, y, tw, h, '#05202f');
-      const kh = Math.max(8, Math.round(h * (h / contentH)));
-      const ky = y + Math.round((h - kh) * (s.off / maxOff));
-      Px.rect(ctx, tx, ky, tw, kh, P.line);
-      // drag the bar
-      if (DZ.Input.mouse.down && hover(tx - 2, y, tw + 4, h)) s.drag = true;
-      if (!DZ.Input.mouse.down) s.drag = false;
-      if (s.drag) s.off = U.clamp(((DZ.Input.mouse.y - y - kh / 2) / (h - kh)) * maxOff, 0, maxOff);
-      // fade edges
-      if (s.off > 1) { ctx.globalAlpha = 0.5; Px.rect(ctx, x, y, w - tw, 1, P.lineHi); ctx.globalAlpha = 1; }
-      if (s.off < maxOff - 1) { ctx.globalAlpha = 0.5; Px.rect(ctx, x, y + h - 1, w - tw, 1, P.lineHi); ctx.globalAlpha = 1; }
+      const kh = Math.max(18, h * (h / contentH));
+      const ky = y + (h - kh) * (s.off / maxOff);
+      D.rr(ctx, x + w - 5, y, 3, h, 1.5, 'rgba(255,255,255,.08)');
+      D.rr(ctx, x + w - 5, ky, 3, kh, 1.5, 'rgba(127,232,255,.55)');
     }
     return s;
   }
   function resetScroll(id) { const s = scrolls.get(id); if (s) s.off = 0; }
 
-  // ---- misc ----------------------------------------------------
-  function shadowText(ctx, str, x, y, col, opts) {
-    opts = Object.assign({ shadow: '#03131d' }, opts || {});
-    return T.draw(ctx, str, x, y, col, opts);
+  function drawTip(ctx, t) {
+    const m = KA.In.mouse;
+    const lines = T.wrapPx(ctx, t.text, 11, 190, 700);
+    const w = Math.min(210, Math.max(...lines.map((l) => T.width(ctx, l, 11, 700))) + 16);
+    const h = lines.length * 14 + 12;
+    let x = Math.min(m.x + 10, KA.W - w - 4), y = m.y - h - 8;
+    if (y < 4) y = m.y + 16;
+    D.rr(ctx, x, y, w, h, 8, 'rgba(4,18,29,.95)', { line: 'rgba(127,232,255,.35)', lineW: 1 });
+    lines.forEach((l, i) => T.draw(ctx, l, x + 8, y + 6 + i * 14, P.text, { size: 11, weight: 700 }));
   }
+  function tooltip(text) { if (text) tip = { text }; }
+
+  function toast(text, col) {
+    toasts.push({ text, col: col || P.text, t: 3.4, y: 0 });
+    if (toasts.length > 5) toasts.shift();
+  }
+  function updateToasts(dt) {
+    for (let i = toasts.length - 1; i >= 0; i--) {
+      const o = toasts[i];
+      o.t -= dt;
+      o.y = U.damp(o.y, i * 30, 0.0008, dt);
+      if (o.t <= 0) toasts.splice(i, 1);
+    }
+  }
+  function drawToasts(ctx) {
+    for (let i = 0; i < toasts.length; i++) {
+      const o = toasts[i];
+      const a = U.clamp(o.t / 0.5, 0, 1);
+      const w = T.width(ctx, o.text, 13, 800) + 26;
+      const x = KA.W - w - 10, y = 52 + o.y;
+      ctx.globalAlpha = a;
+      D.rr(ctx, x, y, w, 24, 12, 'rgba(4,18,29,.92)', { line: D.alpha(o.col, 0.6), lineW: 1.5 });
+      D.circle(ctx, x + 12, y + 12, 4, o.col);
+      T.draw(ctx, o.text, x + 22, y + 5, o.col, { size: 13, weight: 800 });
+      ctx.globalAlpha = 1;
+    }
+  }
+
   function dim(ctx, a) {
     ctx.globalAlpha = a === undefined ? 0.6 : a;
-    Px.rect(ctx, 0, 0, DZ.W, DZ.H, '#020a12');
+    D.rect(ctx, 0, 0, KA.W, KA.H, '#020b14');
     ctx.globalAlpha = 1;
   }
-  function ribbon(ctx, y, h, col) { Px.rect(ctx, 0, y, DZ.W, h, col); }
 
-  return { begin, end, panel, button, bar, chip, statRow, hover, tooltip, scroll,
-           resetScroll, shadowText, dim, ribbon, guard, blocked, TONES };
+  /* ---- on-screen pad, drawn only on touch devices ---- */
+  function touchPad(ctx, buttons) {
+    if (!KA.touch) return;
+    const pad = KA.In.pad;
+    const bx = 62, by = KA.H - 62;
+    ctx.globalAlpha = pad.active ? 0.5 : 0.26;
+    D.circle(ctx, pad.active ? pad.cx : bx, pad.active ? pad.cy : by, 34, 'rgba(255,255,255,.10)',
+      { line: 'rgba(255,255,255,.35)', lineW: 2 });
+    D.circle(ctx, (pad.active ? pad.cx : bx) + pad.dx * 26, (pad.active ? pad.cy : by) + pad.dy * 26, 16,
+      'rgba(255,255,255,.42)');
+    ctx.globalAlpha = 1;
+    for (const b of buttons) {
+      const st = (KA.In.act(b.name) ? 1 : 0);
+      ctx.globalAlpha = 0.34 + st * 0.35;
+      D.circle(ctx, b.x, b.y, b.r, b.col || 'rgba(255,255,255,.16)', { line: 'rgba(255,255,255,.45)', lineW: 2 });
+      ctx.globalAlpha = 0.95;
+      T.draw(ctx, b.label, b.x, b.y - 7, '#ffffff', { size: b.r * 0.62, align: 'center', weight: 800 });
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  return { begin, end, guard, blocked, hit, button, panel, bar, chip, tabs, scroll, resetScroll,
+           tooltip, toast, updateToasts, dim, touchPad, TONES };
 })();

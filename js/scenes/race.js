@@ -1,501 +1,381 @@
 /* ============================================================
-   race.js - the race itself. Hold SPACE to surge, 1/2/3 for
-   abilities, try not to get tail-slapped by a rival in a hat.
+   race.js - side-scrolling mount racing. Surge to spend stamina,
+   hop the obstacles, bet on anyone in the field.
    ============================================================ */
-DZ.Scenes.race = (function () {
-  const U = DZ.Util, Px = DZ.Pixel, T = DZ.Text, PAL = DZ.PAL;
-  const LANES = 6, LANE_H = 23, TOP = 46;
-  let t = 0, phase = 'count', countT = 3.2, tier = 0, cfg = null;
-  let racers = [], trackLen = 1200, camX = 0, finishOrder = [], results = null;
-  let eventT = 3, announce = null, announceT = 0, leaderName = '', shakeSpd = 0;
-  let whistleBuff = 0;
+KA.Scenes.race = (function () {
+  const U = KA.U, D = KA.D, T = KA.T, P = KA.PAL, S = KA.S;
+  let phase = 'lobby', tier = 0, field = [], odds = [], bet = -1, stake = 0;
+  let racers = [], obstacles = [], camX = 0, t = 0, countT = 0, order = [], res = null, ann = null, annT = 0;
+  /* six lanes spread between the crowd and the seabed */
+  const LANE_TOP = 84, LANE_H = 42;
+  const laneY = (i) => LANE_TOP + i * LANE_H;
+  /* mounts are part-normalised: a whale still reads bigger, but it stays in its lane */
+  const laneScale = (pet) => 0.85 / Math.pow(KA.Pets.byId[pet.sp].size, 0.72);
 
   function enter(args) {
-    cfg = args || {};
-    tier = cfg.tier || 0;
-    const T0 = DZ.Races.TIERS[tier];
-    trackLen = Math.round(T0.len * 2.9);
-    t = 0; phase = 'count'; countT = 3.2; camX = 0; finishOrder = []; results = null;
-    eventT = 4; announce = null; announceT = 0;
-    const S = DZ.State.S;
-    whistleBuff = S.inv.use && S.inv.use.whistle ? 3 : 0;
-    if (whistleBuff) { S.inv.use.whistle--; if (!S.inv.use.whistle) delete S.inv.use.whistle; }
-    const clover = S.inv.use && S.inv.use.clover ? 8 : 0;
-    if (clover) { S.inv.use.clover--; if (!S.inv.use.clover) delete S.inv.use.clover; }
+    tier = (args && args.tier) || 0;
+    phase = 'lobby'; bet = -1; stake = 0; t = 0;
+    build();
+  }
+  function build() {
+    const me = S.active();
+    const mine = { name: me.name, sp: me.sp, stats: KA.Pet.stats(me), col: '#ffc94a', mine: true, pet: me };
+    field = [mine].concat(KA.Races.field(tier, KA.Pet.power(me), 5));
+    odds = KA.Races.odds(field);
+  }
 
-    racers = (cfg.field || []).map((r, i) => {
-      const st = Object.assign({}, r.stats);
-      if (r.mine && clover) st.luck += clover;
-      const passives = r.mine && r.dolphin ? DZ.Dolphin.passives(r.dolphin) : {};
-      const abil = r.mine && r.dolphin ? DZ.Dolphin.abilities(r.dolphin)
-        : pickAiAbilities(r.lvl, r.evil);
-      const mood = r.mine && r.dolphin ? 0.85 + r.dolphin.mood * 0.3 : 1;
-      return {
-        ref: r, mine: !!r.mine, name: r.name, col: r.col, evil: !!r.evil, lane: i,
-        stats: st, passives, abil, cds: abil.map(() => 0),
-        x: 0, v: 0, mods: [], stam: 100, stamMax: 40 + st.stamina * 4.2,
-        surge: false, finished: false, place: 0, time: 0, ph: U.rnd(0, 9), frame: 0,
-        base: (34 + st.speed * 1.45) * mood, acc: 44 + st.burst * 3.1,
-        wind: false, aiT: U.rnd(0.5, 3), lucky: st.luck,
-        dolphin: r.dolphin || null
-      };
+  function begin() {
+    const T0 = KA.Races.TIERS[tier];
+    if (!S.spend(T0.entry + (bet >= 0 ? stake : 0))) return;
+    phase = 'count'; countT = 3.2; camX = 0; t = 0; order = []; res = null;
+    const len = T0.len;
+    racers = field.map((r, i) => {
+      const st = r.stats;
+      const fat = r.mine ? S.fatPenalty() : 1;
+      return { ref: r, lane: i, mine: !!r.mine, name: r.name, col: r.col, pet: r.pet, stats: st,
+        x: 0, y: laneY(i), v: 0, base: (54 + st.spd * 1.9) * fat, acc: 60 + st.pwr * 3,
+        stam: 100, stamMax: 46 + st.sta * 4.4, surge: false, mods: [], finished: false, place: 0,
+        time: 0, ph: U.rnd(0, 9), ai: U.rnd(0.6, 2.6), hop: 0 };
     });
-    DZ.Audio.play('whistle');
+    obstacles = [];
+    for (let i = 0; i < Math.floor(len / 210); i++) {
+      obstacles.push({ x: 260 + i * 210 + U.rnd(-40, 40), lane: U.rndInt(0, 5),
+        kind: U.pick(['kelp', 'crab', 'urchin']) });
+    }
+    KA.A.play('whistle');
   }
 
-  function pickAiAbilities(lvl, evil) {
-    const pool = evil ? ['darktide', 'grip', 'tailslap', 'sonar'] : ['torpedo', 'tailslap', 'bubblering', 'sonar'];
-    const n = U.clamp(Math.floor(lvl / 4), 0, 2);
-    return U.shuffle(pool).slice(0, n);
-  }
-
-  /* ---------------- update ---------------- */
   function update(dt) {
     t += dt;
-    DZ.Water.tick(dt);
-    if (announceT > 0) announceT -= dt;
+    if (annT > 0) annT -= dt;
+    layout();
+    if (phase === 'lobby') { if (KA.In.isPressed('Escape')) KA.Game.go('world', {}); return; }
     if (phase === 'count') {
       countT -= dt;
-      const prev = Math.ceil(countT + dt), now = Math.ceil(countT);
-      if (now !== prev && now > 0) DZ.Audio.play('blip');
-      if (countT <= 0) { phase = 'race'; DZ.Audio.play('whistle'); DZ.FX.shake(3); say('AND THEY\'RE OFF!'); }
+      if (Math.ceil(countT) !== Math.ceil(countT + dt) && countT > 0) KA.A.play('blip');
+      if (countT <= 0) { phase = 'run'; KA.A.play('whistle'); say('AND THEY\'RE OFF'); }
       return;
     }
-    if (phase !== 'race') return;
+    if (phase === 'done') { if (KA.In.isPressed('Escape')) KA.Game.go('world', {}); return; }
 
+    const T0 = KA.Races.TIERS[tier];
+    const lead = racers.reduce((m, r) => Math.max(m, r.x), 0);
     const me = racers.find((r) => r.mine);
-    const leadX = racers.reduce((m, r) => Math.max(m, r.x), 0);
-    // ---- player input ----
     if (me && !me.finished) {
-      const holding = DZ.Input.isDown('Space') || DZ.Input.mouse.down;
-      me.surge = holding && (me.stam > 0 || whistleBuff > 0);
-      if (whistleBuff > 0) whistleBuff -= dt;
-      for (let i = 0; i < me.abil.length; i++) {
-        if (DZ.Input.isPressed('Digit' + (i + 1)) && me.cds[i] <= 0) fireAbility(me, i);
-      }
+      me.surge = (KA.In.act('atk', 'Space', 'KeyJ') || KA.In.mouse.down) && me.stam > 0;
+      if (KA.In.actPressed('jump', 'KeyK', 'ArrowUp') && me.hop <= 0) { me.hop = 0.5; KA.A.play('jump'); }
     }
-    // ---- simulate ----
     for (const r of racers) {
       if (r.finished) continue;
       r.time += dt;
-      // mods decay
-      for (let i = r.mods.length - 1; i >= 0; i--) {
-        r.mods[i].t -= dt;
-        if (r.mods[i].t <= 0) r.mods.splice(i, 1);
-      }
-      for (let i = 0; i < r.cds.length; i++) if (r.cds[i] > 0) r.cds[i] -= dt;
-
-      // AI decisions
+      for (let i = r.mods.length - 1; i >= 0; i--) { r.mods[i].t -= dt; if (r.mods[i].t <= 0) r.mods.splice(i, 1); }
+      if (r.hop > 0) r.hop -= dt;
       if (!r.mine) {
-        r.aiT -= dt;
-        const prog = r.x / trackLen;
-        const behind = (leadX - r.x) / trackLen;
-        r.surge = r.stam > r.stamMax * 0.2 && (prog > 0.55 || behind > 0.06 || (r.aiT <= 0 && U.chance(0.6)));
-        if (r.aiT <= 0) {
-          r.aiT = U.rnd(1.2, 3.4);
-          for (let i = 0; i < r.abil.length; i++) if (r.cds[i] <= 0 && U.chance(0.55)) { fireAbility(r, i); break; }
-        }
+        r.ai -= dt;
+        const behind = (lead - r.x) / T0.len;
+        r.surge = r.stam > r.stamMax * 0.2 && (r.x / T0.len > 0.55 || behind > 0.05 || (r.ai <= 0 && U.chance(0.6)));
+        if (r.ai <= 0) r.ai = U.rnd(1.2, 3.2);
       }
-      // stamina
-      const surgeCost = (r.passives.cheapSurge ? 13 : 20);
-      if (r.surge && r.stam > 0) r.stam = Math.max(0, r.stam - surgeCost * dt);
-      else r.stam = Math.min(r.stamMax, r.stam + 9 * dt);
-      if (r.surge && r.stam <= 0 && !(r.mine && whistleBuff > 0)) r.surge = false;
-      // second wind
-      if (r.passives.secondWind && !r.wind && r.x > trackLen * 0.5) {
-        r.wind = true; r.stam = r.stamMax;
-        if (r.mine) { say('SECOND WIND!'); DZ.Audio.play('happy'); }
-      }
-      // target speed
+      if (r.surge && r.stam > 0) r.stam = Math.max(0, r.stam - 22 * dt);
+      else r.stam = Math.min(r.stamMax, r.stam + 10 * dt);
+      if (r.surge && r.stam <= 0) r.surge = false;
       let mult = 1;
       for (const m of r.mods) mult *= m.mult;
-      if (r.surge) mult *= 1.29;
-      // pack physics: trailing racers ride the wash, so nobody gets left behind
-      mult *= 1 + U.clamp((leadX - r.x) / Math.max(1, trackLen), 0, 0.3) * 0.55;
-      // slipstream
-      let draft = 1;
-      for (const o of racers) {
-        if (o === r) continue;
-        const d = o.x - r.x;
-        if (d > 4 && d < 30 && Math.abs(o.lane - r.lane) <= 1) { draft = r.passives.cheapSurge ? 1.12 : 1.07; break; }
-      }
-      if (r.stats.agility > 14 && draft > 1) draft += 0.02;
-      const target = r.base * mult * draft;
+      if (r.surge) mult *= 1.3;
+      mult *= 1 + U.clamp((lead - r.x) / T0.len, 0, 0.3) * 0.5;
+      const target = r.base * mult;
       r.v += (target - r.v) * Math.min(1, r.acc / 100 * dt * 4);
-      // luck wobble keeps races unpredictable
-      r.v += Math.sin(t * 1.7 + r.ph) * (2 + r.lucky * 0.06) * dt * 10;
+      r.v += Math.sin(t * 1.7 + r.ph) * (1 + r.stats.lck * 0.05) * dt * 8;
       r.x += r.v * dt;
-      r.frame += (0.5 + r.v / 40) * dt * 6;
-      if (r.surge && U.chance(dt * 22)) DZ.FX.bubbles(sx(r.x) - 12, laneY(r.lane) + 6, 1, { screen: false });
-      // bumping
-      for (const o of racers) {
-        if (o === r || o.finished) continue;
-        if (Math.abs(o.lane - r.lane) !== 1) continue;
-        if (Math.abs(o.x - r.x) < 10 && U.chance(dt * 1.3)) {
-          const strongerR = r.stats.agility + (r.passives.sturdy ? 8 : 0) + (r.passives.ram ? 10 : 0);
-          const strongerO = o.stats.agility + (o.passives.sturdy ? 8 : 0) + (o.passives.ram ? 10 : 0);
-          const loser = strongerR >= strongerO ? o : r;
-          loser.mods.push({ mult: 0.78, t: 0.7 });
-          if (loser.mine || r.mine || o.mine) { DZ.Audio.play('slap'); DZ.FX.shake(2); }
-          DZ.FX.text(sx(loser.x), laneY(loser.lane) - 4, 'BONK', PAL.coral, { size: 7, screen: true, life: 0.6 });
+      if (r.surge && U.chance(dt * 22)) KA.FX.bubbles(sx(r.x) - 16, r.y + 8, 1);
+      // obstacles
+      for (const o of obstacles) {
+        if (o.lane !== r.lane || o.hit) continue;
+        if (Math.abs(o.x - r.x) < 16) {
+          if (r.hop > 0.05) { if (r.mine) { KA.FX.text(sx(r.x), r.y - 24, 'HOP!', P.kelp, { size: 14, screen: true }); } }
+          else {
+            r.mods.push({ mult: 0.55, t: 0.9 });
+            if (r.mine) { KA.A.play('thud'); KA.FX.shake(5); KA.FX.text(sx(r.x), r.y - 24, 'OOF', P.coral, { size: 16, screen: true }); }
+          }
         }
       }
-      // chaos aura
-      if (r.passives.chaos && U.chance(dt * 0.6)) {
-        const near = racers.filter((o) => o !== r && !o.finished && Math.abs(o.x - r.x) < 40);
-        if (near.length) {
-          const v = U.pick(near);
-          v.mods.push({ mult: 0.8, t: 1 });
-          DZ.FX.text(sx(v.x), laneY(v.lane) - 6, 'PANIC!', PAL.evil, { size: 7, screen: true });
-        }
-      }
-      // finish
-      if (r.x >= trackLen && !r.finished) {
-        r.finished = true;
-        r.place = finishOrder.length + 1;
-        finishOrder.push(r);
-        if (r.mine) {
-          DZ.Audio.play(r.place === 1 ? 'cheer' : 'whistle');
-          DZ.FX.flash(r.place === 1 ? '#ffd24a' : '#7ff0ff', 0.25);
-          DZ.FX.shake(6);
-        }
+      if (r.x >= T0.len && !r.finished) {
+        r.finished = true; r.place = order.length + 1; order.push(r);
+        if (r.mine) { KA.A.play(r.place === 1 ? 'cheer' : 'whistle'); KA.FX.flash(r.place === 1 ? P.gold : P.cyan, 0.25); }
       }
     }
-    // ---- random track events ----
-    eventT -= dt;
-    if (eventT <= 0) {
-      eventT = U.rnd(3.4, 7);
+    // random events
+    if (U.chance(dt * 0.25)) {
       const alive = racers.filter((r) => !r.finished);
       if (alive.length) {
-        const victim = U.pick(alive);
-        const ev = U.pick(DZ.Races.EVENTS);
-        if (ev.kind === 'slow') victim.mods.push({ mult: 0.72, t: 1.4 });
-        else if (ev.kind === 'fast') victim.mods.push({ mult: 1.3, t: 1.6 });
-        else { victim.mods.push({ mult: 1.55, t: 0.9 }); victim.mods.push({ mult: 0.7, t: 2.4 }); }
-        DZ.FX.text(sx(victim.x), laneY(victim.lane) - 8, ev.txt, ev.col, { size: 8, screen: true, life: 1.4 });
-        say(victim.name + ': ' + ev.txt);
-        DZ.Audio.play(ev.kind === 'fast' ? 'pop' : 'thud');
+        const v = U.pick(alive), e = U.pick(KA.Races.EVENTS);
+        if (e.k === 'slow') v.mods.push({ mult: 0.72, t: 1.4 });
+        else if (e.k === 'fast') v.mods.push({ mult: 1.3, t: 1.5 });
+        else { v.mods.push({ mult: 1.5, t: 0.8 }); v.mods.push({ mult: 0.7, t: 2.2 }); }
+        say(v.name + ': ' + e.txt);
+        KA.FX.text(sx(v.x), v.y - 26, e.txt, e.col, { size: 13, screen: true, life: 1.4 });
       }
     }
-    // ---- leader callout ----
-    const lead = racers.slice().sort((a, b) => b.x - a.x)[0];
-    if (lead && lead.name !== leaderName && !lead.finished) {
-      leaderName = lead.name;
-      if (t > 2) say(lead.name.toUpperCase() + ' TAKES THE LEAD!');
-    }
-    // ---- camera ----
-    const focus = racers.find((r) => r.mine) || lead;
-    const fx2 = focus ? focus.x : 0;
-    const lx2 = lead ? lead.x : fx2;
-    const mid = U.lerp(fx2, lx2, 0.42);
-    const target = U.clamp(mid - 150, 0, Math.max(0, trackLen + 60 - DZ.W));
-    camX = U.damp(camX, target, 0.0008, dt);
-
+    const focus = me || racers[0];
+    camX = U.damp(camX, U.clamp(U.lerp(focus.x, lead, 0.4) - KA.W * 0.34, 0, Math.max(0, T0.len + 120 - KA.W)), 0.0008, dt);
     if (racers.every((r) => r.finished)) finish();
   }
+  const sx = (x) => x - camX + 60;
+  function say(s) { ann = s; annT = 2.2; }
 
-  function say(s) { announce = s; announceT = 2.4; }
-  const sx = (x) => x - camX + 30;
-  const laneY = (l) => TOP + l * LANE_H;
-
-  function fireAbility(r, i) {
-    const id = r.abil[i];
-    const A = DZ.Skills.ABILITIES[id];
-    if (!A) return;
-    r.cds[i] = A.cool;
-    DZ.Audio.play(A.sfx || 'blip');
-    const others = racers.filter((o) => o !== r && !o.finished);
-    const ahead = others.filter((o) => o.x > r.x);
-    switch (id) {
-      case 'torpedo':
-        r.mods.push({ mult: 1.75, t: 1.2 });
-        DZ.FX.bubbles(sx(r.x), laneY(r.lane) + 8, 14, { vx: -90 });
-        DZ.FX.shake(r.mine ? 4 : 1);
-        break;
-      case 'bubblering':
-        r.mods.push({ mult: 1.38, t: 3 });
-        DZ.FX.ringWave(sx(r.x), laneY(r.lane) + 8, 4, 22, '#ff9ed2', 0.5);
-        break;
-      case 'tailslap': {
-        const near = others.sort((a, b) => Math.abs(a.x - r.x) - Math.abs(b.x - r.x))[0];
-        if (near) {
-          near.mods.push({ mult: 0.5, t: 1.3 });
-          near.x -= 12;
-          DZ.FX.text(sx(near.x), laneY(near.lane) - 6, 'SLAPPED!', PAL.orange, { size: 8, screen: true });
-          DZ.FX.shake(3);
-        }
-        break;
-      }
-      case 'sonar':
-        ahead.forEach((o) => o.mods.push({ mult: 0.74, t: 2.4 }));
-        DZ.FX.ringWave(sx(r.x), laneY(r.lane) + 8, 6, 60, '#7ff0ff', 0.7);
-        break;
-      case 'darktide': {
-        const lead = others.sort((a, b) => b.x - a.x)[0];
-        if (lead) {
-          lead.mods.push({ mult: 0.72, t: 2 });
-          r.mods.push({ mult: 1.3, t: 2 });
-          DZ.FX.text(sx(lead.x), laneY(lead.lane) - 6, 'DRAINED', PAL.evil, { size: 8, screen: true });
-        }
-        break;
-      }
-      case 'grip': {
-        const v = ahead.sort((a, b) => a.x - b.x)[0] || others[0];
-        if (v) {
-          v.mods.push({ mult: 0.36, t: 1.5 });
-          DZ.FX.text(sx(v.x), laneY(v.lane) - 6, 'GRABBED', PAL.evil, { size: 8, screen: true });
-          DZ.FX.shake(4);
-        }
-        break;
-      }
-      case 'bane':
-        others.forEach((o) => o.mods.push({ mult: 0.6, t: 2.6 }));
-        DZ.FX.flash('#a86bff', 0.3); DZ.FX.shake(7);
-        say('THE OCEAN TURNS ON THEM ALL');
-        break;
-    }
-    if (r.mine) DZ.FX.text(sx(r.x), laneY(r.lane) - 12, A.name.toUpperCase() + '!', A.col, { size: 9, screen: true, life: 1.1 });
-  }
-
-  /* ---------------- results ---------------- */
   function finish() {
     phase = 'done';
-    const S = DZ.State.S;
-    const T0 = DZ.Races.TIERS[tier];
+    const T0 = KA.Races.TIERS[tier];
     const me = racers.find((r) => r.mine);
-    const d = me && me.dolphin ? me.dolphin : null;
     const place = me ? me.place : 6;
-    let purse = T0.purse[place - 1] || 0;
-    let mult = 1;
-    if (d) {
-      const pas = DZ.Dolphin.passives(d);
-      if (pas.showboat) mult += 0.25;
-      if (pas.hype) mult += 0.4;
-    }
-    purse = Math.round(purse * mult);
-    // betting
+    const purse = T0.purse[place - 1] || 0;
     let betWin = 0;
-    if (cfg.betOn >= 0 && cfg.stake > 0) {
-      const picked = racers[cfg.betOn];
-      if (picked && picked.place === 1) {
-        betWin = Math.round(cfg.stake * cfg.odds[cfg.betOn]);
-        const hype = DZ.State.staffOf('hype');
-        if (hype) betWin = Math.round(betWin * (1 + (12 + hype.lvl * 8) / 100));
-      }
+    if (bet >= 0 && stake > 0) {
+      const picked = racers[bet];
+      if (picked && picked.place === 1) betWin = Math.round(stake * odds[bet]);
     }
-    // exp
-    let exp = 0, lvlUps = 0;
-    if (d) {
-      exp = Math.round((44 + tier * 46) * (place === 1 ? 1.6 : place === 2 ? 1.25 : place === 3 ? 1.05 : 0.8));
-      const res = DZ.Dolphin.addExp(d, exp, S);
-      lvlUps = res.levels;
-      d.races++;
-      if (place === 1) d.wins++;
-      d.mood = U.clamp(d.mood + (place === 1 ? 0.12 : -0.04), 0, 1);
-      d.note = U.pick(place === 1 ? DZ.Names.quipsRace : ['Robbed.', 'I demand a rematch.', 'The current was rude.']);
-    }
-    if (purse) DZ.State.earn(purse, true);
-    if (betWin) { DZ.State.earn(betWin, true); DZ.State.event('bet', { clams: betWin - cfg.stake }); }
-    S.totals.races++;
-    if (place === 1) DZ.State.event('race_win', {});
-    if (betWin) S.totals.betWon += betWin;
-    results = { place, purse, betWin, exp, lvlUps, mult };
-    DZ.State.save();
-    DZ.Audio.play(place === 1 ? 'cheer' : 'whistle');
+    const pet = S.active();
+    const exp = Math.round((50 + tier * 55) * (place === 1 ? 1.6 : place === 2 ? 1.2 : 0.85));
+    const r = KA.Pet.addExp(pet, exp);
+    pet.races++;
+    if (place === 1) pet.wins++;
+    S.D.stats.races++;
+    if (place === 1) S.D.stats.wins++;
+    if (purse) S.earn(purse, true);
+    if (betWin) S.earn(betWin, true);
+    S.burnFat(8);
+    res = { place, purse, betWin, exp, levels: r.levels, tokens: r.tokens };
+    S.save();
     if (place === 1) {
-      for (let i = 0; i < 30; i++)
-        DZ.FX.part(U.rnd(0, DZ.W), U.rnd(0, 60), { k: 'chunk', screen: true, vy: U.rnd(20, 70), vx: U.rnd(-30, 30),
-          col: U.pick(['#ffd24a', '#ff9ed2', '#7ff0ff', '#40d492']), life: U.rnd(1.5, 3), r: 2, drag: 0.9 });
+      KA.A.play('jackpot');
+      for (let i = 0; i < 34; i++) KA.FX.part(U.rnd(0, KA.W), U.rnd(0, 60), { k: 'chunk', screen: true,
+        vy: U.rnd(40, 130), vx: U.rnd(-50, 50), col: U.pick([P.gold, P.pink, P.cyan, P.kelp]), life: U.rnd(1.4, 3), r: 3 });
     }
+  }
+
+  const BTNS = [];
+  function layout() {
+    if (!KA.touch) { KA.In.defineButtons([]); return; }
+    BTNS.length = 0;
+    if (phase === 'run' || phase === 'count') {
+      BTNS.push({ name: 'atk', x: KA.W - 56, y: KA.H - 56, r: 32, label: 'GO', col: 'rgba(255,201,74,.3)' });
+      BTNS.push({ name: 'jump', x: KA.W - 126, y: KA.H - 56, r: 26, label: 'HOP', col: 'rgba(127,232,255,.3)' });
+    }
+    KA.In.defineButtons(BTNS);
   }
 
   /* ---------------- draw ---------------- */
   function draw(ctx) {
-    const T0 = DZ.Races.TIERS[tier];
-    Px.vgrad(ctx, 0, 0, DZ.W, DZ.H, '#2f8fc0', '#062033', 11);
-    // crowd stands
-    Px.rect(ctx, 0, 14, DZ.W, TOP - 16, '#0a2a40');
-    for (let i = 0; i < 46; i++) {
-      const cx = (i * 9 + Math.sin(i) * 3) % DZ.W;
-      const cy = 18 + (i % 3) * 8;
-      const bounce = Math.sin(t * 6 + i) > 0.6 ? -2 : 0;
-      const sp = DZ.Species.list[i % DZ.Species.list.length];
-      DZ.Fish.draw(ctx, sp, cx, cy + bounce, { scale: 0.55, alpha: 0.9, speed: 0.2, tag: 'cr' + i });
-    }
-    Px.rect(ctx, 0, TOP - 4, DZ.W, 3, '#0d3d58');
-    DZ.Water.surfaceLine(ctx, TOP - 8);
+    const T0 = KA.Races.TIERS[tier];
+    D.rect(ctx, 0, 0, KA.W, KA.H, D.vgrad(ctx, 0, 0, 0, KA.H,
+      [[0, '#7fd8f0'], [0.3, '#2f93c4'], [1, '#08324c']], 'rcbg'));
+    if (phase === 'lobby') return lobby(ctx);
 
-    // motion streaks
-    ctx.globalAlpha = 0.10;
-    for (let i = 0; i < 26; i++) {
-      const sy2 = TOP + ((i * 37) % (LANES * LANE_H));
-      const sx2 = (i * 71 - camX * 1.7) % (DZ.W + 60) - 30;
-      Px.rect(ctx, sx2, sy2, 14, 1, '#dff6ff');
+    // crowd on the surface
+    D.rect(ctx, 0, 0, KA.W, 46, 'rgba(4,24,38,.55)');
+    for (let i = 0; i < 40; i++) {
+      const cx = ((i * 37 - camX * 0.3) % (KA.W + 60)) - 30;
+      const bounce = Math.sin(t * 5 + i) > 0.4 ? -3 : 0;
+      D.circle(ctx, cx, 26 + (i % 3) * 8 + bounce, 5, KA.Races.COLS[i % KA.Races.COLS.length]);
     }
-    ctx.globalAlpha = 1;
-    // lane ropes
-    for (let l = 0; l <= LANES; l++) {
-      const y = laneY(l) - 3;
-      ctx.globalAlpha = 0.5;
-      for (let x = -(camX % 6); x < DZ.W; x += 6) Px.rect(ctx, x, y, 3, 1, '#1b6b93');
+    D.rect(ctx, 0, 44, KA.W, 3, '#0d3d58');
+    // lanes
+    for (let i = 0; i < 6; i++) {
+      const y = laneY(i);
+      ctx.globalAlpha = 0.35;
+      for (let x = -(camX % 24); x < KA.W; x += 24) D.rect(ctx, x, y + 22, 12, 2, '#1b6b93');
       ctx.globalAlpha = 1;
-      for (let x = -(camX % 72); x < DZ.W; x += 72) Px.draw(ctx, 'buoy', x, y - 4, { alpha: 0.75 });
     }
-    // seabed under the track
-    const bedY = TOP + LANES * LANE_H + 4;
-    DZ.Water.ground(ctx, bedY, DZ.W, '#e2ce97', '#b79a5f', Math.round(camX), DZ.H - bedY);
-    for (let i = 0; i < 7; i++) {
-      const kx = (i * 118 - camX * 0.85) % (DZ.W + 120) - 60;
-      DZ.Water.kelp(ctx, kx, bedY + 2, 14 + (i % 3) * 5, i * 2, '#1c6b46', '#31a468');
-    }
+    // seabed
+    D.rect(ctx, 0, KA.H - 26, KA.W, 26, D.vgrad(ctx, 0, KA.H - 26, 0, KA.H, [[0, '#e0cfa0'], [1, '#a89468']], 'rcs'));
     // finish line
-    const fx = sx(trackLen);
-    if (fx > -20 && fx < DZ.W + 20) {
-      for (let y = TOP - 6; y < TOP + LANES * LANE_H; y += 6) {
-        Px.rect(ctx, fx, y, 4, 3, ((y / 6) | 0) % 2 ? '#ffffff' : '#101820');
-        Px.rect(ctx, fx, y + 3, 4, 3, ((y / 6) | 0) % 2 ? '#101820' : '#ffffff');
-      }
-      Px.draw(ctx, 'flag', fx - 2, TOP - 20, {});
+    const fx = sx(T0.len);
+    if (fx > -30 && fx < KA.W + 30) {
+      for (let y = 60; y < KA.H - 20; y += 12) D.rect(ctx, fx, y, 7, 6, ((y / 12) | 0) % 2 ? '#fff' : '#12202c');
+      D.rr(ctx, fx - 26, 52, 60, 18, 5, '#c9343f');
+      T.draw(ctx, 'FINISH', fx + 4, 55, '#fff', { size: 11, align: 'center', weight: 900 });
     }
-    // start gate
-    const gx = sx(0);
-    if (gx > -30 && gx < DZ.W) Px.draw(ctx, 'starttower', gx - 24, TOP - 24, { scale: 2, alpha: 0.9 });
-
-    // racers
-    const sorted = racers.slice().sort((a, b) => a.lane - b.lane);
-    for (const r of sorted) {
-      const x = sx(Math.min(r.x, trackLen + 26));
-      const y = laneY(r.lane) + 8 + Math.sin(t * 5 + r.ph) * 1.5;
-      if (x < -16 || x > DZ.W + 16) {
-        // off-screen marker
-        const mx = x < 0 ? 2 : DZ.W - 4;
-        Px.rect(ctx, mx, y - 2, 3, 5, r.col);
-        continue;
-      }
-      const stretch = 1 + Math.min(0.22, r.v / 700) + (r.surge ? 0.08 : 0);
+    // obstacles
+    for (const o of obstacles) {
+      const x = sx(o.x), y = laneY(o.lane) + 20;
+      if (x < -30 || x > KA.W + 30) continue;
+      if (o.kind === 'kelp') KA.Rig.sea.prop(ctx, { x, kind: 'kelp', s: 0.5, ph: o.x }, y, {});
+      else if (o.kind === 'crab') KA.Rig.sea.creature(ctx, { kind: 'crabby', x, y: y - 8, s: 0.8, dir: 1, ph: o.x, hue: 0 });
+      else KA.Rig.sea.prop(ctx, { x, kind: 'urchin', s: 0.8, ph: o.x }, y, {});
+    }
+    // racers, top lane first so nearer lanes layer over the ones behind
+    const onScreen = [];
+    for (const r of racers) {
+      const x = sx(Math.min(r.x, KA.Races.TIERS[tier].len + 40));
+      if (x < -60 || x > KA.W + 60) { D.rr(ctx, x < 0 ? 2 : KA.W - 6, r.y, 4, 10, 2, r.col); continue; }
+      const hop = r.hop > 0 ? -Math.sin((0.5 - r.hop) / 0.5 * Math.PI) * 22 : 0;
+      onScreen.push({ r, x, y: r.y + hop + Math.sin(t * 6 + r.ph) * 2 });
+    }
+    onScreen.sort((a, b) => a.r.lane - b.r.lane);
+    // pass 1: name tags and stamina pips sit behind every rig
+    for (const { r, x, y } of onScreen) {
+      const nw = T.width(ctx, r.name, 10, 800) + 12;
+      D.rr(ctx, x - nw / 2, y - 24, nw, 14, 7, 'rgba(4,18,29,.6)');
+      T.draw(ctx, r.name, x, y - 22, r.mine ? P.gold : '#dff0fb', { size: 10, align: 'center', weight: 800 });
+      D.rr(ctx, x - 15, y + 17, 30, 4, 2, 'rgba(0,0,0,.45)');
+      D.rr(ctx, x - 15, y + 17, 30 * (r.stam / r.stamMax), 4, 2, r.stam > r.stamMax * 0.3 ? P.kelp : P.coral);
+    }
+    // pass 2: the mounts and their riders
+    for (const { r, x, y } of onScreen) {
+      const ms = laneScale(r.pet);
       if (r.surge) {
-        ctx.globalAlpha = 0.35;
-        for (let k = 1; k <= 3; k++)
-          Px.draw(ctx, 'dolphin', x - k * 5, y, { center: true, flash: '#bfeaff', alpha: 0.3 / k });
+        ctx.globalAlpha = 0.3;
+        for (let k = 1; k <= 3; k++) KA.Rig.pet.draw(ctx, r.pet, x - k * 9, y, { scale: ms * 0.94, speed: 2, tag: 'gh' + r.lane });
         ctx.globalAlpha = 1;
       }
-      const dObj = r.dolphin || (r._obj = r._obj || { id: 'rc' + r.lane,
-        pal: { '1': r.col, '2': Px.shade(r.col, -0.4), '3': Px.shade(r.col, 0.55) },
-        evil: r.evil, traits: [], skills: {} });
-      DZ.Dolphin.draw(ctx, dObj, x, y, { center: true, scale: 1.25, speed: 0.4 + r.v / 60,
-        sx: stretch, sy: 1 / stretch, tag: 'race' + r.lane });
+      KA.Rig.pet.draw(ctx, r.pet, x, y, { scale: ms, speed: 0.5 + r.v / 60, tag: 'rc' + r.lane });
       if (r.mine) {
-        Px.rect(ctx, x - 1, y - 16, 3, 3, PAL.gold);
-        T.draw(ctx, 'YOU', x, y - 25, PAL.gold, { size: 7, align: 'center', shadow: true });
+        KA.Rig.king.draw(ctx, x - 2, y + KA.Pet.rideY(r.pet) * ms + 4, { scale: 0.52, mode: 'ride', dir: 1,
+          vx: r.v, fat: S.D.fat, weapon: S.weapon(), dt: 1 / 60 });
+        D.tri(ctx, [x - 5, y - 38], [x + 5, y - 38], [x, y - 32], P.gold);
       }
-      T.draw(ctx, r.name, x, y + 10, r.mine ? PAL.gold : '#cfe8ff', { size: 7, align: 'center', shadow: true });
-      if (r.finished) T.draw(ctx, '#' + r.place, x + 16, y - 6, PAL.gold, { size: 8, bold: true });
-      // lane stamina pip
-      const sf = r.stam / r.stamMax;
-      Px.rect(ctx, x - 10, y + 18, 20, 2, '#05202f');
-      Px.rect(ctx, x - 10, y + 18, Math.round(20 * sf), 2, sf > 0.3 ? PAL.kelp : PAL.coral);
+      if (r.finished) T.draw(ctx, '#' + r.place, x + 24, y - 12, P.gold, { size: 13, weight: 900 });
     }
-    DZ.FX.drawWorld(ctx);
-    DZ.Water.marineSnow(ctx, camX, 0, 1 / 60);
-
+    KA.FX.drawWorld(ctx);
     hud(ctx, T0);
-    if (phase === 'count') countdown(ctx);
-    if (phase === 'done' && results) drawResults(ctx, T0);
+    if (phase === 'count') {
+      KA.UI.dim(ctx, 0.3);
+      const n = Math.ceil(countT);
+      T.draw(ctx, n <= 0 ? 'GO!' : String(n), KA.W / 2, KA.H / 2 - 40, n === 1 ? P.gold : P.text,
+        { size: 60, align: 'center', weight: 900, shadow: true });
+      T.draw(ctx, KA.touch ? 'hold GO to surge, HOP over obstacles' : 'hold SPACE to surge, K to hop',
+        KA.W / 2, KA.H / 2 + 30, P.cyan, { size: 15, align: 'center', weight: 800 });
+    }
+    if (phase === 'done' && res) results(ctx, T0);
+    KA.UI.touchPad(ctx, BTNS);
   }
 
   function hud(ctx, T0) {
     const me = racers.find((r) => r.mine);
-    Px.rect(ctx, 0, 0, DZ.W, 13, '#041826');
-    Px.rect(ctx, 0, 13, DZ.W, 1, PAL.line);
-    T.draw(ctx, T0.name.toUpperCase(), 4, 3, T0.col, { size: 8, bold: true });
-    const sorted = racers.slice().sort((a, b) => (b.finished ? trackLen + 1000 - b.place : b.x) - (a.finished ? trackLen + 1000 - a.place : a.x));
-    const pos = me ? sorted.indexOf(me) + 1 : 0;
-    T.draw(ctx, 'POS ' + pos + '/' + racers.length, 120, 3, pos === 1 ? PAL.gold : PAL.text, { size: 8, bold: true });
-    const prog = me ? U.clamp(me.x / trackLen, 0, 1) : 0;
-    T.draw(ctx, Math.round(prog * T0.len) + 'm / ' + T0.len + 'm', 190, 3, PAL.dim, { size: 7 });
+    // the scoreboard lives over the crowd, never in a swim lane
+    D.rr(ctx, 6, 6, 158, 32, 8, 'rgba(4,18,29,.8)');
+    T.draw(ctx, T.fit(ctx, T0.name, 13, 900, 144), 14, 9, T0.col, { size: 13, weight: 900 });
+    const sorted = racers.slice().sort((a, b) => (b.finished ? 1e6 - b.place : b.x) - (a.finished ? 1e6 - a.place : a.x));
+    T.draw(ctx, 'POS ' + (sorted.indexOf(me) + 1) + '/' + racers.length, 14, 24, P.gold, { size: 12, weight: 800 });
+    T.draw(ctx, Math.round(U.clamp(me.x / T0.len, 0, 1) * 100) + '%', 156, 24, P.dim, { size: 12, align: 'right' });
     // mini track
-    const mx = 262, mw = DZ.W - 268;
-    Px.rect(ctx, mx, 4, mw, 6, '#03131d');
-    Px.frame(ctx, mx, 4, mw, 6, '#123246');
-    for (const r of racers) {
-      const px = mx + 1 + Math.round((mw - 3) * U.clamp(r.x / trackLen, 0, 1));
-      Px.rect(ctx, px, 5, 2, 4, r.mine ? PAL.gold : r.col);
-    }
-
+    const mw = Math.min(180, KA.W - 340), mx = KA.W - mw - 10;
+    D.rr(ctx, mx, 14, mw, 10, 5, 'rgba(3,16,26,.7)');
+    for (const r of racers) D.circle(ctx, mx + 4 + (mw - 8) * U.clamp(r.x / T0.len, 0, 1), 19, 3.4, r.mine ? P.gold : r.col);
     if (me && !me.finished) {
-      // stamina + abilities
-      const sf = me.stam / me.stamMax;
-      DZ.UI.bar(ctx, 4, DZ.H - 16, 120, 11, sf, { col: me.surge ? PAL.orange : PAL.kelp,
-        label: whistleBuff > 0 ? 'RALLY! ' + whistleBuff.toFixed(1) + 's' : 'STAMINA - hold SPACE' });
-      me.abil.forEach((id, i) => {
-        const A = DZ.Skills.ABILITIES[id];
-        const ready = me.cds[i] <= 0;
-        const bx = 130 + i * 62;
-        if (DZ.UI.button(ctx, bx, DZ.H - 16, 58, 11, (i + 1) + ' ' + A.name.slice(0, 9),
-            { tone: ready ? 'gold' : 'dark', size: 7, disabled: !ready, id: 'ab' + i, tip: A.blurb })) {
-          fireAbility(me, i);
-        }
-        if (!ready) T.draw(ctx, me.cds[i].toFixed(1), bx + 56, DZ.H - 15, PAL.coral, { size: 7, align: 'right' });
-      });
-      if (!me.abil.length) T.draw(ctx, 'no abilities - learn some in SKILLS', 130, DZ.H - 13, PAL.dim2, { size: 7 });
+      KA.UI.bar(ctx, 8, KA.H - 30, 170, 20, me.stam / me.stamMax,
+        { col: me.surge ? P.amber : P.kelp, label: me.surge ? 'SURGING' : 'STAMINA', ls: 12 });
     }
-    if (announceT > 0 && announce) {
-      const w = T.width(announce, 8, true) + 12;
-      ctx.globalAlpha = U.clamp(announceT, 0, 1);
-      Px.rect(ctx, DZ.W / 2 - w / 2, 16, w, 13, '#041826');
-      Px.frame(ctx, DZ.W / 2 - w / 2, 16, w, 13, PAL.gold);
-      T.draw(ctx, announce, DZ.W / 2, 19, PAL.gold, { size: 8, align: 'center', bold: true });
+    if (annT > 0 && ann) {
+      ctx.globalAlpha = U.clamp(annT, 0, 1);
+      // the call sits in the gap between the scoreboard and the mini track
+      const gl = 170, gr = mx - 8, gc = (gl + gr) / 2;
+      const txt = T.fit(ctx, ann, 14, 900, gr - gl - 24);
+      const w = T.width(ctx, txt, 14, 900) + 24;
+      D.rr(ctx, gc - w / 2, 8, w, 26, 13, 'rgba(4,18,29,.92)');
+      T.draw(ctx, txt, gc, 14, P.gold, { size: 14, align: 'center', weight: 900 });
       ctx.globalAlpha = 1;
     }
   }
 
-  function countdown(ctx) {
-    DZ.UI.dim(ctx, 0.35);
-    const n = Math.ceil(countT);
-    const s = n <= 0 ? 'GO!' : String(n);
-    const frac = countT - Math.floor(countT);
-    const size = 22 + Math.round((1 - frac) * 10);
-    T.draw(ctx, s, DZ.W / 2, DZ.H / 2 - 20, n === 1 ? PAL.gold : PAL.text, { size, align: 'center', bold: true, shadow: true });
-    T.draw(ctx, 'hold SPACE to surge   1/2/3 abilities', DZ.W / 2, DZ.H / 2 + 14, PAL.cyan, { align: 'center', size: 8 });
-    const me = racers.find((r) => r.mine);
-    if (me) T.draw(ctx, 'you are ' + me.name + ', lane ' + (me.lane + 1), DZ.W / 2, DZ.H / 2 + 26, PAL.dim, { align: 'center', size: 7 });
+  function results(ctx, T0) {
+    KA.UI.dim(ctx, 0.65);
+    const w = Math.min(400, KA.W - 40), x = KA.W / 2 - w / 2;
+    const p = KA.UI.panel(ctx, x, 24, w, KA.H - 60, res.place === 1 ? 'WINNER!' : 'FINISHED #' + res.place,
+      { titleCol: res.place === 1 ? P.gold : P.text });
+    let y = p.cy;
+    order.forEach((r, i) => {
+      D.rr(ctx, x + 12, y, w - 24, 20, 5, r.mine ? 'rgba(127,232,255,.14)' : 'rgba(255,255,255,.05)');
+      T.draw(ctx, '#' + r.place, x + 20, y + 3, i === 0 ? P.gold : P.dim, { size: 12, weight: 900 });
+      D.circle(ctx, x + 48, y + 10, 4, r.col);
+      T.draw(ctx, r.name + (r.mine ? '  (YOU)' : ''), x + 58, y + 3, r.mine ? P.cyan : P.text, { size: 12, weight: 700 });
+      T.draw(ctx, r.time.toFixed(2) + 's', x + w - 20, y + 3, P.dim, { size: 12, align: 'right' });
+      y += 22;
+    });
+    y += 6;
+    const rows = [['Purse', '+' + U.fmt(res.purse) + 'c'],
+                  ['Bet', res.betWin ? '+' + U.fmt(res.betWin) + 'c' : (stake ? 'lost ' + U.fmt(stake) + 'c' : 'no bet')],
+                  ['Mount EXP', '+' + res.exp + (res.levels ? '  (' + res.levels + ' level up!)' : '')],
+                  ['Roll tokens', '+' + res.tokens]];
+    rows.forEach((r, i) => {
+      T.draw(ctx, r[0], x + 20, y + i * 20, P.dim, { size: 13, weight: 700 });
+      T.draw(ctx, r[1], x + w - 20, y + i * 20, P.gold, { size: 13, weight: 900, align: 'right' });
+    });
+    if (KA.UI.button(ctx, x + 16, KA.H - 60, (w - 44) / 2, 34, 'RACE AGAIN', { tone: 'blue', size: 15 })) { phase = 'lobby'; build(); }
+    if (KA.UI.button(ctx, x + w / 2 + 6, KA.H - 60, (w - 44) / 2, 34, 'LEAVE', { tone: 'gold', size: 15, key: 'Enter' }))
+      KA.Game.go('world', {});
   }
 
-  function drawResults(ctx, T0) {
-    DZ.UI.dim(ctx, 0.72);
-    const pw = 260, ph = 176, px = (DZ.W - pw) / 2, py = (DZ.H - ph) / 2;
-    const win = results.place === 1;
-    DZ.UI.panel(ctx, px, py, pw, ph, win ? 'WINNER!' : 'FINISHED #' + results.place,
-      { titleCol: win ? PAL.gold : PAL.text });
-    let y = py + 17;
-    finishOrder.forEach((r, i) => {
-      Px.rect(ctx, px + 4, y, pw - 8, 12, r.mine ? '#0d3d58' : (i % 2 ? '#072335' : '#08283c'));
-      T.draw(ctx, '#' + r.place, px + 7, y + 2, i === 0 ? PAL.gold : PAL.dim, { size: 7, bold: true });
-      Px.rect(ctx, px + 22, y + 2, 3, 8, r.col);
-      T.draw(ctx, r.name + (r.mine ? ' (YOU)' : ''), px + 29, y + 2, r.mine ? PAL.cyan : PAL.text, { size: 7 });
-      T.draw(ctx, r.time.toFixed(2) + 's', px + pw - 8, y + 2, PAL.dim, { size: 7, align: 'right' });
-      y += 13;
-    });
-    y += 2;
-    Px.rect(ctx, px + 6, y, pw - 12, 1, PAL.line); y += 4;
-    const rows = [
-      ['purse (' + results.place + (results.place === 1 ? 'st' : results.place === 2 ? 'nd' : results.place === 3 ? 'rd' : 'th') + ')',
-        '+' + U.fmt(results.purse) + 'c', results.purse ? PAL.gold : PAL.dim],
-      ['bet payout', results.betWin ? '+' + U.fmt(results.betWin) + 'c' : (cfg.stake ? 'lost ' + U.fmt(cfg.stake) + 'c' : 'no bet'),
-        results.betWin ? PAL.kelp : PAL.coral],
-      ['dolphin EXP', '+' + results.exp + (results.lvlUps ? '  (' + results.lvlUps + ' level up!)' : ''), PAL.cyan]
-    ];
-    if (results.mult > 1) rows.push(['showbiz bonus', 'x' + results.mult.toFixed(2), PAL.pink]);
-    rows.forEach((r) => {
-      T.draw(ctx, r[0], px + 8, y, PAL.dim, { size: 7 });
-      T.draw(ctx, r[1], px + pw - 8, y, r[2], { size: 7, align: 'right', bold: true });
-      y += 10;
-    });
-    if (DZ.UI.button(ctx, px + 6, py + ph - 18, (pw - 18) / 2, 14, 'RACE AGAIN', { tone: 'blue', size: 8 }))
-      DZ.Game.go('racelobby', { tier });
-    if (DZ.UI.button(ctx, px + pw / 2 + 3, py + ph - 18, (pw - 18) / 2, 14, 'BACK TO RANCH', { tone: 'gold', size: 8, key: 'Enter' }))
-      DZ.Game.go('ranch');
-  }
+  function lobby(ctx) {
+    const T0 = KA.Races.TIERS[tier];
+    ctx.globalAlpha = 0.18;
+    for (let i = 0; i < 6; i++) D.circle(ctx, (i * 181 + 50) % KA.W, 50 + i * 56, 66, '#1d6d94');
+    ctx.globalAlpha = 1;
+    T.draw(ctx, T0.name, 16, 12, T0.col, { size: 22, weight: 900, shadow: true });
+    const meta = 'entry ' + T0.entry + 'c   purse ' + T0.purse[0] + 'c';
+    T.draw(ctx, KA.W < 560 ? meta : T0.blurb + '   ' + meta, 16, 40, P.dim, { size: 12, weight: 700 });
+    T.draw(ctx, U.fmt(S.D.clams) + ' clams', KA.W - 14, 14, P.gold, { size: 16, align: 'right', weight: 800 });
 
+    const lw = Math.min(KA.W - 190, 430);
+    field.forEach((r, i) => {
+      const y = 64 + i * 42;
+      const sel = bet === i;
+      D.rr(ctx, 12, y, lw, 38, 8, sel ? 'rgba(255,201,74,.18)' : (r.mine ? 'rgba(127,232,255,.12)' : 'rgba(255,255,255,.05)'));
+      if (sel) D.rr(ctx, 12, y, lw, 38, 8, null, { line: P.gold, lineW: 2 });
+      D.rr(ctx, 16, y + 4, 5, 30, 2.5, r.col);
+      KA.Rig.pet.draw(ctx, r.pet, 46, y + 20, { scale: 0.55, speed: 0.3, tag: 'lb' + i });
+      // the odds keep their own column; name and stats trim rather than run under it
+      const oddsTxt = 'x' + odds[i].toFixed(2);
+      const availW = lw - 88 - T.width(ctx, oddsTxt, 15, 900);
+      T.draw(ctx, T.fit(ctx, r.name + (r.mine ? '  (YOU)' : ''), 14, 800, availW), 74, y + 5,
+        r.mine ? P.cyan : P.text, { size: 14, weight: 800 });
+      let sub = KA.Pets.byId[r.sp].name + '   SPD ' + r.stats.spd + '  STA ' + r.stats.sta + '  PWR ' + r.stats.pwr;
+      if (T.width(ctx, sub, 11, 600) > availW) sub = 'SPD ' + r.stats.spd + '  STA ' + r.stats.sta + '  PWR ' + r.stats.pwr;
+      if (T.width(ctx, sub, 11, 600) > availW) sub = KA.Pets.byId[r.sp].name;
+      T.draw(ctx, sub, 74, y + 22, P.dim, { size: 11, weight: 600 });
+      T.draw(ctx, oddsTxt, lw - 8, y + 10, odds[i] > 6 ? P.gold : P.text, { size: 15, align: 'right', weight: 900 });
+      if (KA.UI.hit(12, y, lw, 38) && KA.In.mouse.click && !KA.UI.blocked()) {
+        KA.In.mouse.click = false;
+        bet = bet === i ? -1 : i;
+        if (bet >= 0 && stake === 0) stake = Math.min(S.D.clams, 20);
+        KA.A.play('blip');
+      }
+    });
+    // betting box
+    const bx = lw + 24, bw = KA.W - bx - 12;
+    KA.UI.panel(ctx, bx, 64, bw, 150, 'BOOKMAKER', { titleCol: P.gold });
+    if (bet < 0) {
+      T.block(ctx, 'Tap a racer to back them. Long odds mean nobody believes in them. Betting is optional.',
+        bx + 10, 102, P.dim, { size: 12, max: bw - 20, lh: 16 });
+    } else {
+      T.draw(ctx, 'ON: ' + field[bet].name, bx + 10, 100, P.text, { size: 14, weight: 800 });
+      T.draw(ctx, 'x' + odds[bet].toFixed(2) + '  ->  ' + U.fmt(Math.round(stake * odds[bet])) + 'c',
+        bx + 10, 118, P.gold, { size: 13, weight: 800 });
+      [10, 50, 250].forEach((s2, i) => {
+        if (KA.UI.button(ctx, bx + 10 + i * ((bw - 28) / 3 + 4), 138, (bw - 28) / 3, 26, '+' + s2,
+            { tone: 'dark', size: 12, disabled: stake + s2 > S.D.clams, id: 'st' + i })) stake += s2;
+      });
+      if (KA.UI.button(ctx, bx + 10, 170, (bw - 24) / 2, 26, 'CLEAR', { tone: 'red', size: 12 })) stake = 0;
+      if (KA.UI.button(ctx, bx + 16 + (bw - 24) / 2, 170, (bw - 24) / 2, 26, 'MAX', { tone: 'gold', size: 12 }))
+        stake = S.D.clams;
+      T.draw(ctx, 'STAKE ' + U.fmt(stake), bx + bw / 2, 200, P.text, { size: 13, align: 'center', weight: 900 });
+    }
+    const lvl = KA.Pet.level(S.active());
+    const why = lvl < T0.minLvl ? 'needs a level ' + T0.minLvl + ' mount'
+      : S.D.clams < T0.entry + stake ? 'not enough clams' : null;
+    if (KA.UI.button(ctx, bx, KA.H - 96, bw, 44, why ? 'CANNOT RACE' : 'START', { tone: why ? 'dark' : 'green',
+        size: 20, disabled: !!why, key: 'Enter', sub: why || (T0.entry + stake) + 'c total' })) begin();
+    if (KA.UI.button(ctx, bx, KA.H - 46, bw, 34, 'LEAVE', { tone: 'dark', size: 15, key: 'Escape' }))
+      KA.Game.go('world', {});
+    // tier switcher
+    KA.Races.TIERS.forEach((tr, i) => {
+      const w2 = lw / 5, lab = tr.name.split(' ')[0];
+      if (KA.UI.button(ctx, 12 + i * w2, KA.H - 44, w2 - 4, 32, lab,
+          { tone: tier === i ? 'gold' : 'dark', size: U.clamp((w2 - 10) / (lab.length * 0.58), 8, 11), id: 'tr' + i,
+            disabled: KA.Pet.level(S.active()) < tr.minLvl, sub: 'Lv' + tr.minLvl })) {
+        tier = i; build(); bet = -1; stake = 0;
+      }
+    });
+  }
   return { enter, update, draw };
 })();

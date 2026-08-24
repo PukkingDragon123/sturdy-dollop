@@ -1,85 +1,70 @@
 /* ============================================================
-   items.js - food, gear tiers, consumables.
+   items.js - weapons, beer, food, bait, tackle.
    ============================================================ */
-DZ.Items = (function () {
-  /* ---------------- FOOD ---------------- */
+KA.Items = (function () {
+  /* ---- weapons: the combat ladder ---- */
+  const WEAPONS = [
+    { id: 'stool',  name: 'Bar Stool',        cost: 0,     dmg: 7,  spd: 1.00, reach: 24, kb: 90,
+      col: '#a4713d', blurb: 'You woke up holding it. It is technically a weapon.' },
+    { id: 'bone',   name: 'Sharpened Bone',   cost: 140,   dmg: 12, spd: 1.10, reach: 26, kb: 100,
+      col: '#e8dcc0', blurb: 'Somebody else\'s. Do not ask whose.' },
+    { id: 'trident',name: 'Bronze Trident',   cost: 520,   dmg: 19, spd: 1.00, reach: 33, kb: 130,
+      col: '#c98f1c', blurb: 'Three points. Classic. Royalty-adjacent.' },
+    { id: 'halberd',name: 'Coral Halberd',    cost: 1800,  dmg: 29, spd: 0.85, reach: 40, kb: 190,
+      col: '#ff7fa8', blurb: 'Heavy, gorgeous, slightly alive.' },
+    { id: 'fork',   name: 'Kingsfork',        cost: 6000,  dmg: 42, spd: 1.15, reach: 36, kb: 165,
+      col: '#ffd24a', blurb: 'Your old cutlery. Turns out it was ceremonial.' },
+    { id: 'regalia',name: 'Poseidon\'s Regalia', cost: 19000, dmg: 62, spd: 1.30, reach: 44, kb: 240,
+      col: '#7fe8ff', blurb: 'Hums the national anthem when it hits things.' }
+  ];
+  const wById = {}; WEAPONS.forEach((w) => (wById[w.id] = w));
+
+  /* ---- beer: strength now, fat later. The whole tragedy. ---- */
+  const BEERS = [
+    { id: 'lager',   name: 'Reef Lager',      cost: 18,   dmg: 0.18, fat: 6,  dur: 45, col: '#ffb52e',
+      blurb: 'Cheap, wet, does the job. +18% damage.' },
+    { id: 'stout',   name: 'Trench Stout',    cost: 55,   dmg: 0.35, fat: 11, dur: 60, col: '#8a5a24',
+      blurb: 'Thick as tar. +35% damage. Regrettable.' },
+    { id: 'royal',   name: 'Royal Foam',      cost: 160,  dmg: 0.60, fat: 16, dur: 75, col: '#ffe08a',
+      blurb: 'What kings drank. +60% damage. Also what ruined one.' },
+    { id: 'keg',     name: 'Her Own Brew',    cost: 420,  dmg: 1.00, fat: 24, dur: 90, col: '#fff3d6',
+      blurb: 'Brewed by the Princess herself. +100% damage. You will feel it tomorrow.' }
+  ];
+  const bById = {}; BEERS.forEach((b) => (bById[b.id] = b));
+
+  /* ---- pet food: bought, or use raw fish ---- */
   const FOOD = [
-    { id: 'pellet', name: 'Kelp Pellets', cost: 6, exp: 1.0, sprite: 'kelpbulb', col: '#40d492',
-      traitChance: 0.02, blurb: 'Technically food. Legally food.' },
-    { id: 'chow', name: 'Fish Chow', cost: 18, exp: 1.35, sprite: 'bucket', col: '#8fa6b5',
-      traitChance: 0.05, blurb: 'Smells like a crime but they love it.' },
-    { id: 'krill', name: 'Premium Krill', cost: 48, exp: 1.8, sprite: 'prawn', col: '#ffc2a8',
-      traitChance: 0.10, blurb: 'Tiny shrimp, huge gains.' },
-    { id: 'roe', name: 'Golden Roe', cost: 130, exp: 2.6, sprite: 'coin', col: '#ffd24a',
-      traitChance: 0.18, stat: 'any', blurb: 'Eggs of unclear origin. Very shiny.' },
-    { id: 'chum', name: 'Cursed Chum', cost: 90, exp: 2.0, sprite: 'skull', col: '#a86bff',
-      traitChance: 0.22, corrupt: 12, blurb: 'Feeds the body. Ruins the soul. +CORRUPTION.' },
-    { id: 'ambrosia', name: 'Atlantean Ambrosia', cost: 420, exp: 4.0, sprite: 'star', col: '#7ff0ff',
-      traitChance: 0.30, stat: 'any', blurb: 'Poseidon\'s leftovers. Still good.' }
+    { id: 'pellets', name: 'Kelp Pellets',  cost: 8,   exp: 12,  col: '#3fd18b', blurb: 'Technically food.' },
+    { id: 'chow',    name: 'Fish Chow',     cost: 26,  exp: 34,  col: '#9dc4d6', blurb: 'Smells like a crime.' },
+    { id: 'krill',   name: 'Premium Krill', cost: 74,  exp: 78,  col: '#ffc2a8', blurb: 'Tiny shrimp, huge gains.' },
+    { id: 'roe',     name: 'Golden Roe',    cost: 210, exp: 190, col: '#ffd24a', blurb: 'Shiny. Probably illegal.' }
   ];
+  const fById = {}; FOOD.forEach((f) => (fById[f.id] = f));
 
-  /* ---------------- GEAR ---------------- */
-  /* every tier lists what it does in plain numbers; the reef reads these */
-  const GEAR = {
-    spear: { name: 'Spear', icon: 'spear', blurb: 'Kills fish. The main event.', tiers: [
-      { name: 'Sharp Stick',     cost: 0,    dmg: 1, speed: 230, reload: 0.50, assist: 16, blurb: 'It is a stick. It is sharp.' },
-      { name: 'Bone Spear',      cost: 140,  dmg: 2, speed: 270, reload: 0.44, assist: 18, blurb: 'Someone else\'s bone.' },
-      { name: 'Bronze Trident',  cost: 620,  dmg: 3, speed: 310, reload: 0.38, assist: 21, blurb: 'Three points, triple the smug.' },
-      { name: 'Atlantean Lance', cost: 2400, dmg: 5, speed: 360, reload: 0.31, assist: 25, blurb: 'Hums when a fish is near. Homing-ish.' },
-      { name: 'Void Fork',       cost: 9000, dmg: 8, speed: 430, reload: 0.24, assist: 32, pierce: true, blurb: 'Pierces fish AND the concept of fish.' }
-    ]},
-    net: { name: 'Net', icon: 'netring', blurb: 'Catches fish ALIVE - worth more, better EXP.', tiers: [
-      { name: 'Old Sock',        cost: 0,    radius: 21, live: 0.35, reload: 0.85, blurb: 'Holds one fish and a lot of shame.' },
-      { name: 'Kelp Net',        cost: 180,  radius: 27, live: 0.55, reload: 0.76, blurb: 'Woven by a guy named Doug.' },
-      { name: 'Wide Net',        cost: 700,  radius: 34, live: 0.72, reload: 0.66, blurb: 'Wide. Netty.' },
-      { name: 'Vortex Net',      cost: 2900, radius: 43, live: 0.88, reload: 0.54, pull: 70, blurb: 'Sucks fish in. They hate it.' },
-      { name: 'Singularity Sock',cost: 11000,radius: 56, live: 1.00, reload: 0.42, pull: 130, blurb: 'A sock, but cosmic.' }
-    ]},
-    fins: { name: 'Fins', icon: 'bolt', blurb: 'Swim speed and dash power.', tiers: [
-      { name: 'Bare Feet',       cost: 0,    thrust: 1.00, dash: 1.00, blurb: 'Free. Feels illegal.' },
-      { name: 'Rubber Fins',     cost: 120,  thrust: 1.18, dash: 1.10, blurb: 'Squeaky but effective.' },
-      { name: 'Turbo Fins',      cost: 560,  thrust: 1.38, dash: 1.28, blurb: 'Slight risk of takeoff.' },
-      { name: 'Hydro Jets',      cost: 2200, thrust: 1.62, dash: 1.55, blurb: 'Actual jets. On your feet.' },
-      { name: 'Poseidon Boots',  cost: 8600, thrust: 1.95, dash: 1.9,  blurb: 'The sea moves for you.' }
-    ]},
-    tank: { name: 'Air Tank', icon: 'heart', blurb: 'How long you can stay down.', tiers: [
-      { name: 'Big Lungs',       cost: 0,    air: 46,  blurb: 'You just hold your breath. Bold.' },
-      { name: 'Dented Tank',     cost: 150,  air: 66,  blurb: 'Hisses. Probably fine.' },
-      { name: 'Proper Tank',     cost: 640,  air: 92,  blurb: 'Certified by nobody.' },
-      { name: 'Twin Tanks',      cost: 2500, air: 128, blurb: 'Twice the tank, twice the tank.' },
-      { name: 'Gill Grafts',     cost: 9400, air: 180, blurb: 'You are basically a fish now. Legally unclear.' }
-    ]},
-    bag: { name: 'Fish Bag', icon: 'bucket', blurb: 'How many fish you can haul per dive.', tiers: [
-      { name: 'Pockets',         cost: 0,    cap: 12,  blurb: 'Wet pockets.' },
-      { name: 'Bucket',          cost: 100,  cap: 22,  blurb: 'Classic.' },
-      { name: 'Kelp Crate',      cost: 480,  cap: 38,  blurb: 'Smells like commitment.' },
-      { name: 'Trawler Sack',    cost: 1900, cap: 60,  blurb: 'Industrial. Slightly evil.' },
-      { name: 'Bag of Holding',  cost: 7800, cap: 120, blurb: 'Do not look inside.' }
-    ]}
-  };
-
-  /* ---------------- CONSUMABLES ---------------- */
-  const USE = [
-    { id: 'sonar', name: 'Sonar Ping', cost: 70, sprite: 'exporb', col: '#7ff0ff',
-      blurb: 'Next dive: rare fish are 3x more likely. Loud.' },
-    { id: 'fizz', name: 'Fizzy Kelp Cola', cost: 45, sprite: 'kelpbulb', col: '#c8ff4a',
-      blurb: 'Next dive: +30% air and slightly jittery.' },
-    { id: 'clover', name: 'Lucky Clam', cost: 110, sprite: 'clam_shell', col: '#ff9ed2',
-      blurb: 'Next race: your dolphin gets +8 LUCK.' },
-    { id: 'whistle', name: 'Rally Whistle', cost: 150, sprite: 'star', col: '#ffd24a',
-      blurb: 'Next race: infinite surge for the first 3 seconds.' }
+  /* ---- tackle: makes the spear easier to aim and land ---- */
+  const TACKLE = [
+    { id: 'stick',  name: 'Pointy Stick',  cost: 0,    power: 1.00, window: 1.00, blurb: 'Wobbles in flight.' },
+    { id: 'barb',   name: 'Barbed Spear',  cost: 180,  power: 1.15, window: 1.20, blurb: 'Fish struggle less.' },
+    { id: 'harpoon',name: 'Hand Harpoon',  cost: 700,  power: 1.30, window: 1.45, blurb: 'Proper kit at last.' },
+    { id: 'coil',   name: 'Coilgun Spear', cost: 2600, power: 1.55, window: 1.75, blurb: 'Fires itself. Alarming.' }
   ];
+  const tById = {}; TACKLE.forEach((t) => (tById[t.id] = t));
 
-  const foodById = {}; FOOD.forEach((f) => (foodById[f.id] = f));
-  const useById = {}; USE.forEach((u) => (useById[u.id] = u));
+  /* ---- the fish you catch: food, money, and pet favourites ---- */
+  const FISH = [
+    { id: 'shrimp',   name: 'Shrimp',        value: 6,   exp: 14,  depth: 0, fight: 0.5, col: '#ffc2a8' },
+    { id: 'anemone',  name: 'Anemone Blob',  value: 11,  exp: 20,  depth: 0, fight: 0.6, col: '#a86bff' },
+    { id: 'sardine',  name: 'Sardine',       value: 14,  exp: 26,  depth: 1, fight: 0.8, col: '#cfe0ee' },
+    { id: 'clam',     name: 'Fat Clam',      value: 22,  exp: 30,  depth: 0, fight: 0.4, col: '#f6d7e8' },
+    { id: 'mackerel', name: 'Mackerel',      value: 34,  exp: 48,  depth: 1, fight: 1.1, col: '#7fc4a8' },
+    { id: 'squid',    name: 'Squid',         value: 52,  exp: 66,  depth: 2, fight: 1.4, col: '#ff9ed2' },
+    { id: 'krill',    name: 'Krill Cloud',   value: 40,  exp: 90,  depth: 2, fight: 0.7, col: '#ffd9c2' },
+    { id: 'grouper',  name: 'Grumpy Grouper',value: 90,  exp: 120, depth: 2, fight: 1.9, col: '#8f6f4a' },
+    { id: 'tunafish', name: 'Small Tuna',    value: 140, exp: 170, depth: 3, fight: 2.3, col: '#4d7fc4' },
+    { id: 'goldfish', name: 'Golden Snapper',value: 320, exp: 260, depth: 3, fight: 2.8, col: '#ffd24a' },
+    { id: 'void',     name: 'Trench Thing',  value: 620, exp: 420, depth: 4, fight: 3.4, col: '#a86bff' }
+  ];
+  const fishById = {}; FISH.forEach((f) => (fishById[f.id] = f));
 
-  function gearTier(kind, lvl) {
-    const g = GEAR[kind];
-    return g.tiers[DZ.Util.clamp(lvl, 0, g.tiers.length - 1)];
-  }
-  function gearNext(kind, lvl) {
-    const g = GEAR[kind];
-    return lvl + 1 < g.tiers.length ? g.tiers[lvl + 1] : null;
-  }
-  return { FOOD, GEAR, USE, foodById, useById, gearTier, gearNext };
+  return { WEAPONS, wById, BEERS, bById, FOOD, fById, TACKLE, tById, FISH, fishById };
 })();

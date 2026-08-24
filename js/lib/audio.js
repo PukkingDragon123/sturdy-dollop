@@ -2,7 +2,7 @@
    audio.js - 100% procedural WebAudio. No files, no loading.
    Bloops, chomps, splashes, coins plus a lazy underwater arpeggio.
    ============================================================ */
-DZ.Audio = (function () {
+KA.A = (function () {
   let ctx = null, master = null, musicGain = null, sfxGain = null;
   let muted = false, noiseBuf = null;
   let started = false;
@@ -97,7 +97,18 @@ DZ.Audio = (function () {
     swoosh:   () => noise(0.16, { freq: 900, to: 2400, vol: 0.09, q: 1 }),
     slap:     () => { noise(0.12, { freq: 400, to: 120, vol: 0.22, q: 0.5 }); tone(150, 0.1, { vol: 0.12, to: 70, type: 'square' }); },
     sonar:    () => { tone(1500, 0.5, { vol: 0.1, to: 400, type: 'sine' }); tone(750, 0.5, { vol: 0.06, delay: 0.1, to: 300, type: 'sine' }); },
-    error:    () => { tone(160, 0.18, { vol: 0.15, type: 'square', to: 100 }); }
+    error:    () => { tone(160, 0.18, { vol: 0.15, type: 'square', to: 100 }); },
+    /* new cues for the remake */
+    gulp:     () => { tone(220, 0.10, { vol: 0.16, type: 'sine', to: 90 }); noise(0.12, { freq: 500, to: 180, vol: 0.1 }); },
+    burp:     () => { tone(120, 0.28, { vol: 0.18, type: 'sawtooth', to: 60, filter: 500 }); },
+    clash:    () => { noise(0.16, { freq: 3200, to: 900, vol: 0.2, q: 1.4 }); tone(700, 0.1, { vol: 0.1, to: 280, type: 'square' }); },
+    charge:   () => { tone(260, 0.5, { vol: 0.07, to: 900, type: 'triangle' }); },
+    reel:     () => { noise(0.08, { freq: 1500, to: 900, vol: 0.09, q: 2 }); },
+    roll:     () => { for (let i = 0; i < 6; i++) tone(500 + i * 90, 0.05, { vol: 0.08, delay: i * 0.055, type: 'square' }); },
+    jackpot:  () => { [523, 659, 784, 1046, 1318, 1568].forEach((f, i) => tone(f, 0.2, { vol: 0.13, delay: i * 0.075, type: 'square' })); },
+    step:     () => { noise(0.06, { freq: 320, to: 160, vol: 0.06, q: 1 }); },
+    door:     () => { tone(180, 0.18, { vol: 0.12, type: 'triangle', to: 300 }); noise(0.14, { freq: 700, to: 300, vol: 0.08 }); },
+    hurt:     () => { tone(300, 0.16, { vol: 0.18, type: 'sawtooth', to: 120 }); noise(0.14, { freq: 900, to: 250, vol: 0.14 }); }
   };
 
   function play(name) {

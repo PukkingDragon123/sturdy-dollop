@@ -1,179 +1,152 @@
-# Dolphin Ranch: Tides of Atlantis
+# King of Atlantic
 
-A goofy 2D dolphin-raising game. You are **AQUADUDE**, a discount superhero with
-a trident, an orange scale vest and an unreasonable rear end. Fly the trident
-across an ocean overworld, sweet-talk your way past the harbour police, hunt
-fish in the ruins of Atlantis, feed them to your dolphins, level those dolphins
-into skill-tree monsters, race them for money, bet on the results, and — when
-the ranch is going well — build a vat and make one of them evil.
+A goofy side-scrolling underwater RPG that runs in a browser. No build step, no
+dependencies, no pixel art — every fish, coral, tankard and royal belly is drawn
+with vector paths and gradients at runtime.
 
-No engine, no build step, no asset files. Characters are **procedurally
-animated rigs** (springs, verlet chains, 2-bone IK) drawn as flat chunky shapes;
-props are pixel strings in source; every sound is synthesised in WebAudio. The
-whole game is an `index.html` you can open.
+> You were KING OF THE ATLANTIC. Then you met her: a beer keg in a little dress
+> with a crooked tiara. You got fat, you lost the battle, and somebody walked off
+> with your crown in five pieces. Time to earn some clams, buy some beer, and take
+> it back.
 
-```
-open index.html          # that's it
-# or, if your browser is fussy about file://
-npm start                # python3 -m http.server 8080  ->  localhost:8080
-```
+**Play it:** open `index.html` in any modern browser. Works straight off the
+filesystem (`file://`) — classic `<script>` tags, no modules, no server needed.
+Or run `npm start` for a local web server on port 8080.
+
+---
 
 ## The loop
 
-1. **TRAVEL** — press M and ride your trident like a broom across a 2600×1500
-   stretch of ocean. Nine landmarks: your ranch, four dive zones, a racetrack,
-   the Atlantis capital, a market town and a very illegal trench bazaar. Most
-   start locked, with somebody standing in front of them — a kelp cultist, a
-   bookmaker, a Lord, a prophet, and two officers of the Atlantis Harbour Patrol
-   who will absolutely take a bribe.
-2. **DIVE** — swim, spear fish, scoop them with a net. Momentum swimming with
-   real water drag, a dash, spear physics with aim assist, fish that school,
-   flee, chase and bite back. Fill your bag before your air runs out.
-3. **FEED** — fish become EXP. EXP becomes levels. Levels become skill points.
-   Live-netted fish are worth more than speared ones.
-4. **SKILLS** — spend points across four branches (Current / Blubber / Flair /
-   Abyss). Stat nodes make your dolphin faster; ability nodes unlock things you
-   fire mid-race.
-5. **RACE** — pick a tier, pick a runner, and bet on any dolphin in the field
-   including your own. Hold SPACE to surge, 1/2/3 for abilities. The pack
-   drafts and shoves, and there are photo finishes.
-6. **SPEND** — sell fish at the market, upgrade gear, build the ranch, hire
-   staff, breed the next generation, corrupt a dolphin, take quests.
-7. **SLEEP** — NEXT DAY runs the sim: staff work, dolphins train, the market
-   moves, calves are born, corruption spreads, new quests appear.
+1. **Spear fish** at fishing spots. Charge the throw on an oscillating power
+   meter, land the spear, then win the tug-of-war before the line snaps.
+2. **Sell the catch** at Bait & Tackle for clams, or keep it to feed your mount.
+3. **Feed your mount** in the feeding minigame — tip your whole larder into the
+   water and swim around catching it. Chain catches for a combo multiplier. Do
+   not catch the boot.
+4. **Gamble the level-up.** Mounts do not have a skill tree. Every level gives
+   you a token, and a token buys one pull on the ROLLING MACHINE: pick a stat
+   category, pull, and pray. DUD to LEGENDARY. DOUBLE DOWN doubles the payout or
+   busts the whole token.
+5. **Race.** Five cups from the Puddle Cup to the Atlantic Grand. Bet on your own
+   mount or against it. Rivals are seeded partly off your own power, so a bad
+   roll really is a bad race.
+6. **Fight, drink, upgrade.** Better weapons, better spears, better food, better
+   mounts, and beer that buffs your damage while it makes you fatter and slower.
+7. **Recover five crown fragments** and take the throne back off Baron Foamhelm.
+
+## Mounts
+
+Seven species, a real ladder rather than palette swaps — some walk the seabed,
+some only swim, all of them are ridable.
+
+| # | Mount | Clams | Notes |
+|---|-------|-------|-------|
+| 0 | Sea Horse | free | Starter. Tiny, upright, curls its tail when it idles. |
+| 1 | Clownfish | 380 | Fast and flappy, no stamina to speak of. |
+| 2 | War Crab | 1,250 | Walks. Eight legs, two claws, zero grace. |
+| 3 | Bluefin Tuna | 4,200 | The first mount that actually feels like a vehicle. |
+| 4 | Dolphin | 12,000 | Anatomical: melon, blowhole, falcate dorsal, notched flukes. |
+| 5 | Swordfish | 34,000 | A rapier with fins. |
+| 6 | Whale | 90,000 | Slow, unstoppable, enormous. |
+
+Each mount has speed / stamina / power / grace / luck, gains EXP from food and
+races, and can pick up traits (Zoomy, Well Fed, Grumpy, Royal Blood...) from
+LEGENDARY rolls.
+
+## Places
+
+Seven outdoor areas — **Home Shallows, Coral Village, Seahorse Meadow, Crab
+Flats, Sunken Colonnade, The Beer Trench, Throne of Atlantic** — connected by
+side-scrolling travel, each darker and meaner than the last. Six interiors —
+**Your Shack, Bait & Tackle, The Foamy Keg, The Stable, The Armoury, Race
+Office** — every one hand-decorated with its own walls, floor, lamps, bunting,
+portholes and clutter.
+
+Fourteen NPC kinds live out there, including a gull who has opinions, a guard in
+a police cap and shades, a hermit crab with a grudge, and the Princess herself
+(still a beer keg, still in the dress).
+
+## Combat and gear
+
+Six weapon tiers, each with its own silhouette, damage, swing speed, reach and
+knockback: **Bar Stool → Sharpened Bone → Bronze Trident → Coral Halberd →
+Kingsfork → Poseidon's Regalia.** Six enemy kinds from reef crawlers up to the
+Baron, with drops. Four beers that trade damage buff against fat, and fat is a
+real stat: it slows you down until you burn it off swimming and swinging.
 
 ## Controls
 
-| | |
-|---|---|
-| WASD / arrows | swim / fly |
-| mouse | aim |
-| left click | throw spear |
-| right click / E | net (catches fish **alive** — worth more) |
-| SPACE | dash (diving) / boost (map) / surge (racing) |
-| E | enter a place or talk to whoever is guarding it |
-| 1 / 2 / 3 | race abilities |
-| ESC | back / surface |
-| M | world map &nbsp;•&nbsp; F feed &nbsp;•&nbsp; T skills &nbsp;•&nbsp; R dive &nbsp;•&nbsp; N next day &nbsp;•&nbsp; Q/E swap dolphin |
-| F1 | mute &nbsp;•&nbsp; F2 rig test &nbsp;•&nbsp; F3 fps |
+**Keyboard**
 
-The game saves itself to `localStorage` after anything important.
+| Key | Action |
+|-----|--------|
+| `WASD` / arrows | walk the seabed, swim the water column |
+| `Space` / `K` | jump, or rise while swimming |
+| `J` / `Z` / click | attack |
+| `L` / `X` | dash |
+| `F` | mount / dismount |
+| `E` / `Enter` | talk, doors, fishing spots, shop counters |
+| `M` | mount screen (feed, roll, race) |
+| `Esc` | pause / kingdom summary |
+| `F2` | rig test scene |
 
-## Characters
+**Touch** — detected automatically. A virtual joystick claims the left half of
+the screen, and labelled buttons (`HIT`, `UP`, `USE`, `DSH`, `RIDE`) sit on the
+right, relabelled per scene. Every scene defines its own button set, so fishing
+gets `THROW`, the race gets `SURGE` / `HOP`, and so on. Portrait phones get a
+"rotate me" nag.
 
-Nothing is keyframed. Every character is a rig fed by real motion:
+---
 
-**Aquadude** — flat chunky body in the toy-3D style (flat fills with a darker
-extruded side face, no outlines). Blonde hair on a 5-link verlet chain that
-streams in the current, 2-bone IK arms and legs that flutter-kick when
-swimming, straddle the trident when flying and plant when standing. The butt is
-two ellipses on independent 2D springs fed his actual acceleration plus a
-rhythmic kick from the leg cycle, so it lags, overshoots, squashes and never
-quite agrees with itself. This was a requirement.
+## How it is built
 
-**Dolphins** — everything placed by fraction of body length from the tip of the
-rostrum, on real bottlenose landmarks: eye at 0.145, blowhole at 0.175,
-pectoral base at 0.26, falcate dorsal at 0.38–0.54, peduncle at 0.86, notched
-flukes at 1.0. The body is a smooth loft over a non-uniform spine so the beak
-stays slim while the melon bulges; countershading gives a dark dorsal cape, a
-pale belly and the flank hourglass. Locomotion is a travelling wave whose
-amplitude grows toward the tail, which is how they actually swim, and the
-horizontal fluke blade tilts with the stroke. The face is deliberately idiotic:
-a googly eye with its own wobble, a raised eyebrow, a permanently gormless open
-jaw with a tongue.
-
-**Fish** — one loft function plus a shape table covers 19 species: slim, oval,
-long, round, puffer (with spines) and eel bodies with wiggling tails and
-flapping pectorals, plus special rigs for squid (six chain tentacles), jellies
-(pulsing bell), crabs (eight walking legs and snapping claws) and prawns.
-
-**NPCs** — flat townsfolk who breathe, blink, look around and flap their jaws
-when talking. The Atlantis Harbour Patrol get navy uniforms, peaked caps with a
-gold badge, dark shades, a duty belt and folded arms.
-
-## Systems
-
-**Dolphins** have six stats (SPD/STA/BRST/AGI/CHM/LCK), a palette, 1–4 traits,
-a skill tree, a corruption meter, a mood and a family tree. Charm is the sly
-one: it shortens your betting odds, so a beloved dolphin pays worse than a
-hated one.
-
-**Fish** — 19 species across four depth zones (Sunny Shallows, Kelp Forest,
-Sunken Colonnade, The Abyss), each with its own AI behaviour (school, skittish,
-chase, bottom, drift) and flags (armoured, aggressive, stinging, glowing,
-cursed). Deeper water needs a better air tank. Cursed fish feed the vat.
-
-**Gary** is a shark. He shows up mid-dive, steals fish out of your bag, and
-drops a valuable tooth if you spear him five times.
-
-**Places** — nine landmarks, each with an unlock condition checked when you talk
-to whoever is guarding it: say the magic words to a kelp cultist, meet the
-bookmaker, buy a heritage permit for 400 clams *or* three Marble Snappers,
-prove a level 8 dolphin to a Lord, own Twin Tanks before the trench prophet
-will let you down, and donate 1200 clams to Sergeant Sludge's "police social
-fund". Dive zones need both the right air tank *and* their unlock.
-
-**Evil** — the Abyssal Vat corrupts a dolphin over a few nights (or instantly
-with enough cursed chum). Evil dolphins get +SPD/+BRST/+STA, lose charm, unlock
-the Abyss skill branch, and wear a tiny top hat and moustache. Non-negotiable.
-
-**Breeding** averages the parents' stats, mutates them, mixes traits, and can
-roll rare morphs (ATLANTEAN GOLD, RADIOACTIVE LIME). Level 4 lagoon: twins.
-
-**Staff** — deckhands fish while you sleep, trainers grant daily EXP, groomers
-add charm, hype fish improve bet payouts, and a shady dealer sells your catch
-for more and occasionally leaves a cursed eel in your bucket.
-
-## Code layout
+Vanilla JS, one canvas, one global namespace (`KA`), 31 files loaded in order by
+`index.html`.
 
 ```
-index.html            script tags, in load order
-css/style.css         page chrome (the game itself is all canvas)
-js/lib/               engine: util, text, pixel, input, audio, fx, ui, water,
-                      rig (springs / chains / IK / flat shapes), dialog
-js/rigs/              the procedurally animated cast: dolphin, hero, fish, npc
-js/sprites/           props and UI icons, as pixel strings + palettes
-js/data/              species, items/gear, skills, ranch upgrades, quests,
-                      races, places (the world map)
-js/model/             dolphin behaviour + save state and the day cycle
-js/scenes/            title, worldmap, ranch, reef, dolphinview, shop, market,
-                      breed, staff, questboard, vat, racelobby, race, rigtest
-js/game.js            scene manager, main loop, shared HUD
-tools/                dev helpers (sprite previewer, smoke/persist/balance runs)
+index.html            script list, viewport, favicon
+css/style.css         page chrome, touch-action guards
+js/lib/               engine
+  core.js             KA namespace, design-space sizing, math/random helpers
+  draw.js             vector primitives: gradients, blobs, ribbons, capsules
+  text.js             real font stack, wrapping, blocks
+  input.js            keyboard, mouse, touch pad + named buttons
+  audio.js            WebAudio blips, no asset files
+  fx.js               particles, shake, hitstop, flash, camera
+  rig.js              springs, soft bodies, verlet chains, 2-bone IK, body loft
+  ui.js               palette, buttons, panels, bars, tabs, scroll, toasts
+  dialog.js           typed dialogue with live animated portraits
+js/data/              content tables: pets, items, rolls, areas, npcs, quests, races
+js/model/             pet.js (levels, EXP, rolls), state.js (save, money, hp, fat, beer)
+js/rigs/              king.js, pets.js (7 species), sea.js (props/creatures), folk.js (NPCs)
+js/scenes/            menus, world, shop, petview, fishing, feeding, race, rigtest
+js/game.js            responsive fit, scene manager, main loop, HUD
+tools/                check.js (parse + load audit), smoke.js (headless driver)
 ```
 
-Scenes lay out in a 400×225 "design space" and everything is drawn through one
-global ×2 transform, so the real canvas is 800×450 and shapes and text render at
-full native resolution without a single layout needing to change. Pixel props
-keep `imageSmoothingEnabled = false` and land on exact 2×2 blocks; character
-rigs are anti-aliased paths, so they gain the extra resolution. Text is system
-monospace baked at native size, alpha-thresholded to kill anti-aliasing, cached,
-and blitted in device space — a bitmap font without shipping font data.
+**Design space.** The game renders into a fixed 360px-tall space whose width
+follows the window aspect (clamped 460–980), then scales up by
+`devicePixelRatio`. One layout, sharp on a phone and on a 4K monitor.
 
-Press **F2** anywhere for the rig test scene: every character large, with a
-speed toggle, for tuning the animation.
+**Procedural animation.** Nothing is a sprite. Characters are built from scalar
+springs, 2D soft bodies, verlet chains and two-bone IK over a travelling-wave
+spine, so the king's cape trails, his belly wobbles, his feet plant where the
+IK actually lands, and every mount's fins and tail are driven by the same wave
+that moves its body. Anatomy is placed by fraction of body length, which is why
+the dolphin reads as a dolphin.
 
-### Dev tools
+**Saving.** localStorage, key `kingofatlantic.save.v1`. START OVER wipes it.
 
-```
-npm run check                # syntax-check every source; verify index.html loads them all
-node tools/showsprites.js    # ASCII-dump sprite art in the terminal (optional name filter)
-node tools/smoke.js          # headless Chromium: drives the game through tools/script.json,
-                             # screenshots each scene to tools/shots, fails on console errors
-node tools/persist.js        # verifies the save survives a reload, and that file:// boots
-node tools/balance.js        # drives the real model for 25 in-game days and prints the
-                             # progression table (clams / level / zone / race placings)
+## Dev tools
+
+```bash
+npm run check                  # every js file parses and is listed in index.html
+node tools/smoke.js my.json    # headless Chromium: drive the game, screenshot, fail on console errors
+MOBILE=1 node tools/smoke.js my.json   # same, in touch emulation at 844x390
 ```
 
-The browser tools need `npm i -D playwright`. If the bundled Chromium version
-does not match, point at it explicitly:
-`PW_EXEC=/opt/pw-browsers/chromium-*/chrome-linux/chrome node tools/smoke.js`
-
-### Balance notes
-
-Race fields are generated per tier by anchoring rival power 70% to your own
-dolphin and 30% to an absolute per-tier difficulty (`DZ.Races.TIER_POWER`). That
-keeps every race close enough to be decided by surging and ability timing, while
-still punishing you for entering the Poseidon Trophy with a level 20 pup —
-which is what makes stat investment mean anything. Fourth place refunds roughly
-the entry fee, so a competent race is never a pure loss.
+A smoke script is a JSON array of ops: `["shot","name"]`, `["click",x,y]`,
+`["tap",x,y]`, `["drag",x0,y0,x1,y1,ms]`, `["key","KeyE"]`,
+`["hold","Space",ms]`, `["wait",ms]`, `["eval","expr"]`. Coordinates are in
+design space; the driver reads `KA.W` from the page and scales for you.
+Screenshots land in `tools/shots/`.

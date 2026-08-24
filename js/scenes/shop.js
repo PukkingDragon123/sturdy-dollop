@@ -1,157 +1,170 @@
 /* ============================================================
-   shop.js - Gear Shed: gear tiers, ranch buildings, supplies.
+   shop.js - one screen for every counter in the game.
    ============================================================ */
-DZ.Scenes.shop = (function () {
-  const U = DZ.Util, Px = DZ.Pixel, T = DZ.Text, PAL = DZ.PAL;
-  const TABS = ['GEAR', 'RANCH', 'SUPPLIES'];
-  let tab = 0, t = 0;
+KA.Scenes.shop = (function () {
+  const U = KA.U, D = KA.D, T = KA.T, P = KA.PAL, S = KA.S;
+  let kind = 'bait', tab = 0, def = null;
 
-  function enter(args) { t = 0; if (args && args.tab !== undefined) tab = args.tab; }
-  function update(dt) { t += dt; DZ.Water.tick(dt); }
+  function enter(args) {
+    kind = (args && args.shop) || 'bait';
+    if (!KA.NPCs.SHOPS[kind]) kind = 'bait';       // never brick on a bad counter
+    def = KA.NPCs.SHOPS[kind];
+    tab = 0;
+    KA.UI.resetScroll('shop');
+  }
+  function update(dt) {
+    if (KA.In.isPressed('Escape')) KA.Game.go('world', {});
+  }
 
   function draw(ctx) {
-    const S = DZ.State.S;
-    Px.vgrad(ctx, 0, 0, DZ.W, DZ.H, '#0b3552', '#04121f', 10);
-    DZ.Water.shafts(ctx, 4, 0.05);
-    DZ.Water.marineSnow(ctx, 0, 0, 1 / 60);
-    DZ.Game.topbar(ctx, { title: 'GEAR SHED' });
-    TABS.forEach((tb, i) => {
-      if (DZ.UI.button(ctx, 4 + i * 68, 17, 66, 13, tb, { tone: tab === i ? 'gold' : 'dark', size: 8, bold: tab === i }))
-        { tab = i; DZ.UI.resetScroll('shopranch'); DZ.UI.resetScroll('shopsup'); }
-    });
-    T.draw(ctx, 'Doug\'s Gear Shed - "no refunds, no questions"', DZ.W - 6, 20, PAL.dim2, { size: 7, align: 'right' });
-    if (tab === 0) gear(ctx, S);
-    else if (tab === 1) ranch(ctx, S);
-    else supplies(ctx, S);
-  }
+    D.rect(ctx, 0, 0, KA.W, KA.H, D.vgrad(ctx, 0, 0, 0, KA.H, [[0, '#0f3247'], [1, '#04121d']], 'shopbg'));
+    ctx.globalAlpha = 0.2;
+    for (let i = 0; i < 5; i++) D.circle(ctx, (i * 197 + 60) % KA.W, 50 + i * 60, 70, '#154a66');
+    ctx.globalAlpha = 1;
+    // keeper portrait
+    const kd = KA.NPCs.DEF[def.keeper];
+    D.rr(ctx, 8, 40, 104, KA.H - 90, 12, 'rgba(4,18,29,.6)');
+    ctx.save();
+    ctx.beginPath(); D.rr(ctx, 8, 40, 104, KA.H - 90, 12, null); ctx.clip();
+    KA.Rig.folk.draw(ctx, 60, KA.H - 60, { scale: kd.kind === 'keg' ? 1.5 : 2.1, kind: kd.kind, tag: 'shop' + def.keeper });
+    ctx.restore();
+    T.draw(ctx, kd.name, 60, KA.H - 46, kd.col, { size: 12, align: 'center', weight: 800 });
+    T.draw(ctx, def.title, 124, 12, P.gold, { size: 20, weight: 900, shadow: true });
+    T.draw(ctx, U.fmt(S.D.clams) + ' clams', KA.W - 12, 14, P.gold, { size: 16, align: 'right', weight: 800 });
 
-  /* ---------------- gear ---------------- */
-  function gear(ctx, S) {
-    const kinds = ['spear', 'net', 'fins', 'tank', 'bag'];
-    kinds.forEach((k, i) => {
-      const G = DZ.Items.GEAR[k];
-      const lvl = S.gear[k];
-      const cur = DZ.Items.gearTier(k, lvl);
-      const nxt = DZ.Items.gearNext(k, lvl);
-      const y = 34 + i * 37, x = 4, w = DZ.W - 8, h = 35;
-      Px.rect(ctx, x, y, w, h, i % 2 ? '#072335' : '#08283c');
-      Px.frame(ctx, x, y, w, h, '#123246');
-      Px.draw(ctx, G.icon, x + 5, y + 4, { scale: 2 });
-      T.draw(ctx, G.name.toUpperCase(), x + 30, y + 3, PAL.cyan, { size: 8, bold: true });
-      T.draw(ctx, G.blurb, x + 30, y + 12, PAL.dim, { size: 7 });
-      // tier pips
-      for (let p = 0; p < G.tiers.length; p++) {
-        Px.rect(ctx, x + 30 + p * 7, y + 22, 5, 5, p <= lvl ? PAL.gold : '#153a52');
-      }
-      T.draw(ctx, cur.name, x + 30 + G.tiers.length * 7 + 6, y + 21, PAL.text, { size: 7 });
-      T.draw(ctx, statLine(k, cur), x + 178, y + 3, PAL.kelp, { size: 7 });
-      if (nxt) {
-        T.draw(ctx, '-> ' + nxt.name, x + 178, y + 12, PAL.gold, { size: 7 });
-        T.draw(ctx, statLine(k, nxt), x + 178, y + 21, PAL.cyan, { size: 7 });
-        const can = S.clams >= nxt.cost;
-        if (DZ.UI.button(ctx, x + w - 74, y + 6, 68, 22, U.fmt(nxt.cost) + ' CLAMS',
-            { tone: can ? 'gold' : 'dark', size: 8, disabled: !can, sub: 'UPGRADE', tip: nxt.blurb })) {
-          if (DZ.State.spend(nxt.cost)) {
-            S.gear[k]++;
-            if (k === 'tank') S.unlockedZone = Math.min(3, S.gear.tank);
-            DZ.Audio.play('cash');
-            DZ.FX.burst(x + w - 40, y + 17, 16, { col: [PAL.gold, '#ffffff'], speed: 90, screen: true });
-            DZ.State.toast('Bought ' + nxt.name + '!', PAL.gold);
-            DZ.State.event('gear', {});
-            DZ.State.save();
-          }
-        }
-      } else {
-        T.draw(ctx, 'MAXED OUT', x + w - 40, y + 14, PAL.gold, { size: 8, align: 'center', bold: true });
-      }
-    });
-  }
-  function statLine(k, tier) {
-    if (k === 'spear') return 'dmg ' + tier.dmg + '  spd ' + tier.speed + '  cd ' + tier.reload.toFixed(2) + 's' + (tier.pierce ? '  PIERCE' : '');
-    if (k === 'net') return 'r' + tier.radius + '  live ' + Math.round(tier.live * 100) + '%  cd ' + tier.reload.toFixed(2) + 's' + (tier.pull ? '  PULL' : '');
-    if (k === 'fins') return 'thrust x' + tier.thrust.toFixed(2) + '  dash x' + tier.dash.toFixed(2);
-    if (k === 'tank') return tier.air + 's air';
-    if (k === 'bag') return tier.cap + ' fish';
-    return '';
-  }
+    const x = 124, w = KA.W - 136;
+    if (def.tabs.length > 1) KA.UI.tabs(ctx, x, 40, w, 30, def.tabs, tab, (i) => { tab = i; KA.UI.resetScroll('shop'); });
+    const listY = def.tabs.length > 1 ? 78 : 44;
+    const listH = KA.H - listY - 52;
+    D.rr(ctx, x, listY, w, listH, 10, 'rgba(3,16,26,.55)');
 
-  /* ---------------- ranch ---------------- */
-  function ranch(ctx, S) {
-    const x = 4, y = 34, w = DZ.W - 8, h = DZ.H - 40;
-    Px.rect(ctx, x, y, w, h, '#04121d');
-    Px.frame(ctx, x, y, w, h, '#123246');
-    const list = DZ.Upgrades.RANCH;
-    DZ.UI.scroll('shopranch', ctx, x + 1, y + 1, w - 2, h - 2, list.length * 30 + 4, (ox, oy, ow) => {
-      list.forEach((u, i) => {
-        const ry = oy + 2 + i * 30;
-        if (ry > y + h || ry < y - 30) return;
-        const lvl = DZ.Upgrades.level(S, u.id);
-        const nxt = DZ.Upgrades.next(S, u.id);
-        Px.rect(ctx, ox + 1, ry, ow - 4, 28, i % 2 ? '#072335' : '#08283c');
-        Px.draw(ctx, u.icon, ox + 4, ry + 4, {});
-        T.draw(ctx, u.name.toUpperCase(), ox + 26, ry + 2, PAL.cyan, { size: 7, bold: true });
-        T.draw(ctx, u.blurb, ox + 26, ry + 10, PAL.dim, { size: 7 });
-        T.draw(ctx, 'now: ' + u.levels[lvl].txt, ox + 26, ry + 18, PAL.text, { size: 7 });
-        for (let p = 0; p < u.levels.length; p++)
-          Px.rect(ctx, ox + 150 + p * 6, ry + 19, 4, 4, p <= lvl ? PAL.gold : '#153a52');
-        if (nxt) {
-          T.draw(ctx, 'next: ' + nxt.txt, ox + 150, ry + 2, PAL.gold, { size: 7 });
-          const can = S.clams >= nxt.cost;
-          if (DZ.UI.button(ctx, ox + ow - 66, ry + 8, 60, 16, U.fmt(nxt.cost) + 'c',
-              { tone: can ? 'green' : 'dark', size: 8, disabled: !can, id: 'ru' + i, tip: 'Build: ' + nxt.txt })) {
-            if (DZ.State.spend(nxt.cost)) {
-              S.ranch[u.id] = lvl + 1;
-              DZ.Audio.play('cash');
-              DZ.State.toast(u.name + ' -> ' + nxt.txt, PAL.kelp);
-              DZ.FX.burst(ox + ow - 36, ry + 16, 14, { col: [PAL.kelp, '#ffffff'], speed: 80, screen: true });
-              DZ.State.save();
-            }
-          }
-        } else T.draw(ctx, 'MAXED', ox + ow - 36, ry + 12, PAL.gold, { size: 8, align: 'center', bold: true });
-      });
-    });
-  }
-
-  /* ---------------- supplies ---------------- */
-  function supplies(ctx, S) {
-    const x = 4, y = 34, w = DZ.W - 8, h = DZ.H - 40;
-    Px.rect(ctx, x, y, w, h, '#04121d');
-    Px.frame(ctx, x, y, w, h, '#123246');
-    const rows = DZ.Items.FOOD.map((f) => ({ kind: 'food', it: f }))
-      .concat(DZ.Items.USE.map((u) => ({ kind: 'use', it: u })));
-    DZ.UI.scroll('shopsup', ctx, x + 1, y + 1, w - 2, h - 2, rows.length * 26 + 4, (ox, oy, ow) => {
+    const rows = buildRows();
+    KA.UI.scroll('shop', ctx, x + 4, listY + 4, w - 8, listH - 8, rows.length * 56 + 6, (ox, oy, ow) => {
       rows.forEach((r, i) => {
-        const it = r.it, ry = oy + 2 + i * 26;
-        if (ry > y + h || ry < y - 26) return;
-        Px.rect(ctx, ox + 1, ry, ow - 4, 24, i % 2 ? '#072335' : '#08283c');
-        Px.draw(ctx, it.sprite, ox + 5, ry + 6, {});
-        T.draw(ctx, it.name, ox + 22, ry + 2, it.col, { size: 8, bold: true });
-        T.draw(ctx, it.blurb, ox + 22, ry + 11, PAL.dim, { size: 7 });
-        if (r.kind === 'food') {
-          T.draw(ctx, '+' + DZ.Dolphin.foodExpValue(it) + ' EXP', ox + 200, ry + 2, PAL.cyan, { size: 7 });
-          T.draw(ctx, 'trait ' + Math.round(it.traitChance * 100) + '%', ox + 200, ry + 11, PAL.pink, { size: 7 });
-          T.draw(ctx, 'have ' + (S.inv.food[it.id] || 0), ox + 254, ry + 2, PAL.text, { size: 7 });
-          if (it.corrupt) T.draw(ctx, '+' + it.corrupt + '% EVIL', ox + 254, ry + 11, PAL.evil, { size: 7 });
-        } else {
-          T.draw(ctx, 'have ' + (S.inv.use[it.id] || 0), ox + 254, ry + 6, PAL.text, { size: 7 });
-        }
-        const can1 = S.clams >= it.cost, can5 = S.clams >= it.cost * 5;
-        if (DZ.UI.button(ctx, ox + ow - 84, ry + 4, 38, 16, U.fmt(it.cost) + 'c',
-            { tone: can1 ? 'gold' : 'dark', size: 7, disabled: !can1, id: 'b1' + i })) buy(r, 1);
-        if (DZ.UI.button(ctx, ox + ow - 44, ry + 4, 38, 16, 'x5', { tone: can5 ? 'blue' : 'dark', size: 7,
-            disabled: !can5, id: 'b5' + i, sub: U.fmt(it.cost * 5) })) buy(r, 5);
+        const ry = oy + 4 + i * 56;
+        if (ry > listY + listH || ry < listY - 60) return;
+        row(ctx, ox, ry, ow, r, i);
       });
+      if (!rows.length) T.draw(ctx, 'Nothing here right now.', ox + ow / 2, oy + 40, P.dim, { size: 15, align: 'center' });
     });
-  }
-  function buy(r, n) {
-    const S = DZ.State.S;
-    if (!DZ.State.spend(r.it.cost * n)) return;
-    if (r.kind === 'food') DZ.State.addFood(r.it.id, n);
-    else DZ.State.addUse(r.it.id, n);
-    DZ.Audio.play('coin');
-    DZ.State.toast('+' + n + ' ' + r.it.name, r.it.col);
-    DZ.State.save();
+    if (KA.UI.button(ctx, KA.W - 118, KA.H - 44, 106, 34, 'LEAVE', { tone: 'dark', size: 16, key: 'Escape' }))
+      KA.Game.go('world', {});
   }
 
+  function buildRows() {
+    const D0 = S.D;
+    if (kind === 'bait') {
+      if (tab === 0) return KA.Items.TACKLE.map((it, i) => ({
+        t: 'tackle', it, owned: KA.Items.TACKLE.indexOf(KA.Items.tById[D0.tackle]) >= i,
+        title: it.name, sub: it.blurb + '   power x' + it.power.toFixed(2) + '  patience x' + it.window.toFixed(2),
+        cost: it.cost, col: P.kelp
+      }));
+      const out = [];
+      for (const id in D0.inv.fish) {
+        const f = KA.Items.fishById[id];
+        if (!f) continue;
+        out.push({ t: 'sell', id, title: f.name + ' x' + D0.inv.fish[id], sub: f.value + ' clams each',
+          cost: 0, sell: f.value * D0.inv.fish[id], col: f.col, n: D0.inv.fish[id] });
+      }
+      if (out.length) out.push({ t: 'sellall', title: 'SELL EVERYTHING', sub: S.fishValue() + ' clams for ' + S.fishCount() + ' fish', col: P.gold });
+      return out;
+    }
+    if (kind === 'beer') {
+      return KA.Items.BEERS.map((b) => ({
+        t: 'beer', it: b, title: b.name, sub: b.blurb + '   +' + b.fat + ' fat', cost: b.cost, col: b.col,
+        have: D0.inv.beer[b.id] || 0
+      }));
+    }
+    if (kind === 'stable') {
+      if (tab === 0) return KA.Pets.SPECIES.map((sp) => ({
+        t: 'pet', it: sp, title: sp.name, sub: sp.blurb, cost: sp.cost, col: sp.col.a,
+        owned: !!D0.owned[sp.id], locked: lockReason(sp)
+      }));
+      return KA.Items.FOOD.map((f) => ({ t: 'food', it: f, title: f.name, sub: f.blurb + '   +' + f.exp + ' EXP',
+        cost: f.cost, col: f.col, have: D0.inv.food[f.id] || 0 }));
+    }
+    if (kind === 'weapons') {
+      if (tab === 0) return KA.Items.WEAPONS.map((w, i) => ({
+        t: 'weapon', it: w, title: w.name, sub: w.blurb + '   dmg ' + w.dmg + '  speed x' + w.spd.toFixed(2) + '  reach ' + w.reach,
+        cost: w.cost, col: w.col, owned: KA.Items.WEAPONS.indexOf(KA.Items.wById[D0.weapon]) >= i
+      }));
+      const cost = 500 + D0.hpUps * 900;
+      return [{ t: 'hp', title: 'ANOTHER HEART', sub: 'Grunda welds a plate to your chest. Max HP +1.',
+        cost, col: P.coral }];
+    }
+    if (kind === 'race') {
+      return KA.Races.TIERS.map((tr) => ({ t: 'race', it: tr, title: tr.name,
+        sub: tr.blurb + '   entry ' + tr.entry + 'c   purse ' + tr.purse[0] + 'c', cost: 0, col: tr.col,
+        locked: KA.Pet.level(S.active()) < tr.minLvl ? 'needs a level ' + tr.minLvl + ' mount' : null }));
+    }
+    return [];
+  }
+  function lockReason(sp) {
+    const D0 = S.D;
+    if (D0.owned[sp.id]) return null;
+    if (sp.id === 'tuna' && D0.stats.wins < 1) return 'win a race first';
+    if (sp.id === 'swordfish' && !S.pets().some((p) => KA.Pet.level(p) >= 12)) return 'needs a level 12 mount';
+    return null;
+  }
+
+  function row(ctx, x, y, w, r, i) {
+    const D0 = S.D;
+    D.rr(ctx, x, y, w - 6, 50, 8, i % 2 ? 'rgba(255,255,255,.04)' : 'rgba(255,255,255,.07)');
+    D.rr(ctx, x + 4, y + 4, 6, 42, 3, r.col || P.line);
+    T.draw(ctx, r.title, x + 18, y + 6, P.text, { size: 15, weight: 800 });
+    T.block(ctx, r.sub || '', x + 18, y + 23, P.dim, { size: 11, max: w - 152, lh: 12, weight: 600, maxLines: 2 });
+    const bx = x + w - 122, bw = 108;
+    if (r.t === 'sell') {
+      if (KA.UI.button(ctx, bx, y + 9, bw, 32, 'SELL ' + U.fmt(r.sell), { tone: 'gold', size: 14, id: 'sl' + i })) {
+        S.earn(KA.Items.fishById[r.id].value * r.n, true);
+        delete D0.inv.fish[r.id];
+        KA.A.play('cash'); S.save();
+      }
+    } else if (r.t === 'sellall') {
+      if (KA.UI.button(ctx, bx, y + 9, bw, 32, 'SELL ALL', { tone: 'gold', size: 14, id: 'sa' })) {
+        const res = S.sellAllFish();
+        KA.UI.toast('Sold ' + res.n + ' fish for ' + U.fmt(res.clams), P.gold);
+        S.save();
+      }
+    } else if (r.owned) {
+      T.draw(ctx, r.t === 'pet' ? 'OWNED' : 'HAVE IT', bx + bw / 2, y + 18, P.kelp, { size: 14, align: 'center', weight: 800 });
+      if (r.t === 'pet') {
+        const mine = S.pets().find((p) => p.sp === r.it.id);
+        if (mine && S.active().uid !== mine.uid &&
+            KA.UI.button(ctx, bx, y + 28, bw, 20, 'RIDE THIS ONE', { tone: 'blue', size: 12, id: 'sw' + i })) {
+          S.setActive(mine.uid); KA.UI.toast('Now riding ' + mine.name, P.cyan); S.save();
+        }
+      }
+    } else if (r.locked) {
+      T.draw(ctx, r.locked, bx + bw / 2, y + 18, P.coral, { size: 11, align: 'center', weight: 700 });
+    } else if (r.t === 'race') {
+      if (KA.UI.button(ctx, bx, y + 9, bw, 32, 'ENTER', { tone: 'gold', size: 14, id: 'rc' + i }))
+        KA.Game.go('race', { tier: r.it.id });
+    } else {
+      const can = D0.clams >= r.cost;
+      const label = r.cost ? U.fmt(r.cost) + 'c' : 'TAKE';
+      if (KA.UI.button(ctx, bx, y + 9, bw, 32, label, { tone: can ? 'gold' : 'dark', size: 14, disabled: !can,
+          id: 'by' + i, sub: r.have ? 'have ' + r.have : '' })) buy(r);
+    }
+  }
+
+  function buy(r) {
+    const D0 = S.D;
+    if (!S.spend(r.cost)) return;
+    KA.A.play('cash');
+    if (r.t === 'tackle') { D0.tackle = r.it.id; KA.UI.toast('Equipped ' + r.it.name, P.kelp); }
+    else if (r.t === 'weapon') { D0.weapon = r.it.id; KA.UI.toast('Equipped ' + r.it.name, P.gold); }
+    else if (r.t === 'beer') { S.addItem('beer', r.it.id, 1); KA.UI.toast('Bought ' + r.it.name, r.it.col); }
+    else if (r.t === 'food') { S.addItem('food', r.it.id, 1); KA.UI.toast('Bought ' + r.it.name, r.it.col); }
+    else if (r.t === 'hp') { D0.hpUps++; D0.hp = S.hpMax(); KA.UI.toast('Max HP up!', P.coral); KA.A.play('levelup'); }
+    else if (r.t === 'pet') {
+      const p = KA.Pet.create(r.it.id);
+      S.addPet(p); S.setActive(p.uid);
+      KA.UI.toast('Meet ' + p.name + ' the ' + r.it.name + '!', r.it.col.a);
+      KA.A.play('jackpot');
+      KA.FX.flash(r.it.col.a, 0.25);
+    }
+    S.save();
+  }
   return { enter, update, draw };
 })();

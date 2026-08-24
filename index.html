@@ -2,64 +2,45 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Dolphin Ranch: Tides of Atlantis</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='13' font-size='13'%3E%F0%9F%90%AC%3C/text%3E%3C/svg%3E">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#04121d">
+<title>King of Atlantic</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='13' font-size='13'%3E%F0%9F%91%91%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div id="stage">
-    <canvas id="game" width="800" height="450"></canvas>
-    <div id="boot">LOADING THE OCEAN...</div>
-  </div>
-  <div id="hint">WASD move &nbsp;•&nbsp; Mouse aim &nbsp;•&nbsp; Click spear &nbsp;•&nbsp; E net &nbsp;•&nbsp; Space dash / boost &nbsp;•&nbsp; M world map &nbsp;•&nbsp; E enter places &nbsp;•&nbsp; Esc back &nbsp;•&nbsp; F1 mute</div>
-
-  <!-- engine -->
-  <script src="js/lib/util.js"></script>
+  <div id="stage"><canvas id="game"></canvas><div id="boot">LOADING THE ATLANTIC...</div></div>
+  <script src="js/lib/core.js"></script>
+  <script src="js/lib/draw.js"></script>
   <script src="js/lib/text.js"></script>
-  <script src="js/lib/pixel.js"></script>
   <script src="js/lib/input.js"></script>
   <script src="js/lib/audio.js"></script>
   <script src="js/lib/fx.js"></script>
-  <script src="js/lib/ui.js"></script>
-  <script src="js/lib/water.js"></script>
   <script src="js/lib/rig.js"></script>
+  <script src="js/lib/ui.js"></script>
   <script src="js/lib/dialog.js"></script>
-  <!-- art -->
-  <script src="js/sprites/sprites.js"></script>
-  <!-- content -->
-  <script src="js/data/names.js"></script>
-  <script src="js/data/species.js"></script>
+  <script src="js/data/pets.js"></script>
   <script src="js/data/items.js"></script>
-  <script src="js/data/skills.js"></script>
-  <script src="js/data/upgrades.js"></script>
+  <script src="js/data/rolls.js"></script>
+  <script src="js/data/areas.js"></script>
+  <script src="js/data/npcs.js"></script>
   <script src="js/data/quests.js"></script>
   <script src="js/data/races.js"></script>
-  <script src="js/data/places.js"></script>
-  <!-- model -->
-  <script src="js/model/dolphin.js"></script>
+  <script src="js/model/pet.js"></script>
   <script src="js/model/state.js"></script>
-  <!-- procedurally animated characters -->
-  <script src="js/rigs/dolphin.js"></script>
-  <script src="js/rigs/hero.js"></script>
-  <script src="js/rigs/fish.js"></script>
-  <script src="js/rigs/npc.js"></script>
-  <!-- scenes -->
-  <script src="js/scenes/title.js"></script>
-  <script src="js/scenes/rigtest.js"></script>
-  <script src="js/scenes/worldmap.js"></script>
-  <script src="js/scenes/ranch.js"></script>
-  <script src="js/scenes/reef.js"></script>
-  <script src="js/scenes/dolphinview.js"></script>
+  <script src="js/rigs/king.js"></script>
+  <script src="js/rigs/pets.js"></script>
+  <script src="js/rigs/sea.js"></script>
+  <script src="js/rigs/folk.js"></script>
+  <script src="js/scenes/menus.js"></script>
+  <script src="js/scenes/world.js"></script>
   <script src="js/scenes/shop.js"></script>
-  <script src="js/scenes/market.js"></script>
-  <script src="js/scenes/breed.js"></script>
-  <script src="js/scenes/staff.js"></script>
-  <script src="js/scenes/questboard.js"></script>
-  <script src="js/scenes/vat.js"></script>
-  <script src="js/scenes/racelobby.js"></script>
+  <script src="js/scenes/petview.js"></script>
+  <script src="js/scenes/fishing.js"></script>
+  <script src="js/scenes/feeding.js"></script>
   <script src="js/scenes/race.js"></script>
-  <!-- boot -->
+  <script src="js/scenes/rigtest.js"></script>
   <script src="js/game.js"></script>
 </body>
 </html>
