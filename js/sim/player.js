@@ -124,9 +124,20 @@ KD.Player = (function () {
     const groundBefore = P.onGround;
     P.onGround = false;
     if (boxHits(P.x, ny)) {
-      /* walk the collision back to the tile face so you never sink in */
-      const dir = Math.sign(P.vy) || 1;
-      while (boxHits(P.x, ny) && Math.abs(ny - P.y) > 0.01) ny -= dir;
+      /* Walk the collision back to the tile face. The step must never overshoot
+         P.y: stepping a whole pixel past it and then testing only the DISTANCE
+         from P.y lets that distance grow without bound, which hangs the game
+         the moment the player is embedded in solid tiles - out of bounds, or
+         teleported into rock. Step toward P.y, stop when we reach it, and cap
+         the iterations so no future embedding can ever spin here again. */
+      const dir = Math.sign(ny - P.y) || 1;
+      let guard = 0;
+      while (boxHits(P.x, ny) && guard++ < 64) {
+        const step = Math.min(1, Math.abs(ny - P.y));
+        if (step <= 0.001) break;
+        ny -= dir * step;
+      }
+      if (boxHits(P.x, ny)) ny = P.y;          // still stuck: do not move at all
       if (wasFalling) {
         P.onGround = true;
         if (P.fallFrom !== null) {
@@ -145,6 +156,12 @@ KD.Player = (function () {
       }
     }
     P.y = ny;
+    /* Unstick: if we somehow ended up inside solid tiles, climb out upward
+       rather than vibrating in the floor forever. */
+    if (boxHits(P.x, P.y)) {
+      for (let k = 0; k < 24 && boxHits(P.x, P.y); k++) P.y -= 2;
+      P.vy = 0;
+    }
     if (P.onGround) { P.coyote = 0.09; P.fallFrom = null; }
     else if (groundBefore) P.coyote = 0.09;
     if (!P.onGround && P.vy > 0 && P.fallFrom === null && !wet) P.fallFrom = P.y;
@@ -176,9 +193,11 @@ KD.Player = (function () {
     const z = KD.Zones.atPx(P.x);
     if (!z || !KD.Goal.milestone(z.id)) { P.zone = z; return; }
     if (KD.Goal.allowed(S.S, z.id)) { P.zone = z; return; }
-    /* shove them back toward the edge they came from */
+    /* shove them back toward the edge they came from, and never outside the
+       world - out there every tile reads solid and the player is embedded */
     const fromLeft = P.x / TS - z.x0 < (z.x1 - z.x0) / 2;
-    P.x = (fromLeft ? z.x0 - 1 : z.x1 + 1) * TS;
+    const target = (fromLeft ? z.x0 - 2 : z.x1 + 2) * TS;
+    P.x = Math.max(P.w + 1, Math.min(KD.World.W * TS - P.w - 1, target));
     P.vx = fromLeft ? -40 : 40;
     if (KD.Game.t - gateMsg > 3) {
       gateMsg = KD.Game.t;
@@ -257,7 +276,9 @@ KD.Player = (function () {
     P.swingT = 0.22 / ((wpn.spd || 1) * S.stats.swingSpeed);
     P.swingCd = 0.30 / ((wpn.spd || 1) * S.stats.swingSpeed);
     KD.Sfx.play('swing');
-    KD.Mobs.hitArc(P.x, P.y - P.h / 2, P.face, wpn.reach || 14, (wpn.dmg || 3) * S.dmgMult(), S, wpn);
+    const dmg = (wpn.dmg || 3) * S.dmgMult();
+    KD.Mobs.hitArc(P.x, P.y - P.h / 2, P.face, wpn.reach || 14, dmg, S, wpn);
+    if (KD.Boss.active()) KD.Boss.playerHit(P.x, P.y - P.h / 2, P.face, wpn.reach || 14, dmg, S, wpn);
   }
 
   /* USE is context-sensitive: a chest opens, a door swings, otherwise you

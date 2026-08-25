@@ -14,7 +14,11 @@ KD.Light = (function () {
   function init() {
     const Wd = KD.World;
     W = Wd.W; H = Wd.H;
-    q = new Int32Array(W * H);
+    /* The flood queue is a ring. If more entries are pushed than it can hold,
+       it overwrites work that has not been done yet and the fill can chase its
+       own tail forever. Give it real headroom AND a hard budget, because a
+       1.2M-tile world seeds hundreds of thousands of entries at once. */
+    q = new Int32Array(Math.min(6e6, W * H * 2));
     pending = new Set();
     full();
   }
@@ -37,19 +41,22 @@ KD.Light = (function () {
     return T.clear ? 2 : 4;
   }
 
+  let dropped = 0;
   function push(i, v) {
     const lit = KD.World.lit;
     if (lit[i] >= v) return;
     lit[i] = v;
-    q[qt++] = i;
-    if (qt >= q.length) qt = 0;
+    const nxt = qt + 1 >= q.length ? 0 : qt + 1;
+    if (nxt === qh) { dropped++; return; }      // full: drop rather than corrupt
+    q[qt] = i;
+    qt = nxt;
   }
 
   /* rebuild the whole map: seed the sky column, seed every emitter, flood */
   function full() {
     const Wd = KD.World, lit = Wd.lit, fg = Wd.fg;
     lit.fill(0);
-    qh = qt = 0;
+    qh = qt = 0; dropped = 0;
     /* sunlight: walk down each column until something opaque stops it */
     for (let x = 0; x < W; x++) {
       let v = SUN_TOP;
@@ -69,16 +76,19 @@ KD.Light = (function () {
     }
     /* Ambient floor: the sunlit layers never go fully black, or the seabed
        right under a bright surface reads as a hole in the world. It fades out
-       by the bottom of the reef, and below that darkness is the point. */
+       by the bottom of the reef, and below that darkness is the point.
+       Written straight into the buffer, NOT queued - these need no spreading
+       and half a million queue entries is what overran the ring. */
     for (let y = 0; y < H; y++) {
       const amb = y < 60 ? 5 : y < 100 ? 4 : y < 140 ? 2 : 0;
       if (!amb) continue;
       for (let x = 0; x < W; x++) {
         const i = y * W + x;
-        if (lit[i] < amb) { lit[i] = amb; q[qt++] = i; if (qt >= q.length) qt = 0; }
+        if (lit[i] < amb) lit[i] = amb;
       }
     }
-    flood(1e9);
+    flood(W * H * 3);
+    if (dropped) console.warn('light: ' + dropped + ' queue entries dropped');
   }
 
   /* spread until the queue drains or we hit the budget */

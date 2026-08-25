@@ -13,10 +13,14 @@ function scriptList() {
 function stubCanvas() {
   const mk = (w, h) => {
     const c = {
-      width: w || 0, height: h || 0,
+      width: w || 0, height: h || 0, style: {},
+      remove() {}, addEventListener() {}, removeEventListener() {},
+      getBoundingClientRect: () => ({ x: 0, y: 0, width: c.width, height: c.height }),
       getContext: () => ({
         canvas: c, fillStyle: '', imageSmoothingEnabled: true,
         fillRect() {}, clearRect() {}, drawImage() {}, save() {}, restore() {},
+        beginPath() {}, closePath() {}, rect() {}, clip() {}, fill() {}, stroke() {},
+        moveTo() {}, lineTo() {}, strokeStyle: '', lineWidth: 1,
         translate() {}, scale() {}, setTransform() {}, globalAlpha: 1,
         createImageData: (a, b) => ({ width: a, height: b, data: new Uint8ClampedArray(a * b * 4) }),
         putImageData() {}, getImageData: (x, y, a, b) => ({ width: a, height: b, data: new Uint8ClampedArray(a * b * 4) })

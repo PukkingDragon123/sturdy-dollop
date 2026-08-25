@@ -85,6 +85,7 @@ KD.Scenes.play = (function () {
     if (KD.Panels.isOpen()) { KD.Fx.update(dt); return; }
 
     KD.Player.update(dt, S);
+    KD.Boss.update(dt, S);
     KD.Mobs.update(dt, S);
     KD.Mobs.updateShots(dt, S);
     KD.Water.step(2600);
@@ -100,36 +101,33 @@ KD.Scenes.play = (function () {
     KD.Cam.y += (ty - KD.Cam.y) * Math.min(1, dt * 7);
 
     if (P.swim > 0.45 && Math.random() < dt * 2.2) KD.Fx.bubbles(P.x, P.y - P.h, 1);
-    baronWatch(S);
+    bossWatch(S);
     /* autosave, quietly */
     if ((S.S.playtime | 0) % 30 === 0 && S.S.playtime - (S.lastSave || 0) > 30) {
       S.lastSave = S.S.playtime; S.save();
     }
   }
 
-  /* The Baron sits in his throne room until you walk in. With fewer than five
-     fragments he throws you out instead of fighting - the fragments are the key. */
-  function baronWatch(S) {
+  /* The King is sitting in there the whole time. Walk in out of shape and he
+     does not even stand up - the weight gate is the lock on the last door. */
+  function bossWatch(S) {
     const th = KD.Gen.meta.throne;
-    if (!th || S.S.flags.baronDead) return;
+    if (!th || S.S.flags.kingDead || KD.Boss.active()) return;
     const P = KD.Player.P;
-    const near = Math.abs(P.x / 8 - th.x) < 26 && Math.abs(P.y / 8 - th.y) < 14;
-    if (!near) return;
-    if (S.fragCount() < 5) {
-      if (!S.S.flags.baronWarned) {
-        S.S.flags.baronWarned = 1;
-        S.say('"Five pieces, or nothing." ' + S.fragCount() + '/5', 'BLOOD.3');
+    if (Math.abs(P.x / 8 - th.x) > 30 || Math.abs(P.y / 8 - th.y) > 16) return;
+    const m = KD.Goal.milestone('drop');
+    const short = KD.Goal.why(S.S, 'drop');
+    if (short) {
+      if (KD.Game.t - (S.S.flags.kingWarnT || -99) > 5) {
+        S.S.flags.kingWarnT = KD.Game.t;
+        S.say('"Look at you." He does not get up. ' + short + '.', 'ROT.3');
+        KD.Sfx.play('deny');
       }
       return;
     }
-    if (!S.S.flags.baronUp) {
-      S.S.flags.baronUp = 1;
-      KD.Mobs.spawn('baron', th.x, th.y);
-      KD.Fx.flash('BLOOD.2', 0.4);
-      KD.Fx.shake(6);
-      S.say('BARON FOAMHELM STANDS UP', 'BLOOD.3');
-      KD.Sfx.play('die');
-    }
+    S.S.flags.kingUp = 1;
+    KD.Boss.start(th.x, th.y);
+    S.say('"Oh. You actually did it."', 'ROT.3');
   }
 
   function drawKing(ctx, cam) {
@@ -176,6 +174,7 @@ KD.Scenes.play = (function () {
     const lightR = 26 + (st.lightRadius || 0) * 10;
     KD.Render.torch(ctx, cam, KD.Player.P.x, KD.Player.P.y - 8, lightR);
     KD.Mobs.draw(ctx, cam);
+    KD.Boss.draw(ctx, cam);
     drawKing(ctx, cam);
     KD.Fx.draw(ctx, cam);
     KD.Parallax.front(ctx, cam, dayT);
