@@ -1,0 +1,165 @@
+/* ============================================================
+   ui/ui.js - panels, buttons, slots and bars, built from the
+   hand-drawn 9-slice kits. Every widget falls back to stepped
+   rectangles if its sprite kit has not been drawn yet, so the
+   game is always playable.
+   ============================================================ */
+KD.UI = (function () {
+  let hotId = null, guardT = 0;
+  const tipQ = [];
+
+  const kit = (k) => [k + '_tl', k + '_t', k + '_tr', k + '_l', k + '_c', k + '_r', k + '_bl', k + '_b', k + '_br'];
+  const hasKit = (k) => kit(k).every((n) => KD.PX.has(n));
+
+  /* a stepped bevel box: light top-left, dark bottom-right (or inverted) */
+  function bevel(x, y, w, h, fill, recessed) {
+    const hi = recessed ? 'INK.0' : 'INK.3';
+    const lo = recessed ? 'INK.3' : 'INK.0';
+    KD.Screen.rect(x, y, w, h, fill);
+    KD.Screen.rect(x, y, w, 1, hi);
+    KD.Screen.rect(x, y, 1, h, hi);
+    KD.Screen.rect(x, y + h - 1, w, 1, lo);
+    KD.Screen.rect(x + w - 1, y, 1, h, lo);
+  }
+  function panel(x, y, w, h, k) {
+    const key = k || 'pnl';
+    if (hasKit(key)) KD.PX.nine(KD.Screen.ctx(), kit(key), x, y, w, h);
+    else { KD.Screen.rect(x, y, w, h, 'INK.1'); bevel(x, y, w, h, 'INK.1', false); }
+    return { x, y, w, h, cx: x + w / 2, iy: y + 4 };
+  }
+  function titled(x, y, w, h, title) {
+    const p = panel(x, y, w, h);
+    KD.Screen.rect(x + 3, y + 11, w - 6, 1, 'INK.3');
+    KD.Text.draw(title, x + w / 2, y + 3, 'GOLD.3', { align: 'center', shadow: 'INK.0' });
+    p.iy = y + 15;
+    return p;
+  }
+  const inside = (x, y, w, h) => {
+    const m = KD.In.mouse;
+    return m.x >= x && m.y >= y && m.x < x + w && m.y < y + h;
+  };
+  const guard = (t) => { guardT = t || 0.16; };
+  const blocked = () => guardT > 0;
+  const tickGuard = (dt) => { if (guardT > 0) guardT -= dt; };
+
+  function button(x, y, w, h, label, o) {
+    o = o || {};
+    const hot = !o.off && inside(x, y, w, h);
+    const held = hot && KD.In.mouse.down;
+    const k = o.off ? null : (held || o.on ? 'btnhot' : 'btn');
+    if (k && hasKit(k)) KD.PX.nine(KD.Screen.ctx(), kit(k), x, y, w, h);
+    else bevel(x, y, w, h, o.off ? 'INK.1' : (held || o.on ? 'DEEP.3' : (hot ? 'DEEP.2' : 'DEEP.1')), held);
+    const col = o.off ? 'INK.3' : (o.on ? 'GOLD.3' : 'BONE.2');
+    KD.Text.draw(label, x + w / 2, y + ((h - 7) >> 1), col, { align: 'center', max: w - 6, shadow: 'INK.0' });
+    if (o.off) return false;
+    const clicked = (hot && KD.In.mouse.click && !blocked()) ||
+                    (o.key && KD.In.isHit(o.key));
+    if (clicked) { KD.In.consumedClick(); KD.Sfx.play('click'); }
+    return clicked;
+  }
+
+  /* an inventory slot. Returns 'left' | 'right' | null. */
+  function slot(x, y, item, o) {
+    o = o || {};
+    const sel = o.sel;
+    const k = sel ? 'slotsel' : 'slot';
+    if (hasKit(k)) KD.PX.nine(KD.Screen.ctx(), kit(k), x, y, 16, 16);
+    else {
+      bevel(x, y, 16, 16, 'INK.0', true);
+      if (sel) KD.Screen.frame(x, y, 16, 16, 'GOLD.2');
+    }
+    if (item) {
+      const spr = KD.State.spriteOf(item);
+      if (spr && KD.PX.has(spr)) KD.PX.blit(KD.Screen.ctx(), spr, x + 2, y + 2, { anchor: false });
+      else KD.Screen.rect(x + 4, y + 4, 8, 8, 'CORAL.2');
+      if (!KD.State.isGear(item) && item.n > 1) {
+        KD.Text.draw(item.n, x + 15, y + 10, 'BONE.2', { tiny: true, align: 'right', shadow: 'INK.0' });
+      }
+      if (KD.State.isGear(item) && item.prefixTier) {
+        const pc = item.prefixTier < 0 ? 'BLOOD.1' : (item.prefixTier >= 3 ? 'GOLD.3' : (item.prefixTier >= 2 ? 'ROT.3' : 'KELP.2'));
+        KD.Screen.rect(x + 1, y + 1, 2, 2, pc);
+      }
+      if (KD.State.isGear(item) && item.kind === 'armour' && KD.State.equipped(item.slot) === item) {
+        KD.Screen.rect(x + 12, y + 1, 3, 3, 'KELP.2');
+      }
+    }
+    const hot = inside(x, y, 16, 16);
+    if (hot && item) tipQ.push({ item, x, y });
+    if (hot && !blocked()) {
+      if (KD.In.mouse.click) { KD.In.consumedClick(); return 'left'; }
+      if (KD.In.mouse.rclick) return 'right';
+    }
+    return null;
+  }
+
+  function bar(x, y, w, h, frac, fillCol, o) {
+    o = o || {};
+    frac = Math.max(0, Math.min(1, frac));
+    KD.Screen.rect(x, y, w, h, 'INK.0');
+    KD.Screen.rect(x, y, w, 1, 'INK.2');
+    const iw = Math.round((w - 2) * frac);
+    if (iw > 0) {
+      KD.Screen.rect(x + 1, y + 1, iw, h - 2, fillCol);
+      KD.Screen.rect(x + 1, y + 1, iw, 1, KD.PAL.shift(fillCol, 1));
+    }
+    if (o.label) KD.Text.draw(o.label, x + w / 2, y + ((h - 5) >> 1), 'BONE.2', { tiny: true, align: 'center', shadow: 'INK.0' });
+  }
+
+  /* tooltips draw last so they sit over everything */
+  function tooltips() {
+    if (!tipQ.length) return;
+    const t = tipQ[tipQ.length - 1];
+    tipQ.length = 0;
+    const it = t.item;
+    const lines = [];
+    lines.push([KD.State.nameOf(it), it.tierCol || 'BONE.2']);
+    if (KD.State.isGear(it)) {
+      if (it.kind === 'weapon') lines.push([it.dmg + ' dmg   ' + it.spd.toFixed(2) + ' spd   ' + it.reach + ' reach', 'BONE.1']);
+      if (it.kind === 'tool') lines.push(['mine ' + it.pow + '   tier ' + it.tier + '   ' + it.dmg + ' dmg', 'BONE.1']);
+      if (it.kind === 'armour') {
+        lines.push([it.armour + ' armour   (' + (it.slot || 'body') + ')', 'BONE.1']);
+        lines.push([KD.State.equipped(it.slot) === it ? 'WORN' : 'right-click to wear', 'KELP.2']);
+      }
+      if (it.crit) lines.push([it.crit + '% crit', 'GOLD.2']);
+      if (it.dur !== undefined) lines.push([it.dur + ' / ' + it.durMax + ' durability', 'BONE.0']);
+      if (it.effect) lines.push(['* ' + it.effect, 'ROT.3']);
+      if (it.tier) lines.push(['tier ' + it.tier, 'INK.3']);
+    } else {
+      const r = KD.State.resOf(it.id);
+      if (r && r.tile) lines.push(['placeable', 'KELP.2']);
+      if (r && r.beer) lines.push(['+' + Math.round(r.beer.dmg * 100) + '% damage, +' + r.beer.fat + ' fat', 'GOLD.2']);
+      if (r && r.food) lines.push(['heals ' + r.food, 'KELP.2']);
+      if (r && r.value) lines.push([r.value + 'c each', 'BONE.0']);
+    }
+    let w = 0;
+    for (const l of lines) w = Math.max(w, KD.Text.width(l[0]));
+    w += 8;
+    const h = lines.length * 9 + 5;
+    let x = t.x + 18, y = t.y - 2;
+    if (x + w > KD.W - 2) x = t.x - w - 2;
+    if (y + h > KD.H - 2) y = KD.H - h - 2;
+    KD.Screen.rect(x, y, w, h, 'INK.0');
+    KD.Screen.frame(x, y, w, h, 'INK.3');
+    lines.forEach((l, i) => KD.Text.draw(l[0], x + 4, y + 3 + i * 9, l[1]));
+  }
+
+  /* the touch control cluster, drawn from the same pixel kit */
+  function touchPad(defs) {
+    if (!KD.touch) return;
+    const pad = KD.In.padState();
+    if (pad.on) {
+      KD.Screen.frame(Math.round(pad.cx) - 12, Math.round(pad.cy) - 12, 25, 25, 'BONE.0');
+      KD.Screen.rect(Math.round(pad.cx + pad.dx * 10) - 3, Math.round(pad.cy + pad.dy * 10) - 3, 7, 7, 'BONE.2');
+    } else {
+      KD.Screen.frame(18, KD.H - 34, 25, 25, 'INK.3');
+    }
+    for (const b of defs) {
+      const held = KD.In.act(b.name);
+      KD.Screen.rect(b.x - b.r, b.y - b.r, b.r * 2, b.r * 2, held ? 'DEEP.3' : 'INK.1');
+      KD.Screen.frame(b.x - b.r, b.y - b.r, b.r * 2, b.r * 2, held ? 'GOLD.2' : 'INK.3');
+      KD.Text.draw(b.label, b.x, b.y - 3, held ? 'GOLD.3' : 'BONE.1', { tiny: true, align: 'center' });
+    }
+  }
+  return { panel, titled, button, slot, bar, bevel, inside, tooltips, touchPad,
+           guard, blocked, tickGuard, hasKit, kit };
+})();
