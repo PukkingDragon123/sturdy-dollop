@@ -64,16 +64,19 @@ KD.Hud = (function () {
       KD.UI.bar(3, 27, 40, 4, S.S.beer.t / S.S.beer.max, 'GOLD.2');
       KD.Text.draw('+' + Math.round(S.S.beer.dmg * 100) + '%', 45, 26, 'GOLD.2', { tiny: true });
     }
-    /* fragments */
+    /* Fragments, tucked under the fat bar on the LEFT. They used to sit
+       top-centre, which is exactly where a boss fight puts the King's name
+       and health, so his title read as "THE KING[][][]E ATLANTIC". */
     for (let i = 0; i < 5; i++) {
-      const fx = KD.W / 2 - 22 + i * 9;
+      const fx = 3 + i * 9;
+      const fy = S.S.beer ? 33 : 27;
       const got = S.S.frags.length > i;
       if (KD.PX.has('ic_crown')) {
-        KD.PX.blit(KD.Screen.ctx(), 'ic_crown', fx, 3, { anchor: false });
-        if (!got) KD.Dither.fill(KD.Screen.ctx(), fx, 3, 8, 8, 'INK.0', 0.75);
+        KD.PX.blit(KD.Screen.ctx(), 'ic_crown', fx, fy, { anchor: false });
+        if (!got) KD.Dither.fill(KD.Screen.ctx(), fx, fy, 8, 8, 'INK.0', 0.75);
       } else {
-        KD.Screen.rect(fx, 4, 7, 5, got ? 'GOLD.3' : 'INK.2');
-        KD.Screen.frame(fx, 4, 7, 5, 'INK.0');
+        KD.Screen.rect(fx, fy + 1, 7, 5, got ? 'GOLD.3' : 'INK.2');
+        KD.Screen.frame(fx, fy + 1, 7, 5, 'INK.0');
       }
     }
     /* depth read-out, so the layers are legible as progress */

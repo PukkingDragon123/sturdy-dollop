@@ -63,6 +63,8 @@ KD.Tiles = (function () {
   /* the Sea Gate: solid until the guard lets you through */
   def({ id: 'gate',     name: 'The Sea Gate', solid: true, art: 'masonry', hard: 9, hp: 250, gate: true });
   def({ id: 'pillar',   name: 'Pillar',    solid: true,  deco: 'bk_pillar_mid', hp: 30, drop: 'brick' });
+  /* the seat he stole. Purely scenery, but it has to be THERE. */
+  def({ id: 'throne_seat', name: 'The Throne', solid: false, deco: 'bk_throne', big: [3, 4], hp: 60, light: 2 });
 
   const AIR = byId.air.i, WATER = byId.water.i;
   const isSolid = (i) => T[i] && T[i].solid;

@@ -156,10 +156,17 @@ KD.Player = (function () {
       }
     }
     P.y = ny;
-    /* Unstick: if we somehow ended up inside solid tiles, climb out upward
-       rather than vibrating in the floor forever. */
+    /* Unstick: if we somehow ended up inside solid tiles, step out to the
+       NEAREST free spot rather than climbing. The old version walked up 48px
+       every frame it was stuck, so being teleported into a pillar levitated
+       the king a hundred tiles out through the ceiling. Bounded to two tiles
+       and biased downward, because a floor is the usual thing to be inside. */
     if (boxHits(P.x, P.y)) {
-      for (let k = 0; k < 24 && boxHits(P.x, P.y); k++) P.y -= 2;
+      const OUT = [[0, 2], [0, -2], [0, 4], [0, -4], [-3, 0], [3, 0],
+                   [0, 8], [0, -8], [-6, 0], [6, 0], [0, 16], [0, -16]];
+      for (const [ox, oy] of OUT) {
+        if (!boxHits(P.x + ox, P.y + oy)) { P.x += ox; P.y += oy; break; }
+      }
       P.vy = 0;
     }
     if (P.onGround) { P.coyote = 0.09; P.fallFrom = null; }

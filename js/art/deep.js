@@ -122,6 +122,329 @@ KD.art.deep = (function () {
     P.def('king2_scale0', A(SCALE0, 24, 44));
 
     P.anim('king2_scale', ['king2_scale0'], 6);
+
+    /* ---- his other three outfits ------------------------------------
+       The phase telegraph. Same body, same pose - what changes is what
+       the light catches, because that is what you read at a glance in
+       the middle of a fight:
+         gold  full plate where the mail was, trim knocked back to bone
+               so it still reads, and a plume he did not earn
+         ink   the octopus has taken him over: everything that caught
+               light goes ROT, and the blond mop becomes a hood
+         torn  the plate is off. Bare skin, wounds where the straps
+               were, and the stolen crown finally cracked
+       ---------------------------------------------------------------- */
+    const K2 = (name, rows) => P.def(name, A(rows, 24, 44));
+    K2('king2_gold0', [
+      '....................oo..oo..oo.o%o...............',
+      '...................oYYooYYooYYo%&%o..............',
+      '...................oyWyyYyyYyyo$%&oozZo..........',
+      '.................oMoGyYyGyYyGGo$%ooZAaao.........',
+      '................oMmoggGGggGGggo$ooZAAaaaZo.......',
+      '...............oMmmmmmmmmNNno...oAAAaaaaaZZo.....',
+      '..............oMmmmmmmmmmmNNno.oAAAaaaaaaaZZo....',
+      '..............qMmNNNNNNNNNNnno.oAAAaaaaaaaaZZo...',
+      '..............qNmKKKKKKKKkSsno.oAAAaaaaaaaaaZZo..',
+      '..............qNmKooKKoooKSsno.oAAAaaaaaaaaaZZzo.',
+      '..............qNKoWpoKKoWpkSno.oAAaaaaaaaaaaZZzo.',
+      '..............qNKKKKKKsKkkSsno.oAAaoooooooaaZZzo.',
+      '..............qNKKKKKKsoKkSsno.oAAoWwwwwBboaZZzo.',
+      '...............oKKKKKKoKkSsno..oAAowooooobcoaZzo.',
+      '...............oKKoooooKkkSso..oAAowwwwwBboaZZzo.',
+      '................oKKKWWKkkkSso..oAaaoooooooaZZzzo.',
+      '................oKKKKKkkkkSso..oAaaZZZZZZZzzzzo..',
+      '.................oKKkkkkSso....oAaaZZZZZzzzzzo...',
+      '...................oSKkkkSo.....oaaZZZZzzzzzo....',
+      '......qyYGGgyooAaaZzoBWWBwbBbooaaaZZZZZzzzzzo....',
+      '...qyYGGGgyyooAaaaZzooYyGGyGGyooaaaZZZZZZzzzzzo..',
+      '..qyYGGGgyyooAaxaZzooYyGGyGGyyooaaaZZZZZZZzzzzzo.',
+      '...qgGGgyo.oAaaaZzoowByGGyGGyBbo.oAaaZZzzo.oaZZzo',
+      '.oAaxZo....oxaxaxzooywBGyGGyBbyo.oxaxaxazo..oxZzo',
+      'oAaaZo....oYyGyo...oywByGGyBbyo...oYyGyo...oaZZzo',
+      'oxaZzo....oYyGyo...oyGwBBbGGyo....oYyGyo..oxaZZzo',
+      'oAaaZo....oYyGyo...oyGGbBBGGyo....oYyGyo..oaaZZzo',
+      '.oxaaZo....oAaaZzo..oyGGyGGyyo...oYyGyo.oxaZZzo..',
+      '..oaaZzo...oxaxaxo..oyGyGGyGyo..oAaaZzo.oaZZzo...',
+      '...oxaZzo...oYyGyo.oyGGyGGyGGyo.oxaxaxo..oaZZzo..',
+      '....oaZZzo..obBGGyoooyGyGGyGGGyooYyGGyo...oaZZzo.',
+      '.....oazo...oBWGgyoooyGGyGGyGGyoobBGgyo....oZzo..',
+      '............ooGgyoobBWoWWoWWboooGgyo.............',
+      '..............oybbBBWWBBBBWWBBbbyo...............',
+      '..........oaZooYyGGyGGyGGyGGyGGyyooaZo...........',
+      '.......oAaZzo.oYyGGyGyo..oYyGyGGyo..oaZZzo.......',
+      '....oAaaxZo..qYyGGyGyo..qYyGyGGyGyo..oaaxZZo.....',
+      '..oAaaZo.....qYyGyGGyo..qbBWBBwwwbo....oaaZZzo...',
+      'oAxaaZo......qbBWBBwbo..qYyGGyGGyyo.....oaxZZzo..',
+      'oAaaZo.......qYyGGyGyo..qYyGyGGyGyo......oaZZzo..',
+      '.oxaaZo......qYyGyGGyo..qYyGGyGGyyo.....oxaZzo...',
+      '...oaaZzo.qggyyyyyyyyoo.qggyyyyyyyyoo..oaZzo.....',
+      '..........qBBgyyyyyyyoo.qgyyyyyyyBBoo............',
+      '..........ooooooooooooo.ooooooooooooo............'
+    ]);
+    K2('king2_ink0', [
+      '....................oo..oo..oo...................',
+      '...................oYYooYYooYYo..................',
+      '...................oyWyyYyyYyyo....ozZo..........',
+      '.................oMoGyYyGyYyGGo...oZAaao.........',
+      '................oMmoggGGggGGggo..oZAAaaaZo.......',
+      '...............oAaaaaaaaaZZzo...oAAAaaaaaZZo.....',
+      '..............oAaaaaaaaaaaZZzo.oAAAaaaaaaaZZo....',
+      '..............qAaZZZZZZZZZZzzo.oAAAaaaaaaaaZZo...',
+      '..............qZaKKKKKKKKkSszo.oAAAaaaaaaaaaZZo..',
+      '..............qNmZooZZoooZSsno.oAAAaaaaaaaaaZZzo.',
+      '..............qNZoWpoZZoWpkSno.oAAaaaaaaaaaaZZzo.',
+      '..............qNKKKKKKsKkkSsno.oAAaoooooooaaZZzo.',
+      '..............qNKKKKKKsoKkSsno.oAAoWwwwwBboaZZzo.',
+      '...............oKKKKKKoKkSsno..oAAowooooobcoaZzo.',
+      '...............oKKoooooKkkSso..oAAowwwwwBboaZZzo.',
+      '................oKKKWWKkkkSso..oAaaoooooooaZZzzo.',
+      '................oKKKKKkkkkSso..oAaaZZZZZZZzzzzo..',
+      '.................oKKkkkkSso....oAaaZZZZZzzzzzo...',
+      '...................oSKkkkSo.....oaaZZZZzzzzzo....',
+      '......qaAZZzZooAaaZzoaZZaZzazooaaaZZZZZzzzzzo....',
+      '...qaAZZZzZZooAaaaZzooAaZZaZZZooaaaZZZZZZzzzzzo..',
+      '..qaAZZZzZZooAaxaZzooAaZZaZZaZooaaaZZZZZZZzzzzzo.',
+      '...qzZZzZo.oAaaaZzooZaaZZaZZaazo.oAaaZZzzo.oaZZzo',
+      '.oAaxZo....oxaxaxzooaZaZaZZaazZo.oxaxaxazo..oxZzo',
+      'oAaaZo....oAaZZo...oaZaaZZaazZo...oAaZZo...oaZZzo',
+      'oxaZzo....oAaZZo...oaZZaazZZZo....oAaZZo..oxaZZzo',
+      'oAaaZo....oAaZZo...oaZZzaaZZZo....oAaZZo..oaaZZzo',
+      '.oxaaZo....oAaaZzo..oaZZaZZaZo...oAaZZo.oxaZZzo..',
+      '..oaaZzo...oxaxaxo..oaZaZZaZZo..oAaaZzo.oaZZzo...',
+      '...oxaZzo...oAaZZo.oaZZaZZaZZZo.oxaxaxo..oaZZzo..',
+      '....oaZZzo..ozaZZZoooaZaZZaZZZZooAaZZZo...oaZZzo.',
+      '.....oazo...oaZZzZoooaZZaZZaZZZoozaZzZo....oZzo..',
+      '............ooZzZoozaZoWZoZZzoooZzZo.............',
+      '..............oZzzaaZZaaaaZZaazzZo...............',
+      '..........oaZooAaZZaZZaZZaZZaZZaZooaZo...........',
+      '.......oAaZzo.oAaZZaZZo..oAaZaZZZo..oaZZzo.......',
+      '....oAaaxZo..qAaZZaZZo..qAaZaZZaZZo..oaaxZZo.....',
+      '..oAaaZo.....qAaZaZZZo..qzaZaaZZZzo....oaaZZzo...',
+      'oAxaaZo......qzaZaaZzo..qAaZZaZZaZo.....oaxZZzo..',
+      'oAaaZo.......qAaZZaZZo..qAaZaZZaZZo......oaZZzo..',
+      '.oxaaZo......qAaZaZZZo..qAaZZaZZaZo.....oxaZzo...',
+      '...oaaZzo.qzzZZZZZZZZoo.qzzZZZZZZZZoo..oaZzo.....',
+      '..........qaazZZZZZZZoo.qzZZZZZZZaaoo............',
+      '..........ooooooooooooo.ooooooooooooo............'
+    ]);
+    K2('king2_torn0', [
+      '....................oo..oo.......................',
+      '...................oYYooYo.......................',
+      '...................oyWyyYo.o...ozZo..............',
+      '.................oMoGyYyGo.oo..oZAaao............',
+      '................oMmoggGGgo...o..oZAAaaaZo........',
+      '...............oMmmmmmmmmNNno...oAAAaaaaaZZo.....',
+      '..............oMmmmmmmmmmmNNno.oAAAaaaaaaaZZo....',
+      '..............qMmNNNNNNNNNNnno.oAAAaaaaaaaaZZo...',
+      '..............qNmKKKKKKKKkSsno.oAAAaaaaaaaaaZZo..',
+      '..............qNmKooKKoooKSsno.oAAAaaaaaaaaaZZzo.',
+      '..............qNKoWpoKKoWpkSno.oAAaaaaaaaaaaZZzo.',
+      '..............qNKKKKKKsKkkSsno.oAAaoooooooaaZZzo.',
+      '..............qNKKKKKKsoKkSsno.oAAoWwwwwBboaZZzo.',
+      '...............oKKKKKKoKkSsno..oAAowooooobcoaZzo.',
+      '...............oKKoooooKkkSso..oAAowwwwwBboaZZzo.',
+      '................oKKKWWKkkkSso..oAaaoooooooaZZzzo.',
+      '................oKKKKKkkkkSso..oAaaZZZZZZZzzzzo..',
+      '.................oKKkkkkSso....oAaaZZZZZzzzzzo...',
+      '...................oSKkkkSo.....oaaZZZZzzzzzo....',
+      '......qkKSSssooAaaZzo$%%$$#$#ooaaaZZZZZzzzzzo....',
+      '...qkKSSSsssooAaaaZzooKkSSkSSsooaaaZZZZZZzzzzzo..',
+      '..qkKSSSsssooAaxaZzooKkSSkSSksooaaaZZZZZZZzzzzzo.',
+      '...qsSSsso.oAaaaZzoo$$kSSkSSk$#o.oAaaZZzzo.oaZZzo',
+      '.oAaxZo....oxaxaxzook$$SkSSk$#so.oxaxaxazo..oxZzo',
+      'oAaaZo....oKkSso...o#%$&%#$kSso...oKkSso...oaZZzo',
+      'oxaZzo....oKkSso...o#$%%$#kSso....oKkSso..oxaZZzo',
+      'oAaaZo....oKkSso...okSS#$$SSso....oKkSso..oaaZZzo',
+      '.oxaaZo....oAaaZzo..okSSkSSkso...oKkSso.oxaZZzo..',
+      '..oaaZzo...oxaxaxo..okSkSSkSso..oAaaZzo.oaZZzo...',
+      '...oxaZzo...oKkSso.okSSkSSkSSso.oxaxaxo..oaZZzo..',
+      '....oaZZzo..o#$SSsoookSkSSkSSSsooKkSSso...oaZZzo.',
+      '.....oazo...o$%SssoookSSkSSkSSsoo#$Ssso....oZzo..',
+      '............ooSssoo#$%oW%o%%#oooSsso.............',
+      '..............os##$$%%$$$$%%$$##so...............',
+      '..........oaZooKkSSkSSkSSkSSkSSksooaZo...........',
+      '.......oAaZzo.oKkSSkSso..oKkSkSSso..oaZZzo.......',
+      '....oAaaxZo..qKkSSkSso..qKkSkSSkSso..oaaxZZo.....',
+      '..oAaaZo.....qKkSkSSso..q#$%$$$$$#o....oaaZZzo...',
+      'oAxaaZo......q#$%$$$#o..qKkSSkSSkso.....oaxZZzo..',
+      'oAaaZo.......qKkSSkSso..qKkSkSSkSso......oaZZzo..',
+      '.oxaaZo......qKkSkSSso..qKkSSkSSkso.....oxaZzo...',
+      '...oaaZzo.qSSssssssssoo.qSSssssssssoo..oaZzo.....',
+      '..........q$$Ssssssssoo.qSsssssss$$oo............',
+      '..........ooooooooooooo.ooooooooooooo............'
+    ]);
+
+    P.anim('king2_gold', ['king2_gold0'], 6);
+    P.anim('king2_ink', ['king2_ink0'], 6);
+    P.anim('king2_torn', ['king2_torn0'], 6);
+
+    /* ==========================================================
+       B. THE OCTOPUS ARMY. Five soldiers, told apart by
+       SILHOUETTE before colour, because in a boss fight you only
+       get the shape:
+         grunt   conical helmet, spear planted, four arms down
+         brute   fat mantle over a plate breastplate, two fists
+         caster  long hood and a lit orb held out in front
+         swarm   a hatchling. Mantle, three arms, no gear at all
+         ink     a swollen sac, dripping, nothing else
+       Every one of them keeps the King's ROT purple and the same
+       white eye with an INK.1 slit, so they read as HIS.
+       ========================================================== */
+    const O = (name, rows) => P.def(name, A(rows, (rows[0].length >> 1), rows.length));
+    O('octo_grunt0', [
+      '.......ohho.......',
+      '......ohHJho......',
+      '.....ohHJJJho.....',
+      '....oAaZZZZzzo....',
+      '...oAaaZZZZZzzo...',
+      '..oAaaaZZZZZZzzo..',
+      '..oAaWWaZoWWZzzo..',
+      '..oAaWpaZoWpZzzo..',
+      '..oAaaaZZZZZZzzo..',
+      '..oAaaZZZZZZZzzo..',
+      '...oAaZZZZZZzzo...',
+      '..oxaoZZZZZZoazo..',
+      '.oxaxaoooooooaxzo.',
+      'oxaxaxo.....oxaxzo',
+      'oaxaxo..hh...oaxzo',
+      'oxaxo...HH....oxzo',
+      '.oao....HH.....oo.',
+      '..o.....HH........',
+      '........oo........',
+      '..................'
+    ]);
+    O('octo_brute0', [
+      '........oAAaaZZo..........',
+      '......oAAaaaaZZZzo........',
+      '.....oAaaaaaaZZZZzo.......',
+      '....oAaaaaaaaaZZZZzo......',
+      '...oAaaaaaaaaaaZZZZzo.....',
+      '...oAaWWWaaZZoWWWZZzo.....',
+      '...oAaWppWaZZoWppWZzo.....',
+      '...oAaaWWaaaZZoWWZZzo.....',
+      '...oAaaaaaaaaaaZZZZzo.....',
+      '....oAaaaaaaaaZZZZzo......',
+      '...ohhhhhhhhhhhhhhho......',
+      '..oHJJJJJJJJJJJJJJJHo.....',
+      '..oHJhhhhhhhhhhhhhJHo.....',
+      '..oHJhoooooooooooohJHo....',
+      '..oHJJJJJJJJJJJJJJJHo.....',
+      '..oHHHHHHHHHHHHHHHHHo.....',
+      '.oxaoHJJJJJJJJJJJJJHoazo..',
+      'oxaxaoHHHHHHHHHHHHHoaxzo..',
+      'oaxaxo.oooooooooooo.oaxzo.',
+      'oxaxo..............oxaxzo.',
+      'oaxo...oAAao..oAAao..oaxzo',
+      'oxo...oAaaaZo.oAaaZo..oxzo',
+      '.o....oAaaaZo.oAaaZo...oo.',
+      '.......oooooo.oooooo......'
+    ]);
+    O('octo_caster0', [
+      '.......oo.........',
+      '......ozzo........',
+      '.....oZzzzo.......',
+      '....oZZzzzzo......',
+      '...oAZZzzzzzo.....',
+      '...oAaZZzzzzzo....',
+      '..oAaaZZZzzzzzo...',
+      '..oAaoWWoZoWWzo...',
+      '..oAaoWpoZoWpzo...',
+      '..oAaaZZZZZzzzo...',
+      '..oAaaZZZZZzzzo...',
+      '...oAaZZZZzzzo....',
+      '...oAaZZZZzzzo....',
+      '..oxaoZZZZoazo....',
+      '.oxaxaoooooaxzo...',
+      'oxaxaxo...oxaxzo..',
+      'oaxaxo.oCCo.oaxzo.',
+      'oxaxo.oCWWCo.oxzo.',
+      '.oao.oCWWWWCo.oo..',
+      '..o..oCWWWWCo.....',
+      '......oCCCCo......',
+      '.......oooo.......'
+    ]);
+    O('octo_swarm0', [
+      '...oAaZzo...',
+      '..oAaaZZzo..',
+      '.oAaaaZZZzo.',
+      '.oAaWaZoWzo.',
+      '.oAaWaZoWzo.',
+      '.oAaaaZZZzo.',
+      '..oAaZZZzo..',
+      '..oxaoZazo..',
+      '.oxaxaoaxzo.',
+      'oxaxo.oxaxzo',
+      'oaxo...oaxzo',
+      '.oo.....oo..'
+    ]);
+    O('octo_ink0', [
+      '......ozZZzo......',
+      '....ozZZZZZZzo....',
+      '...ozZZZZZZZZzo...',
+      '..ozZZZZZZZZZZzo..',
+      '..oZZZZZZZZZZZZo..',
+      '..oZZoWWoZoWWZZo..',
+      '..oZZoWpoZoWpZZo..',
+      '..oZZZZZZZZZZZZo..',
+      '..ozZZZZZZZZZZzo..',
+      '...ozZZZZZZZZzo...',
+      '..oxzoZZZZZZozzo..',
+      '.oxzxzoooooozxzo..',
+      'oxzxzo.....ozxzzo.',
+      'ozxzo..ozo...ozzo.',
+      'oxzo..oZZo....ozo.',
+      '.oo...oZZo.....oo.',
+      '.......oo.oo......',
+      '..........oo......',
+      '.......oo.........',
+      '.......oo.........'
+    ]);
+
+    P.anim('octo_grunt', ['octo_grunt0'], 5);
+    P.anim('octo_brute', ['octo_brute0'], 5);
+    P.anim('octo_caster', ['octo_caster0'], 5);
+    P.anim('octo_swarm', ['octo_swarm0'], 7);
+    P.anim('octo_ink', ['octo_ink0'], 5);
+    const TH = (name, rows) => P.def(name, A(rows, 0, rows.length));
+
+    /* ---- the seat he stole ------------------------------------------
+       Coral and gold, and an octopus arm already grown over the back:
+       he has been sitting in it long enough for the thing to take root.
+       Anchored bottom-left so it lands on a 3x4 tile footprint. */
+    TH('bk_throne', [
+      '........oGGGGo..........',
+      '.......oGYYYYGo.........',
+      '......oGYWWWWYGo....ozZo',
+      '......oGYWWWWYGo...oZAao',
+      '.......oGYYYYGo...oZAaao',
+      '........oGyygo...oZAaaZo',
+      '.......orrrrro..oZAaaZzo',
+      '......orRRxxRro.oAaaZZzo',
+      '.....orRxxxxxRro.oaaZZzo',
+      '....orRxxXXxxxRro.oaZZzo',
+      '....oRxxXXXXxxRo.oaZZzzo',
+      '....oRxxXXXXxxRo.oaZZzo.',
+      '....oRxxXXXXxxRo.oZzzo..',
+      '....oRxxXXXXxxRoozzo....',
+      '....oRxxXXXXxxRozo......',
+      '....oRxxXXXXxxRo........',
+      '....oRxxXXXXxxRo........',
+      '...orRxxXXXXxxRro.......',
+      '..orRxxxxxxxxxxRro......',
+      '.orRxxxxxxxxxxxxRro.....',
+      'oRxxxxxxxxxxxxxxxxRo....',
+      'oRxxGGGGGGGGGGGGxxRo....',
+      'oRxxGYYYYYYYYYYGxxRo....',
+      'oRxxGYYYYYYYYYYGxxRo....',
+      'oRxxGGGGGGGGGGGGxxRo....',
+      'oRxxxxxxxxxxxxxxxxRo....',
+      'oRRxxxxxxxxxxxxxxRRo....',
+      'orRRxxxxxxxxxxxxRRro....',
+      '.orrRRRRRRRRRRRRrro.....',
+      '.oGo.oooooooooo.oGo.....',
+      '.oYo............oYo.....',
+      '.ooo............ooo.....'
+    ]);
   }
 
   return { build };

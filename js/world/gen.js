@@ -320,14 +320,30 @@ KD.Gen = (function () {
       Wd.fg[ty * w + tx] = edge ? T.id('masonry') : T.AIR;
       if (!edge) { Wd.bg[ty * w + tx] = T.id('masonry'); markDry(tx, ty); }
     }
-    for (let i = 3; i < rw - 3; i += 6) {
+    /* Pillars ONLY against the two ends. They used to march across the
+       whole room every six tiles, which put one right where the fight
+       starts - the player was teleported inside solid rock and the
+       collision unstick levitated him out through the ceiling. A boss
+       arena needs a clear floor. */
+    for (const i of [3, 8, rw - 4, rw - 9]) {
       for (let j = y + 2; j < y + rh - 2; j++) Wd.fg[j * w + x + i] = T.id('pillar');
     }
-    for (let i = 4; i < rw - 4; i += 8) Wd.fg[(y + 2) * w + x + i] = T.id('lantern');
-    Wd.fg[(y + rh - 2) * w + (x + rw - 8)] = T.id('statue');
+    /* the floor of the arena, so nothing in the fight can fall out of it */
+    for (let i = 1; i < rw - 1; i++) {
+      Wd.fg[(y + rh - 2) * w + x + i] = T.id('masonry');
+      Wd.fg[(y + rh - 3) * w + x + i] = T.id('masonry');
+    }
+    for (let i = 5; i < rw - 5; i += 7) Wd.fg[(y + 2) * w + x + i] = T.id('lantern');
+    Wd.fg[(y + rh - 4) * w + (x + 5)] = T.id('statue');
+    Wd.fg[(y + rh - 4) * w + (x + rw - 7)] = T.id('statue');
+    /* his throne, dead centre against the back wall */
+    const seat = x + (rw >> 1) + 12;
+    Wd.fg[(y + rh - 4) * w + seat] = T.id('throne_seat');
     /* a way in from above */
     for (let j = y - 30; j < y; j++) { Wd.fg[j * w + (x + 5)] = T.AIR; Wd.fg[j * w + (x + 6)] = T.AIR; }
-    meta.throne = { x: x + (rw >> 1), y: y + rh - 3, room: { x, y, w: rw, h: rh } };
+    /* Where the fight happens: standing ON the arena floor, clear of every
+       pillar and of the throne itself. */
+    meta.throne = { x: x + (rw >> 1) - 6, y: y + rh - 4, room: { x, y, w: rw, h: rh }, seat: seat };
     meta.structures.push({ kind: 'throne', x, y, w: rw, h: rh });
   }
 
