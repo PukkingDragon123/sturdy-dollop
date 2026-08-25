@@ -137,6 +137,7 @@ KD.Scenes.play = (function () {
     else if (P.mode === 'swim') base = 'king_swim';
     else if (P.mode === 'walk') base = 'king_walk';
     else if (P.mode === 'jump') base = 'king_swim';
+    if (!KD.PX.hasAny(base)) base = KD.PX.hasAny('king_idle') ? 'king_idle' : base;
     const name = KD.PX.frameOf(base, P.anim * 0.12);
     const px = Math.round(P.x - cam.x), py = Math.round(P.y - cam.y);
     if (KD.PX.has(name)) {

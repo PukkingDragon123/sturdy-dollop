@@ -67,13 +67,31 @@ KD.PX = (function () {
 
   /* an animation is just a name list; frame() picks one by time */
   const ANIM = {};
+  const AUTO = {};
   function anim(name, frames, fps) {
     ANIM[name] = { frames, fps: fps || 8 };
   }
+  /* An art file that names its frames foo0, foo1, foo2 but forgets to call
+     anim('foo', ...) should still animate. Discover numbered frames on first
+     ask and cache the result, so a missing anim() is a non-event rather than
+     a creature that never draws. */
+  function autoFrames(name) {
+    if (AUTO[name] !== undefined) return AUTO[name];
+    const out = [];
+    for (let i = 0; i < 32; i++) {
+      if (!SPR[name + i]) break;
+      out.push(name + i);
+    }
+    AUTO[name] = out.length ? out : null;
+    return AUTO[name];
+  }
   function frameOf(name, t) {
     const a = ANIM[name];
-    if (!a) return name;
-    return a.frames[Math.floor(t * a.fps) % a.frames.length];
+    if (a) return a.frames[Math.floor(t * a.fps) % a.frames.length];
+    if (SPR[name]) return name;
+    const f = autoFrames(name);
+    if (f) return f[Math.floor(t * 8) % f.length];
+    return name;
   }
 
   /* ---- the atlas ------------------------------------------ */
@@ -225,6 +243,8 @@ KD.PX = (function () {
   const names = () => Object.keys(SPR);
   const sheet = () => atlas;
 
-  return { def, variant, anim, frameOf, build, blit, nine, has, get, names, sheet, SPR,
+  /* does this name resolve to something drawable, directly or as an anim? */
+  const hasAny = (name) => !!(SPR[name] || ANIM[name] || autoFrames(name));
+  return { def, variant, anim, frameOf, autoFrames, hasAny, build, blit, nine, has, get, names, sheet, SPR,
            SHADES, bandFor, MIX };
 })();

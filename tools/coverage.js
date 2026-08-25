@@ -57,7 +57,7 @@ const GENERIC = new Set(['it_bar', 'it_brick_i', 'it_pick', 'it_shortblade', 'it
 const missing = [], variants = [], aliased = [];
 for (const [n, why] of want) {
   if (n[0] === '~') { variants.push(n.slice(1)); continue; }
-  if (have.has(n)) continue;
+  if (have.has(n) || (KD.PX.hasAny && KD.PX.hasAny(n))) continue;
   const resolved = KD.State.art ? KD.State.art(n) : null;
   if (resolved && have.has(resolved) && !GENERIC.has(resolved)) { aliased.push(n + '->' + resolved); continue; }
   missing.push([n, why.trim()]);

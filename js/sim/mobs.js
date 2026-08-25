@@ -237,8 +237,10 @@ KD.Mobs = (function () {
 
   function draw(ctx, cam) {
     for (const m of list) {
-      const spr = KD.PX.frameOf(m.K.spr + (m.state === 'wind' ? '_wind' : ''), m.anim);
-      let name = KD.PX.has(spr) ? spr : (KD.PX.has(m.K.spr) ? m.K.spr : null);
+      const windName = m.K.spr + '_wind';
+      const base = (m.state === 'wind' && KD.PX.hasAny(windName)) ? windName : m.K.spr;
+      const spr = KD.PX.frameOf(base, m.anim);
+      const name = KD.PX.has(spr) ? spr : null;
       if (!name) {
         /* the art has not landed yet: a readable placeholder box, still no circles */
         const px = Math.round(m.x - m.K.w / 2 - cam.x), py = Math.round(m.y - m.K.h - cam.y);
