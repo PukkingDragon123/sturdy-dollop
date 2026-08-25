@@ -11,6 +11,7 @@ KD.Scenes.play = (function () {
     KD.Cam = KD.Cam || { x: 0, y: 0 };
     snapCam();
     KD.Parallax.seed(30);
+    KD.Folk.seed();
     KD.UI.guard(0.2);
   }
   function snapCam() {
@@ -97,6 +98,7 @@ KD.Scenes.play = (function () {
     KD.Light.step();
     KD.Fx.update(dt);
     KD.Parallax.tick(dt);
+    KD.Folk.update(dt, S);
 
     /* camera: lead the player, snap to whole pixels so nothing shimmers */
     const P = KD.Player.P;
@@ -181,6 +183,7 @@ KD.Scenes.play = (function () {
     const st = S.stats;
     const lightR = 26 + (st.lightRadius || 0) * 10;
     KD.Render.torch(ctx, cam, KD.Player.P.x, KD.Player.P.y - 8, lightR);
+    KD.Folk.draw(ctx, cam);
     KD.Mobs.draw(ctx, cam);
     KD.Boss.draw(ctx, cam);
     drawKing(ctx, cam);

@@ -207,9 +207,32 @@ KD.PX = (function () {
   }
 
   /* nine-slice from a 3x3 kit of same-sized corner/edge/centre tiles.
-     names: [tl,t,tr, l,c,r, bl,b,br] */
+     names: [tl,t,tr, l,c,r, bl,b,br]
+     A big panel is hundreds of 8px tiles - the skill tree fills most of
+     the screen and cost two thirds of the frame rate every time it was
+     open. Each (kit, size) is drawn once into its own canvas and then
+     blitted whole; a panel that stays the same size is one drawImage. */
+  const nineCache = {};
+  let nineGen = 0;
   function nine(ctx, names, x, y, w, h) {
     if (!built) build();
+    w = Math.round(w); h = Math.round(h);
+    const key = names.join(',') + '|' + w + 'x' + h;
+    let c = nineCache[key];
+    if (!c) {
+      c = document.createElement('canvas');
+      c.width = Math.max(1, w); c.height = Math.max(1, h);
+      const g = c.getContext('2d');
+      g.imageSmoothingEnabled = false;
+      nineRaw(g, names, 0, 0, w, h);
+      /* Do not let this grow without bound: panels resize with the window,
+         and every intermediate size would otherwise be kept forever. */
+      if (++nineGen > 64) { for (const k in nineCache) delete nineCache[k]; nineGen = 0; }
+      nineCache[key] = c;
+    }
+    ctx.drawImage(c, Math.round(x), Math.round(y));
+  }
+  function nineRaw(ctx, names, x, y, w, h) {
     const t = SPR[names[0]];
     const u = t.w, v = t.h;
     const cols = Math.max(1, Math.ceil((w - u * 2) / u));

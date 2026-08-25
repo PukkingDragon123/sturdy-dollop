@@ -32,7 +32,9 @@ KD.Scenes.interior = (function () {
   function geom() {
     /* and not too WIDE either: 400px of room with a 14px king in it read
        as a corridor. About twelve paces across is a room. */
-    const w = Math.min(KD.W - 48, 268);
+    /* Grow with the screen, within reason: a fixed 268 looked marooned in
+       the middle of a 624-wide phone in landscape. */
+    const w = Math.max(220, Math.min(Math.round(KD.W * 0.62), 344));
     const wall = 56, floorH = 22;
     const h = wall + floorH;
     const x = Math.round((KD.W - w) / 2);
@@ -343,15 +345,25 @@ KD.Scenes.interior = (function () {
      rind, going darker the further it is from the lit room. */
   function outside(ctx, g) {
     KD.Screen.clear('INK.0');
+    /* One shade for the whole shell, then a dithered vignette over it.
+       Stepping the shade by distance drew a visible RECTANGLE where the
+       band changed, which is the one thing a vignette must not do. */
     for (let ty = 0; ty < KD.H; ty += TS) {
       for (let tx = 0; tx < KD.W; tx += TS) {
         if (tx + TS > g.x - 8 && tx < g.x + g.w + 8 && ty + TS > g.y - 8 && ty < g.y + g.h + 8) continue;
-        const d = Math.max(
-          (g.x - 8 - (tx + TS)) / 150, ((tx) - (g.x + g.w + 8)) / 150,
-          (g.y - 8 - (ty + TS)) / 110, ((ty) - (g.y + g.h + 8)) / 110, 0);
-        KD.PX.blit(ctx, ((tx / TS | 0) + (ty / TS | 0)) & 1 ? 'in_wall2' : 'in_wall',
-          tx, ty, { shade: Math.min(4, 2 + Math.round(d * 2)) });
+        KD.PX.blit(ctx, ((tx / TS | 0) + (ty / TS | 0)) & 1 ? 'in_wall2' : 'in_wall', tx, ty, { shade: 2 });
       }
+    }
+    /* four soft rings of dark, each dithered, so the falloff has no edge */
+    for (let k = 1; k <= 4; k++) {
+      const pad = 8 + (k - 1) * 26;
+      const x0 = g.x - pad, y0 = g.y - pad;
+      const x1 = g.x + g.w + pad, y1 = g.y + g.h + pad;
+      const a = 0.22;
+      KD.Dither.wash(ctx, 0, 0, KD.W, Math.max(0, y0), 'INK.0', a);
+      KD.Dither.wash(ctx, 0, Math.min(KD.H, y1), KD.W, Math.max(0, KD.H - y1), 'INK.0', a);
+      KD.Dither.wash(ctx, 0, Math.max(0, y0), Math.max(0, x0), Math.max(0, Math.min(KD.H, y1) - Math.max(0, y0)), 'INK.0', a);
+      KD.Dither.wash(ctx, Math.min(KD.W, x1), Math.max(0, y0), Math.max(0, KD.W - x1), Math.max(0, Math.min(KD.H, y1) - Math.max(0, y0)), 'INK.0', a);
     }
     /* a thick rind lip right around the opening */
     KD.Screen.rect(g.x - 8, g.y - 8, g.w + 16, 8, 'CORAL.0');

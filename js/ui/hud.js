@@ -83,8 +83,11 @@ KD.Hud = (function () {
        it a 2600-tile world is just a big cave with fish in it. */
     const task = KD.Quests && KD.Quests.current();
     if (task) {
-      KD.Text.draw(task, KD.W - 6, 38, task.startsWith('READY') ? 'KELP.2' : 'BONE.1',
-        { tiny: true, align: 'right', shadow: 'INK.0', max: Math.min(210, KD.W - 120) });
+      /* On a touch layout the right edge belongs to the tab column, so the
+         task line goes under the fragments instead of behind the buttons. */
+      const col = task.startsWith('READY') ? 'KELP.2' : 'BONE.1';
+      if (KD.touch) KD.Text.draw(task, 3, 38, col, { tiny: true, shadow: 'INK.0', max: KD.W - 90 });
+      else KD.Text.draw(task, KD.W - 6, 38, col, { tiny: true, align: 'right', shadow: 'INK.0', max: Math.min(230, KD.W - 130) });
     }
     /* depth read-out, so the layers are legible as progress */
     const d = (KD.Player.P.y / 8) | 0;

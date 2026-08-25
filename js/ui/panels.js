@@ -142,6 +142,21 @@ KD.Panels = (function () {
   /* Node col/row are coordinates on ONE shared 11-column grid, not per-trunk
      offsets - the trunks just occupy different column bands. Laying them out
      per-trunk is what loses a whole trunk off the side of the panel. */
+  /* One existing 8x8 icon per skill, chosen for what the skill DOES, so a
+     glance at the tree reads as "dig, light, luck, lungs" rather than as
+     twenty-seven identical discs. No new art needed. */
+  const NODE_ICON = {
+    delve_root: 'ic_pick',     delve_speed1: 'ic_pick',    delve_light1: 'ic_star',
+    delve_luck1: 'ic_coin',    delve_breath: 'ic_bubble',   delve_tough: 'ic_shield',
+    delve_speed2: 'ic_anvil',  delve_pressure: 'ic_arrow_down', delve_cap: 'ic_crown',
+    brawl_root: 'ic_sword',    brawl_dmg1: 'ic_sword',      brawl_crit1: 'ic_cross',
+    brawl_swing: 'ic_arrow_r', brawl_reach: 'ic_arrow_r',   brawl_rage: 'ic_heart_full',
+    brawl_bulwark: 'ic_shield', brawl_leech: 'ic_heart_half', brawl_cap: 'ic_skull',
+    tide_root: 'ic_bubble',    tide_swim1: 'ic_arrow_up',   tide_hook1: 'ic_pick',
+    tide_grapple: 'ic_map',    tide_current: 'ic_arrow_r',  tide_mount: 'ic_star',
+    tide_flow: 'ic_clock_day', tide_gills: 'ic_bubble',     tide_cap: 'ic_crown'
+  };
+
   function tree(S) {
     const Sk = KD.Skills;
     const w = KD.W - 8, h = KD.H - 8, x = 4, y = 4;
@@ -186,6 +201,13 @@ KD.Panels = (function () {
       else {
         KD.Screen.rect(nx, ny, 12, 12, rank > 0 ? 'GOLD.1' : (can ? 'DEEP.2' : 'INK.1'));
         KD.Screen.frame(nx, ny, 12, 12, rank > 0 ? 'GOLD.3' : 'INK.3');
+      }
+      /* the node's own mark inside it. Twenty-seven identical discs is a
+         wall, not a tree - you could only tell them apart by hovering. */
+      const ico = NODE_ICON[n.id];
+      if (ico && KD.PX.has(ico)) {
+        KD.PX.blit(KD.Screen.ctx(), ico, nx + 2, ny + 2,
+          { anchor: false, shade: state === 'locked' ? 3 : 0 });
       }
       if (n.max > 1 || rank) {
         KD.Text.draw(rank + '/' + n.max, nx + 6, ny + 13, rank ? 'GOLD.2' : 'INK.3', { tiny: true, align: 'center' });

@@ -9,7 +9,9 @@ KD.Screen = (function () {
      shows more world at once - that is what "higher resolution" buys here.
      Tiles stay 8px, so 288 tall shows 36 tile rows instead of 27. */
   const H = 288;
-  const WMIN = 416, WMAX = 832;       // internal width follows the aspect
+  /* WMIN is what the UI still lays out in; going below it is worse than
+     letterboxing. WMAX caps how much world one screen may show. */
+  const WMIN = 384, WMAX = 832;
 
   let buf = null, bctx = null;        // the low-res target
   let out = null, octx = null;        // the on-page canvas
@@ -30,19 +32,32 @@ KD.Screen = (function () {
     const cw = Math.max(160, window.innerWidth);
     const ch = Math.max(120, window.innerHeight);
     const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
-    /* internal width from the window aspect, clamped and even */
-    let w = Math.round(H * (cw / ch));
-    w = Math.max(WMIN, Math.min(WMAX, w));
-    if (w & 1) w++;
+    /* Scale is chosen against DEVICE pixels, not CSS pixels: a phone at
+       390 CSS px wide with DPR 2 has 780 real pixels to play with, and
+       picking the scale from 390 renders the game at 1x in a big frame.
+       And the WIDTH follows from the scale, not from the window aspect -
+       deriving w from the aspect and then flooring the scale threw away
+       whatever did not divide evenly. A 1280x720 window got a 512-wide
+       buffer at 2x, filling 1024 of 1280 px; a 390x844 portrait phone got
+       416 at 1x, filling 208 of 390. Pick the largest scale whose leftover
+       width is still a playable buffer, and use all of it. */
+    const dw = cw * dpr, dh = ch * dpr;
+    let w = WMIN;
+    scale = 1;
+    for (let sc = 8; sc >= 1; sc--) {
+      if (H * sc > dh) continue;                       // too tall to fit
+      const cand = Math.floor(dw / sc);
+      if (cand < WMIN && sc > 1) continue;             // too narrow to play
+      scale = sc;
+      w = Math.max(WMIN, Math.min(WMAX, cand));
+      break;
+    }
+    if (w & 1) w--;
     KD.W = w; KD.H = H;
     if (buf.width !== w || buf.height !== H) {
       buf.width = w; buf.height = H;
       bctx.imageSmoothingEnabled = false;
     }
-    /* Scale is chosen against DEVICE pixels, not CSS pixels. A phone at
-       390 CSS px tall with DPR 2 has 780 real pixels to play with; picking
-       the scale from 390 would render the game at 1x in a big black frame. */
-    scale = Math.max(1, Math.floor(Math.min(cw * dpr / w, ch * dpr / H)));
     cssScale = scale / dpr;
     KD.scale = scale; KD.dpr = dpr; KD.cssScale = cssScale;
     out.width = w * scale;
@@ -85,6 +100,11 @@ KD.Screen = (function () {
   /* Bresenham, because there is no lineTo in a pixel game either */
   function line(x0, y0, x1, y1, col) {
     x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
+    /* An axis-aligned line is one rect, not one rect per pixel. The skill
+       tree draws its whole prerequisite graph out of vertical and
+       horizontal runs, which was thousands of 1x1 fills a frame. */
+    if (y0 === y1) { rect(Math.min(x0, x1), y0, Math.abs(x1 - x0) + 1, 1, col); return; }
+    if (x0 === x1) { rect(x0, Math.min(y0, y1), 1, Math.abs(y1 - y0) + 1, col); return; }
     const dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
     const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
     let err = dx - dy;
