@@ -143,23 +143,54 @@ KD.UI = (function () {
     lines.forEach((l, i) => KD.Text.draw(l[0], x + 4, y + 3 + i * 9, l[1]));
   }
 
-  /* the touch control cluster, drawn from the same pixel kit */
+  /* An octagon, stepped by hand. No arc(), and it reads as a round button. */
+  function octo(cx, cy, r, fill, line) {
+    const c = Math.max(2, Math.round(r * 0.42));       // corner cut
+    for (let y = -r; y <= r; y++) {
+      const ay = Math.abs(y);
+      let half = r;
+      if (ay > r - c) half = r - (ay - (r - c));
+      if (fill) KD.Screen.rect(cx - half, cy + y, half * 2 + 1, 1, fill);
+      if (line) {
+        KD.Screen.rect(cx - half, cy + y, 1, 1, line);
+        KD.Screen.rect(cx + half, cy + y, 1, 1, line);
+      }
+    }
+    if (line) { KD.Screen.rect(cx - (r - c), cy - r, (r - c) * 2 + 1, 1, line);
+                KD.Screen.rect(cx - (r - c), cy + r, (r - c) * 2 + 1, 1, line); }
+  }
+
+  /* The touch cluster. Big, stepped-octagonal, icon-first, and it fades out
+     while you are not touching it so it never covers the game. */
   function touchPad(defs) {
     if (!KD.touch) return;
     const pad = KD.In.padState();
     if (pad.on) {
-      KD.Screen.frame(Math.round(pad.cx) - 12, Math.round(pad.cy) - 12, 25, 25, 'BONE.0');
-      KD.Screen.rect(Math.round(pad.cx + pad.dx * 10) - 3, Math.round(pad.cy + pad.dy * 10) - 3, 7, 7, 'BONE.2');
+      octo(Math.round(pad.cx), Math.round(pad.cy), 20, null, 'BONE.0');
+      octo(Math.round(pad.cx + pad.dx * 13), Math.round(pad.cy + pad.dy * 13), 7, 'BONE.2', 'INK.0');
     } else {
-      KD.Screen.frame(18, KD.H - 34, 25, 25, 'INK.3');
+      /* a hint of where the stick lives, so a new player finds it */
+      octo(30, KD.H - 40, 20, null, 'INK.3');
+      KD.Text.draw('MOVE', 30, KD.H - 43, 'INK.3', { tiny: true, align: 'center' });
     }
     for (const b of defs) {
       const held = KD.In.act(b.name);
-      KD.Screen.rect(b.x - b.r, b.y - b.r, b.r * 2, b.r * 2, held ? 'DEEP.3' : 'INK.1');
-      KD.Screen.frame(b.x - b.r, b.y - b.r, b.r * 2, b.r * 2, held ? 'GOLD.2' : 'INK.3');
-      KD.Text.draw(b.label, b.x, b.y - 3, held ? 'GOLD.3' : 'BONE.1', { tiny: true, align: 'center' });
+      const face = held ? (b.big ? 'GOLD.2' : 'DEEP.3') : (b.big ? 'DEEP.2' : 'INK.1');
+      octo(b.x, b.y, b.r, face, held ? 'GOLD.3' : 'INK.0');
+      /* a lit top edge, so even a flat octagon has a direction of light */
+      if (!held) KD.Screen.rect(b.x - (b.r - Math.round(b.r * 0.42)), b.y - b.r + 1,
+                                (b.r - Math.round(b.r * 0.42)) * 2 + 1, 1, b.big ? 'WATER.2' : 'INK.3');
+      const icon = b.icon && KD.PX.has(b.icon) ? b.icon : null;
+      if (icon && b.r >= 14) {
+        KD.PX.blit(KD.Screen.ctx(), icon, b.x - 4, b.y - 7, { anchor: false });
+        KD.Text.draw(b.label, b.x, b.y + 3, held ? 'INK.0' : 'BONE.2', { tiny: true, align: 'center' });
+      } else if (icon) {
+        KD.PX.blit(KD.Screen.ctx(), icon, b.x - 4, b.y - 4, { anchor: false });
+      } else {
+        KD.Text.draw(b.label, b.x, b.y - 3, held ? 'INK.0' : 'BONE.2', { tiny: true, align: 'center' });
+      }
     }
   }
-  return { panel, titled, button, slot, bar, bevel, inside, tooltips, touchPad,
+  return { panel, titled, button, slot, bar, bevel, octo, inside, tooltips, touchPad,
            guard, blocked, tickGuard, hasKit, kit };
 })();

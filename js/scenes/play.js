@@ -10,6 +10,7 @@ KD.Scenes.play = (function () {
   function enter(args) {
     KD.Cam = KD.Cam || { x: 0, y: 0 };
     snapCam();
+    KD.Parallax.seed(30);
     KD.UI.guard(0.2);
   }
   function snapCam() {
@@ -20,21 +21,50 @@ KD.Scenes.play = (function () {
   const clampCamX = (v) => Math.max(0, Math.min(KD.World.W * 8 - KD.W, v));
   const clampCamY = (v) => Math.max(0, Math.min(KD.World.H * 8 - KD.H, v));
 
-  function layout() {
+  /* MOBILE CONTROLS: two thumbs, no thinking.
+     Left thumb: a stick that appears wherever you put it down.
+     Right thumb: ONE big ACT button whose job changes to match what is in
+     front of you, and one big SWIM/JUMP button. Panels live in three small
+     tabs out of the way. Six buttons that all did one thing each was a menu;
+     this is a controller. */
+  let actMode = 'dig';
+  function contextAction(S) {
+    const P = KD.Player.P, Wd = KD.World;
+    /* an enemy within a swing? then the button is a weapon */
+    for (const m of KD.Mobs.list) {
+      if (m.dead > 0) continue;
+      if (Math.hypot(m.x - P.x, m.y - m.K.h / 2 - (P.y - P.h / 2)) < 34) return 'hit';
+    }
+    /* something interactive under the reticle? then it is USE */
+    const T = KD.Tiles.get(Wd.at(P.tgx, P.tgy));
+    if (T && (T.container || T.door || T.station)) return 'use';
+    /* holding a placeable and pointing at empty space? then it is PLACE */
+    const held = S.hotbarItem();
+    if (held && held.tile && Wd.at(P.tgx, P.tgy) === KD.Tiles.AIR) return 'use';
+    return 'dig';
+  }
+  const ACT_LABEL = { dig: 'DIG', hit: 'HIT', use: 'USE' };
+  const ACT_ICON = { dig: 'ic_pick', hit: 'ic_sword', use: 'ic_check' };
+
+  function layout(S) {
     BTNS.length = 0;
     if (!KD.touch) { KD.In.buttons(BTNS); return; }
-    const r = 13, x = KD.W - 20, y = KD.H - 22;
-    BTNS.push({ name: 'dig',  x: x,      y: y,      r, label: 'DIG' });
-    BTNS.push({ name: 'hit',  x: x - 30, y: y,      r, label: 'HIT' });
-    BTNS.push({ name: 'jump', x: x,      y: y - 30, r, label: 'UP' });
-    BTNS.push({ name: 'use',  x: x - 30, y: y - 30, r, label: 'USE' });
-    BTNS.push({ name: 'bag',  x: x - 58, y: y - 30, r: 11, label: 'BAG' });
-    BTNS.push({ name: 'make', x: x - 58, y: y,      r: 11, label: 'MAKE' });
+    actMode = contextAction(S);
+    const R = 22, r = 16;
+    const bx = KD.W - R - 12, by = KD.H - R - 12;
+    /* the two big ones, under the right thumb */
+    BTNS.push({ name: actMode, x: bx, y: by, r: R, label: ACT_LABEL[actMode], icon: ACT_ICON[actMode], big: true });
+    BTNS.push({ name: 'jump', x: bx - R - r - 6, y: by - 6, r, label: 'UP', icon: 'ic_arrow_up' });
+    /* three small tabs, top right, out of the way of the action */
+    const tx = KD.W - 16;
+    BTNS.push({ name: 'bag',  x: tx, y: 46, r: 11, label: 'BAG',  icon: 'ic_bag',  tab: true });
+    BTNS.push({ name: 'make', x: tx, y: 70, r: 11, label: 'MAKE', icon: 'ic_anvil', tab: true });
+    BTNS.push({ name: 'tree', x: tx, y: 94, r: 11, label: 'SKL',  icon: 'ic_tree', tab: true });
     KD.In.buttons(BTNS);
   }
 
   function update(dt) {
-    layout();
+    layout(S);
     S.tick(dt);
     dayT += dt;
 
@@ -43,6 +73,7 @@ KD.Scenes.play = (function () {
     if (KD.In.isHit('KeyC') || KD.In.actHit('make')) KD.Panels.toggle('craft');
     if (KD.In.isHit('KeyV')) KD.Panels.toggle('tree');
     if (KD.In.actHit('bag')) KD.Panels.toggle('bag');
+    if (KD.In.actHit('tree')) KD.Panels.toggle('tree');
     if (KD.In.isHit('Escape')) {
       if (KD.Panels.isOpen()) KD.Panels.close();
       else KD.Game.go('pause', {});
@@ -59,6 +90,7 @@ KD.Scenes.play = (function () {
     KD.Water.step(2600);
     KD.Light.step();
     KD.Fx.update(dt);
+    KD.Parallax.tick(dt);
 
     /* camera: lead the player, snap to whole pixels so nothing shimmers */
     const P = KD.Player.P;
@@ -100,36 +132,6 @@ KD.Scenes.play = (function () {
     }
   }
 
-  /* the water surface and the sky behind everything */
-  function backdrop(ctx, cam) {
-    const sea = (KD.Gen.meta.sea || 34) * 8;
-    const horizon = Math.round(sea - cam.y);
-    /* sky */
-    if (horizon > 0) {
-      KD.Screen.rect(0, 0, KD.W, Math.min(KD.H, horizon), 'DEEP.4');
-      /* a dithered band just under the sky, so it is not a flat wall */
-      KD.Dither.fill(ctx, 0, Math.max(0, horizon - 10), KD.W, 10, 'WATER.3', 0.5);
-    }
-    /* the water column, banded by depth with dither seams */
-    const bands = [[34, 'WATER.0'], [90, 'DEEP.2'], [150, 'DEEP.1'], [230, 'DEEP.0'], [330, 'ROT.0']];
-    for (let i = 0; i < bands.length; i++) {
-      const y0 = bands[i][0] * 8 - cam.y;
-      const y1 = (i + 1 < bands.length ? bands[i + 1][0] * 8 : KD.World.H * 8) - cam.y;
-      if (y1 < 0 || y0 > KD.H) continue;
-      const a = Math.max(0, y0), b = Math.min(KD.H, y1);
-      KD.Screen.rect(0, a, KD.W, b - a, bands[i][1]);
-      if (y0 > 0 && y0 < KD.H) KD.Dither.fill(ctx, 0, y0 - 6, KD.W, 12, bands[i][1], 0.5);
-    }
-    /* the surface line itself: a hand-drawn 2px chop */
-    if (horizon > -4 && horizon < KD.H) {
-      for (let x = 0; x < KD.W; x += 2) {
-        const bob = Math.round(Math.sin((x + cam.x) * 0.09 + dayT * 1.6) * 1.4);
-        KD.Screen.rect(x, horizon + bob, 2, 1, 'WATER.3');
-        KD.Screen.rect(x, horizon + bob + 1, 2, 1, 'WATER.2');
-      }
-    }
-  }
-
   function drawKing(ctx, cam) {
     const P = KD.Player.P;
     let base = 'king_idle';
@@ -167,14 +169,16 @@ KD.Scenes.play = (function () {
   function draw(ctx) {
     const sh = KD.Fx.shakeOffset();
     const cam = { x: Math.round(KD.Cam.x + sh.x), y: Math.round(KD.Cam.y + sh.y) };
-    backdrop(ctx, cam);
+    KD.Parallax.back(ctx, cam, dayT);
     KD.Render.draw(ctx, cam);
+    KD.Parallax.surface(ctx, cam, dayT);
     const st = S.stats;
     const lightR = 26 + (st.lightRadius || 0) * 10;
     KD.Render.torch(ctx, cam, KD.Player.P.x, KD.Player.P.y - 8, lightR);
     KD.Mobs.draw(ctx, cam);
     drawKing(ctx, cam);
     KD.Fx.draw(ctx, cam);
+    KD.Parallax.front(ctx, cam, dayT);
     KD.Fx.overlay(ctx);
     KD.Hud.draw(S, cam);
     KD.UI.touchPad(BTNS);

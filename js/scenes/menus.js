@@ -20,33 +20,35 @@ KD.Scenes.title = (function () {
       KD.Screen.rect(bx, Math.round(by), (i % 3) ? 1 : 2, (i % 3) ? 1 : 2, 'WATER.2');
     }
     const cx = KD.W / 2;
-    /* the logo, hand-spaced */
-    KD.Text.draw('CROWNDEEP', cx, 22, 'GOLD.3', { align: 'center', space: 2, shadow: 'INK.0' });
-    KD.Text.draw('KING OF ATLANTIC', cx, 34, 'WATER.3', { align: 'center', space: 1, shadow: 'INK.0' });
-    KD.Text.draw('he had it all. then he met a keg.', cx, 46, 'BONE.0', { tiny: true, align: 'center' });
+    /* Everything here is a fraction of KD.H. Pinning the layout to one height
+       is how a resolution bump silently buries the start button. */
+    const top = Math.round(KD.H * 0.07);
+    KD.Text.draw('CROWNDEEP', cx, top, 'GOLD.3', { align: 'center', space: 2, shadow: 'INK.0' });
+    KD.Text.draw('KING OF ATLANTIC', cx, top + 13, 'WATER.3', { align: 'center', space: 1, shadow: 'INK.0' });
+    KD.Text.draw('he had it all. then he met a keg.', cx, top + 26, 'BONE.0', { tiny: true, align: 'center' });
 
-    /* the king and the keg, if their art has landed */
-    const gy = KD.H - 42;
-    if (KD.PX.has('king_idle0')) KD.PX.blit(ctx, KD.PX.frameOf('king_idle', t), cx - 22, gy);
-    if (KD.PX.has('npc_princess_idle0')) KD.PX.blit(ctx, KD.PX.frameOf('npc_princess_idle', t), cx + 12, gy);
+    /* the seabed, and the two of them standing on it */
+    const gy = KD.H - Math.round(KD.H * 0.16);
     KD.Screen.rect(0, gy, KD.W, KD.H - gy, 'SAND.1');
-    KD.Dither.fill(ctx, 0, gy, KD.W, 4, 'SAND.2', 0.6);
+    KD.Dither.fill(ctx, 0, gy, KD.W, 5, 'SAND.2', 0.6);
+    if (KD.PX.hasAny('king_idle')) KD.PX.blit(ctx, KD.PX.frameOf('king_idle', t), cx - 24, gy + 2);
+    if (KD.PX.hasAny('npc_princess_idle')) KD.PX.blit(ctx, KD.PX.frameOf('npc_princess_idle', t), cx + 14, gy + 2);
 
-    const bw = 96, bx = cx - bw / 2;
-    let by = 62;
+    const bw = 110, bx = cx - bw / 2;
+    let by = Math.round(KD.H * 0.40);
     if (KD.State.hasSave()) {
-      if (KD.UI.button(bx, by, bw, 14, 'CONTINUE', { key: 'Enter' })) {
+      if (KD.UI.button(bx, by, bw, 18, 'CONTINUE', { key: 'Enter' })) {
         if (KD.State.load()) KD.Game.go('play', {});
         else KD.State.say('That save is broken.', 'BLOOD.2');
       }
-      by += 18;
-      if (KD.UI.button(bx, by, bw, 12, 'NEW WORLD')) { KD.State.wipe(); KD.Game.go('gen', {}); }
-      by += 16;
+      by += 22;
+      if (KD.UI.button(bx, by, bw, 15, 'NEW WORLD')) { KD.State.wipe(); KD.Game.go('gen', {}); }
+      by += 19;
     } else {
-      if (KD.UI.button(bx, by, bw, 14, 'DIG IN', { key: 'Enter' })) KD.Game.go('gen', {});
-      by += 18;
+      if (KD.UI.button(bx, by, bw, 18, 'DIG IN', { key: 'Enter' })) KD.Game.go('gen', {});
+      by += 22;
     }
-    if (KD.UI.button(bx, by, bw, 12, KD.Sfx.isMuted() ? 'SOUND OFF' : 'SOUND ON')) KD.Sfx.mute();
+    if (KD.UI.button(bx, by, bw, 15, KD.Sfx.isMuted() ? 'SOUND OFF' : 'SOUND ON')) KD.Sfx.mute();
     KD.Text.draw('every pixel placed by hand', cx, KD.H - 12, 'INK.3', { tiny: true, align: 'center' });
   }
   return { enter, update, draw };
@@ -175,7 +177,8 @@ KD.Scenes.victory = (function () {
       KD.Screen.rect(x, Math.round(y), 2, 2, i % 3 ? 'GOLD.2' : 'GOLD.3');
     }
     const cx = KD.W / 2;
-    KD.Text.draw('KING AGAIN', cx, 30, 'GOLD.3', { align: 'center', space: 2, shadow: 'INK.0' });
+    const vtop = Math.round(KD.H * 0.10);
+    KD.Text.draw('KING AGAIN', cx, vtop, 'GOLD.3', { align: 'center', space: 2, shadow: 'INK.0' });
     const lines = [
       'The crown is back on your head.',
       'It does not fit like it used to.',
@@ -185,7 +188,7 @@ KD.Scenes.victory = (function () {
       'You are still in love with her.',
       'Some things a crown cannot fix.'
     ];
-    lines.forEach((l, i) => KD.Text.draw(l, cx, 52 + i * 11, i > 3 ? 'GOLD.2' : 'BONE.1', { align: 'center' }));
+    lines.forEach((l, i) => KD.Text.draw(l, cx, vtop + 24 + i * 12, i > 3 ? 'GOLD.2' : 'BONE.1', { align: 'center' }));
     if (KD.PX.has('it_crown')) KD.PX.blit(ctx, 'it_crown', cx - 7, KD.H - 46, { anchor: false });
     if (t > 1 && KD.UI.button(cx - 40, KD.H - 26, 80, 13, 'THE END', { key: 'Enter' })) KD.Game.go('title', {});
   }

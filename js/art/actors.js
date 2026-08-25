@@ -46,14 +46,8 @@ KD.art.actors = (function () {
     5: 'CLOTH.0', 6: 'CLOTH.1', 7: 'CLOTH.2', 8: 'CLOTH.3'
   };
 
-  /* a frame that is another frame with named rows redrawn. Still
-     hand-drawn pixels - this is just not retyping the thirty rows
-     of a boss that did not move. */
-  function edit(base, changes) {
-    const out = base.slice();
-    for (const k in changes) out[+k] = changes[k];
-    return out;
-  }
+  /* every sprite below is { pal: C, ax, ay, px }; this just keeps
+     eighty of those from being eighty copies of the same boilerplate */
   const A = (px, ax, ay) => ({ pal: C, ax: ax, ay: ay, px: px });
 
   function build() {
@@ -425,15 +419,15 @@ KD.art.actors = (function () {
       '............',
       '............',
       '............',
-      '............',
-      '............',
-      '.....oooo...',
-      '..oooo%%$oo.',
-      '.oKKKo%%$$to',
-      'oKoKow%$$#vo',
-      'okoowwgyYGUo',
-      '.owwBb$TTtuo',
-      '..oooooooooo'
+      '.........oo.',
+      '........ovUo',
+      '........ovUo',
+      '....ooooouuo',
+      '...o%%$$o6o.',
+      'ooKKKo%$$cTo',
+      'oKoKowwgyYGo',
+      'oKkoowwcTtuo',
+      'oooooooooooo'
     ], 6, 18));
 
     P.anim('king_idle', ['king_idle0', 'king_idle1'], 3);
@@ -701,12 +695,12 @@ KD.art.actors = (function () {
 
     /* beer bandit - hood, rust straps, and somebody elses tankard */
     P.def('bandit0', A([
-      '.....oo.....',
-      '....o66o....',
-      '...o6677o...',
+      '...oo.......',
+      '..o66o......',
+      '..o667o.....',
+      '..o6677o....',
+      '..o66pw7o...',
       '..o66pp77o..',
-      '..o66pwp7o..',
-      '..o667pp7o..',
       '..oppppppo..',
       '.o66677778o.',
       '.o6u6777778o',
@@ -722,13 +716,13 @@ KD.art.actors = (function () {
     ], 6, 18));
 
     P.def('bandit1', A([
-      '......oo....',
-      '.....o66o...',
-      '....o6677o..',
+      '....oo......',
+      '...o66o.....',
+      '...o667o....',
+      '...o6677o...',
+      '...o66pB7o..',
       '...o66pp77o.',
-      '...o66pBp7o.',
-      '...o667pp7o.',
-      '...oppppppo.',
+      '..oppppppo..',
       '.o66677778o.',
       '.o6u6777778o',
       '.o66u677778o',
@@ -737,7 +731,7 @@ KD.art.actors = (function () {
       '..o67778oU2o',
       '..o6777oo21o',
       '..o6777oooo.',
-      '..o6o77o....',
+      '..o66o7o....',
       '..ovUuovUo..',
       '..ouuoouuo..'
     ], 6, 18));
@@ -922,10 +916,10 @@ KD.art.actors = (function () {
       '.............ooJjjjjjHHHHHHHhhhhoo...o2221111o..',
       '.......oooooooooJjjjjjHHHHHHHhhhho..oooooooo....',
       '.....o4444444444ojjjjjHHHHHHhhho...oHJooHJo.....',
-      '....o44V444444V3oooooooooooooo....ooooooo33o..w.',
-      '...o444V4p4p43VV2ojjjjjjHHHHHHHhhoHHHHHHo33o..ww',
+      '....o44V444444V3oooooooooooooo....ooooooo33o..ww',
+      '...o444V4p4p43VV2ojjjjjjHHHHHHHhhoHHHHHHo33o..w.',
       '...o444V4p4p43VV2ojjjjjjHHHHHHHHhoHHHHHHo33oo...',
-      '...o344V3p3p32UU1ojjjjjjHHHHHHHHhoHHHHHHo33oo..w',
+      '...o344V3p3p32UU1ojjjjjjHHHHHHHHhoHHHHHHo33oo.ww',
       '...o344V3p3p32UU1ojjjjjjHHHHHHHHhohHHHHHo33o....',
       '...o334v3p3p32UU1ojjjjjjHHHHHHHHhohhhhhho33o....',
       '...o334v3p3p32UU1oyjjjjjHHHHHHyghhooHHHHo33o....',
@@ -968,9 +962,9 @@ KD.art.actors = (function () {
       '.....o4444444444ojjjjjHHHHHHhhho...oHJooo33o....',
       '....o44V444444V3oooooooooooooo....ooooooo33o..ww',
       '...o444V4p4p43VV2ojjjjjjHHHHHHHhhoHHHHHHo33o....',
-      '...o444V4p4p43VV2ojjjjjjHHHHHHHHhoHHHHHHo33oo.w.',
+      '...o444V4p4p43VV2ojjjjjjHHHHHHHHhoHHHHHHo33oo.ww',
       '...o344V3p3p32UU1ojjjjjjHHHHHHHHhoHHHHHHo33oo...',
-      '...o344V3p3p32UU1ojjjjjjHHHHHHHHhohHHHHHo33o...w',
+      '...o344V3p3p32UU1ojjjjjjHHHHHHHHhohHHHHHo33o..ww',
       '...o334v3p3p32UU1ojjjjjjHHHHHHHHhohhhhhho33o....',
       '...o334v3p3p32UU1oyjjjjjHHHHHHyghhooHHHHo33o....',
       '...o233v2p2p21uu1ogyjjjjHHHHHygHhhhoHHHHo33o....',
@@ -1014,7 +1008,7 @@ KD.art.actors = (function () {
       '...o444V4p4p43VV2ojjjjjjHHHHHHHhhoHHHHHHo33o..w.',
       '...o444V4p4p43VV2ojjjjjjHHHHHHHHhoHHHHHHo33oo.ww',
       '...o344V3p3p32UU1ojjjjjjHHHHHHHHhoHHHHHHo33oo...',
-      '...o344V3p3p32UU1ojjjjjjHHHHHHHHhohHHHHHo33o..w.',
+      '...o344V3p3p32UU1ojjjjjjHHHHHHHHhohHHHHHo33o..ww',
       '...o334v3p3p32UU1ojjjjjjHHHHHHHHhohhhhhho33o....',
       '...o334v3p3p32UU1oyjjjjjHHHHHHyghhooHHHHo33o....',
       '...o233v2p2p21uu1ogyjjjjHHHHHygHhhhoHHHHo33o....',
@@ -1054,10 +1048,10 @@ KD.art.actors = (function () {
       '.............ooJjjjjjHHHHHHHhhhhoo..oUUUUUUUUUo.',
       '.......oooooooooJjjjjjHHHHHHHhhhho..oo2221111o..',
       '.....o4444444444ojjjjjHHHHHHhhho...oHJoooooo....',
-      '....o44V444444V3oooooooooooooo....oooooooo....w.',
-      '...o444V4p4p43VV2ojjjjjjHHHHHHHhhoHHHHHHo33o..ww',
+      '....o44V444444V3oooooooooooooo....oooooooo....ww',
+      '...o444V4p4p43VV2ojjjjjjHHHHHHHhhoHHHHHHo33o..w.',
       '...o444V4p4p43VV2ojjjjjjHHHHHHHHhoHHHHHHo33oo...',
-      '...o344V3p3p32UU1ojjjjjjHHHHHHHHhoHHHHHHo33oo..w',
+      '...o344V3p3p32UU1ojjjjjjHHHHHHHHhoHHHHHHo33oo.ww',
       '...o344V3p3p32UU1ojjjjjjHHHHHHHHhohHHHHHo33o....',
       '...o334v3p3p32UU1ojjjjjjHHHHHHHHhohhhhhho33o....',
       '...o334v3p3p32UU1oyjjjjjHHHHHHyghhooHHHHo33o....',
@@ -1207,16 +1201,16 @@ KD.art.actors = (function () {
     /* war crab - digs, walks, does not care */
     P.def('mt_crab0', A([
       '......w...w.........',
-      '......R...R.........',
-      '.....ooooooo........',
-      '...ooXXXXXxxRooooo..',
-      '..oXXXXXXxxxxoXXXxo.',
-      '.oXXXXxxxxxxRoXxoo..',
-      '.oXxxxxRRRRRrRxRo...',
-      '.oxxRRRRRrrrrRRrrro.',
-      '..oooooooooooooorro.',
-      '..R..R..R..R........',
-      '..R..R..R..R........',
+      '......R...R...ooo...',
+      '......R...R..oXXxo..',
+      '.....ooooooo.oXxoo..',
+      '..oXXXXXXxxRoRxRro..',
+      '.oXXXXXxxxxRRoorro..',
+      '.oXxxxxRRRRrroooo...',
+      '.oxxRRRRRrrrroXXxo..',
+      '..oooooooooo.oXxxxo.',
+      '..R..R..R..R.RxRrro.',
+      '..R..R..R..R..orro..',
       '.r..r..r..r.........',
       '.r..r..r..r.........',
       'o..o..o..o..........'
@@ -1224,16 +1218,16 @@ KD.art.actors = (function () {
 
     P.def('mt_crab1', A([
       '......w...w.........',
-      '......R...R.........',
-      '.....ooooooo........',
-      '...ooXXXXXxxRoooo...',
-      '..oXXXXXXxxxxoXXxo..',
-      '.oXXXXxxxxxxRoXxxo..',
-      '.oXxxxxRRRRRrRxRro..',
-      '.oxxRRRRRrrrrRRrrro.',
-      '..oooooooooooooorro.',
-      '...R..R..R..R.......',
-      '...R..R..R..R.......',
+      '......R...R...ooo...',
+      '......R...R..oXXxo..',
+      '.....ooooooo.oXxxxo.',
+      '..oXXXXXXxxRoRxRrro.',
+      '.oXXXXXxxxxRRoorro..',
+      '.oXxxxxRRRRrroooo...',
+      '.oxxRRRRRrrrroXXxo..',
+      '..oooooooooo.oXxoo..',
+      '...R..R..R..RRxRro..',
+      '...R..R..R..R.orro..',
       '...r..r..r..r.......',
       '...r..r..r..r.......',
       '...o..o..o..o.......'
@@ -1241,16 +1235,16 @@ KD.art.actors = (function () {
 
     P.def('mt_crab2', A([
       '......w...w.........',
-      '......R...R.........',
-      '.....ooooooo........',
-      '...ooXXXXXxxRooooo..',
-      '..oXXXXXXxxxxoXXXxo.',
-      '.oXXXXxxxxxxRoXxxxo.',
-      '.oXxxxxRRRRRrRxRrro.',
-      '.oxxRRRRRrrrrRRrrro.',
-      '..oooooooooooooorro.',
-      '..R..R..R..R........',
-      '...R..R..R..R.......',
+      '......R...R...ooo...',
+      '......R...R..oXXxo..',
+      '.....ooooooo.oXxoo..',
+      '..oXXXXXXxxRoRxRro..',
+      '.oXXXXXxxxxRRoorro..',
+      '.oXxxxxRRRRrroooo...',
+      '.oxxRRRRRrrrroXXxo..',
+      '..oooooooooo.oXxoo..',
+      '..R..R..R..R.RxRro..',
+      '...R..R..R..R.orro..',
       '....r..r..r..r......',
       '....r..r..r..r......',
       '.....o..o..o..o.....'
@@ -1550,8 +1544,8 @@ KD.art.actors = (function () {
       '.okNMMMMNko.',
       '.okNMMMMNn3.',
       '.okNMMMMNn3.',
-      '..oNMMMMNo..',
-      '..oNMMMMNo..',
+      '.oSNMMMMNSo.',
+      '..ouUUUUuo..',
       '..onNNNNno..',
       '...ovvoovvo.',
       '...ovUoovUo.',
@@ -1571,8 +1565,8 @@ KD.art.actors = (function () {
       '.okNMMMMNko.',
       '.okNMMMMNnN.',
       '.okNMMMMNnN.',
-      '..oNMMMMNo..',
-      '..oNMMMMNo..',
+      '.oSNMMMMNSo.',
+      '..ouUUUUuo..',
       '..onNNNNno..',
       '...ovvoovvo.',
       '...ovUoovUo.',
@@ -1684,9 +1678,9 @@ KD.art.actors = (function () {
       '..ozZaaZzo..',
       '.ozZaaaZzooo',
       '.ozZaaaZzoww',
-      '.ozZaaaZzoww',
-      '.ozZaaaZzooo',
-      '.ozZaaaZzo..',
+      '.ozoaaaozoww',
+      '.ozoaaaozooo',
+      '.ogyYygyyo..',
       '.ozZaaaZzo..',
       '.ozZaaaZzo..',
       'ozZaaaaZzo..',
@@ -1705,9 +1699,9 @@ KD.art.actors = (function () {
       '..ozZaaZzo..',
       '.ozZaaaZzooo',
       '.ozZaaaZzowB',
-      '.ozZaaaZzowB',
-      '.ozZaaaZzooo',
-      '.ozZaaaZzo..',
+      '.ozoaaaozowB',
+      '.ozoaaaozooo',
+      '.ogyyygyyo..',
       '.ozZaaaZzo..',
       '.ozZaaaZzo..',
       'ozZaaaaZzo..',

@@ -67,6 +67,17 @@ KD.Light = (function () {
       const e = KD.Tiles.light(fg[i]);
       if (e) push(i, Math.min(MAX, e * 2));
     }
+    /* Ambient floor: the sunlit layers never go fully black, or the seabed
+       right under a bright surface reads as a hole in the world. It fades out
+       by the bottom of the reef, and below that darkness is the point. */
+    for (let y = 0; y < H; y++) {
+      const amb = y < 60 ? 5 : y < 100 ? 4 : y < 140 ? 2 : 0;
+      if (!amb) continue;
+      for (let x = 0; x < W; x++) {
+        const i = y * W + x;
+        if (lit[i] < amb) { lit[i] = amb; q[qt++] = i; if (qt >= q.length) qt = 0; }
+      }
+    }
     flood(1e9);
   }
 

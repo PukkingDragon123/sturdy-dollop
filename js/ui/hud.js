@@ -16,20 +16,20 @@ KD.Hud = (function () {
       }
     }
   }
-  function breath(S) {
+  function stamina(S) {
     const P = KD.Player.P;
-    if (P.breath >= 1) return;
-    const n = Math.ceil(P.breath * 8);
+    if (P.stam >= 0.999) return;
+    const n = Math.ceil(P.stam * 8);
     for (let i = 0; i < 8; i++) {
       const x = 3 + i * 9, y = 12;
       if (i < n) {
         if (KD.PX.has('ic_bubble')) KD.PX.blit(KD.Screen.ctx(), 'ic_bubble', x, y, { anchor: false });
         else { KD.Screen.rect(x + 1, y + 1, 5, 5, 'WATER.2'); KD.Screen.frame(x + 1, y + 1, 5, 5, 'INK.0'); }
+      } else {
+        KD.Screen.frame(x + 1, y + 1, 5, 5, 'INK.2');
       }
     }
-    if (P.breath < 0.3 && ((KD.Game.t * 6) | 0) % 2 === 0) {
-      KD.Text.draw('NO AIR', KD.W / 2, 30, 'BLOOD.3', { align: 'center', shadow: 'INK.0' });
-    }
+    KD.Text.draw('PUFF', 3 + 8 * 9 + 2, 13, 'WATER.1', { tiny: true });
   }
   function hotbar(S) {
     const n = KD.State.HOT;
@@ -107,7 +107,7 @@ KD.Hud = (function () {
   }
   function draw(S, cam) {
     reticle(cam);
-    hearts(S); breath(S); stats(S); hotbar(S); message(S);
+    hearts(S); stamina(S); stats(S); hotbar(S); message(S);
   }
   return { draw };
 })();

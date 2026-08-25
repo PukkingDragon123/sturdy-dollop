@@ -12,7 +12,7 @@ KD.Player = (function () {
                                       // and a wider box could never enter either
     face: 1, onGround: false, mode: 'stand',
     swim: 0,                          // 0..1 submersion
-    breath: 1, hp: 6, hpMax: 6,
+    breath: 1, stam: 1, hp: 6, hpMax: 6,
     mineT: 0, mineTx: -1, mineTy: -1, mineAcc: 0,
     swingT: 0, swingCd: 0, hurtT: 0, iframe: 0,
     fallFrom: null, anim: 0, aimX: 0, aimY: 0,
@@ -49,15 +49,16 @@ KD.Player = (function () {
   function update(dt, S) {
     const In = KD.In, Wd = KD.World;
     const st = S.stats;
-    /* ---- submersion and breath ---- */
+    /* ---- submersion and stamina ----
+       The king is an Atlantean. He does not drown in his own ocean, and a
+       breath meter that empties while you stand in the shallows is just a
+       clock counting down to a pointless death. The bar is STAMINA now: it
+       pays for dashes and heavy swings and refills when you stop, which is
+       also what a man trying to get back in shape would notice. */
     P.swim = KD.Water.submersion(P.x, P.y, P.h);
     const wet = P.swim > 0.45;
-    if (wet) {
-      P.breath -= dt / (14 + st.breath * 0.5);
-      if (P.breath <= 0) { P.breath = 0; hurt(1, S, 'drowning'); }
-    } else {
-      P.breath = Math.min(1, P.breath + dt * 0.55);
-    }
+    P.stam = Math.min(1, (P.stam === undefined ? 1 : P.stam) + dt * (0.16 + st.breath * 0.004));
+    P.breath = P.stam;                    // the HUD reads one field
     /* pressure: the abyss crushes you unless you are geared for it */
     const depth = (P.y / TS) | 0;
     if (depth > 300 + st.pressureDepth) {
@@ -225,6 +226,10 @@ KD.Player = (function () {
     if (P.swingCd > 0) return;
     if (!(KD.In.actHit('hit', 'KeyF') || (KD.In.mouse.rclick))) return;
     const wpn = S.weapon();
+    /* a heavy weapon costs stamina; a light one is nearly free */
+    const cost = 0.05 + Math.max(0, (wpn.dmg || 3) - 6) * 0.006;
+    if (P.stam < cost) { S.say('Out of puff.', 'BLOOD.2'); KD.Sfx.play('deny'); P.swingCd = 0.3; return; }
+    P.stam -= cost;
     P.swingT = 0.22 / ((wpn.spd || 1) * S.stats.swingSpeed);
     P.swingCd = 0.30 / ((wpn.spd || 1) * S.stats.swingSpeed);
     KD.Sfx.play('swing');

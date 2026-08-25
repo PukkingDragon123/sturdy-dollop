@@ -5,8 +5,11 @@
    That is what keeps the pixels square.
    ============================================================ */
 KD.Screen = (function () {
-  const H = 216;                      // internal height, fixed forever
-  const WMIN = 320, WMAX = 560;       // internal width follows the aspect
+  /* Internal resolution. Raising H makes the pixels smaller on screen and
+     shows more world at once - that is what "higher resolution" buys here.
+     Tiles stay 8px, so 288 tall shows 36 tile rows instead of 27. */
+  const H = 288;
+  const WMIN = 416, WMAX = 832;       // internal width follows the aspect
 
   let buf = null, bctx = null;        // the low-res target
   let out = null, octx = null;        // the on-page canvas
