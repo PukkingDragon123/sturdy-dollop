@@ -24,12 +24,20 @@ KD.Scenes.interior = (function () {
   const BTNS = [];
 
   /* ---- geometry: one room, centred, floor near the bottom ---------- */
+  /* Size the room to what is IN it, not to the screen. The king is 14px
+     tall and the furniture 12-22px, so a room 180px tall left a flat pink
+     field four storeys high with a doll's house at the bottom. A 54px wall
+     puts his head at two-thirds of it, which is what a room looks like.
+     The rest of the frame is the rind he is standing inside. */
   function geom() {
-    const w = Math.min(KD.W - 36, 424);
-    const h = Math.min(KD.H - 84, 180);
+    /* and not too WIDE either: 400px of room with a 14px king in it read
+       as a corridor. About twelve paces across is a room. */
+    const w = Math.min(KD.W - 48, 268);
+    const wall = 56, floorH = 22;
+    const h = wall + floorH;
     const x = Math.round((KD.W - w) / 2);
-    const y = Math.round((KD.H - h) / 2) - 4;
-    return { x, y, w, h, floor: y + h - 30 };
+    const y = Math.round((KD.H - h) / 2) + 6;
+    return { x, y, w, h, wall, floor: y + wall };
   }
 
   /* ---- what goes in this room ------------------------------------- */
@@ -124,16 +132,17 @@ KD.Scenes.interior = (function () {
     D.wall.forEach((n, i) => {
       const s = px_(n); if (!s) return;
       const f = slots[i % slots.length];
-      out.wall.push({ n, x: Math.round(g.x + g.w * f - s.w / 2), y: g.y + 13 + ((i % 2) ? 7 : 0) });
+      const room = Math.max(2, g.wall - s.h - 12);
+      out.wall.push({ n, x: Math.round(g.x + g.w * f - s.w / 2), y: g.y + 5 + ((i % 2) ? Math.min(6, room) : 0) });
     });
     /* floor props stand along the left half, leaving a walkway */
-    let fx = g.x + 12;
-    const limit = g.x + g.w * 0.50;
+    let fx = g.x + 14;
+    const limit = out.counter ? out.counter.x - 12 : g.x + g.w - 20;
     D.floor.forEach((n) => {
       const s = px_(n); if (!s) return;
       if (fx + s.w > limit) return;
       out.floor.push({ n, x: fx, y: g.floor - s.h });
-      fx += s.w + 3 + ((r() * 5) | 0);
+      fx += s.w + 4 + ((r() * 6) | 0);
     });
     /* one or two more crowded into the far right corner */
     let rx = g.x + g.w - 12;
@@ -311,21 +320,43 @@ KD.Scenes.interior = (function () {
     }
   }
 
+  /* The shell around the room: you are inside a fruit, so the frame is
+     rind, going darker the further it is from the lit room. */
+  function outside(ctx, g) {
+    KD.Screen.clear('INK.0');
+    for (let ty = 0; ty < KD.H; ty += TS) {
+      for (let tx = 0; tx < KD.W; tx += TS) {
+        if (tx + TS > g.x - 8 && tx < g.x + g.w + 8 && ty + TS > g.y - 8 && ty < g.y + g.h + 8) continue;
+        const d = Math.max(
+          (g.x - 8 - (tx + TS)) / 150, ((tx) - (g.x + g.w + 8)) / 150,
+          (g.y - 8 - (ty + TS)) / 110, ((ty) - (g.y + g.h + 8)) / 110, 0);
+        KD.PX.blit(ctx, ((tx / TS | 0) + (ty / TS | 0)) & 1 ? 'in_wall2' : 'in_wall',
+          tx, ty, { shade: Math.min(4, 2 + Math.round(d * 2)) });
+      }
+    }
+    /* a thick rind lip right around the opening */
+    KD.Screen.rect(g.x - 8, g.y - 8, g.w + 16, 8, 'CORAL.0');
+    KD.Screen.rect(g.x - 8, g.y + g.h, g.w + 16, 8, 'CORAL.0');
+    KD.Screen.rect(g.x - 8, g.y - 8, 8, g.h + 16, 'CORAL.0');
+    KD.Screen.rect(g.x + g.w, g.y - 8, 8, g.h + 16, 'CORAL.0');
+    KD.Dither.fill(ctx, g.x - 8, g.y - 8, g.w + 16, 4, 'CORAL.1', 0.5);
+    KD.Screen.frame(g.x - 9, g.y - 9, g.w + 18, g.h + 18, 'INK.0');
+  }
+
   function draw(ctx) {
     const g = geom();
-    KD.Screen.clear('INK.0');
+    outside(ctx, g);
     /* the room shell: flesh wall, plank wainscot, rind ceiling */
-    tileFill(ctx, g.x, g.y, g.w, g.floor - g.y, 'in_wall', 'in_wall2');
+    tileFill(ctx, g.x, g.y, g.w, g.wall, 'in_wall', 'in_wall2');
     for (let tx = 0; tx < g.w; tx += TS) {
       KD.PX.blit(ctx, 'in_ceil', g.x + tx, g.y, { clip: { w: Math.min(TS, g.w - tx), h: TS } });
-      KD.PX.blit(ctx, 'in_wainscot', g.x + tx, g.floor - TS * 2, { clip: { w: Math.min(TS, g.w - tx), h: TS } });
-      KD.PX.blit(ctx, 'in_wainscot', g.x + tx, g.floor - TS, { clip: { w: Math.min(TS, g.w - tx), h: TS } });
+      KD.PX.blit(ctx, 'in_wainscot', g.x + tx, g.floor - 5, { clip: { w: Math.min(TS, g.w - tx), h: 5 } });
     }
     for (let ty = g.y; ty < g.floor; ty += TS) {
       KD.PX.blit(ctx, 'in_beam', g.x, ty, { clip: { w: TS, h: Math.min(TS, g.floor - ty) } });
       KD.PX.blit(ctx, 'in_beam', g.x + g.w - TS, ty, { clip: { w: TS, h: Math.min(TS, g.floor - ty) } });
     }
-    tileFill(ctx, g.x, g.floor, g.w, g.y + g.h - g.floor, 'in_floor', 'in_floor2');
+    tileFill(ctx, g.x, g.floor, g.w, g.h - g.wall, 'in_floor', 'in_floor2');
     KD.Screen.rect(g.x, g.floor - 1, g.w, 1, 'INK.0');
     KD.Screen.frame(g.x - 1, g.y - 1, g.w + 2, g.h + 2, 'INK.0');
     /* the rug, under everything */
@@ -333,12 +364,16 @@ KD.Scenes.interior = (function () {
     if (rug) KD.PX.blit(ctx, 'fu_rug', Math.round(g.x + (g.w - rug.w) / 2), g.floor + 3, {});
     /* a doorway at each end, so leaving is never a hunt */
     for (const side of [-1, 1]) {
-      const dx = side < 0 ? g.x + 3 : g.x + g.w - 17;
-      KD.Screen.rect(dx, g.floor - 30, 14, 30, 'INK.0');
-      KD.Screen.rect(dx + 1, g.floor - 29, 12, 29, 'WOOD.3');
-      KD.Screen.rect(dx + 2, g.floor - 27, 10, 27, 'WATER.0');
-      KD.Dither.fill(ctx, dx + 2, g.floor - 27, 10, 14, 'WATER.1', 0.45);
-      KD.Screen.rect(dx + 2, g.floor - 3, 10, 1, 'SAND.1');
+      const dh = 26, dw = 15;
+      const dx = side < 0 ? g.x + 3 : g.x + g.w - 3 - dw;
+      KD.Screen.rect(dx, g.floor - dh, dw, dh, 'WOOD.3');
+      KD.Screen.rect(dx + 2, g.floor - dh + 2, dw - 4, dh - 2, 'WATER.0');
+      KD.Dither.fill(ctx, dx + 2, g.floor - dh + 2, dw - 4, 12, 'WATER.1', 0.45);
+      KD.Dither.fill(ctx, dx + 2, g.floor - 10, dw - 4, 9, 'INK.0', 0.35);
+      KD.Screen.frame(dx, g.floor - dh, dw, dh, 'INK.0');
+      /* a step out onto the street, so it reads as a way out */
+      KD.Screen.rect(dx + 1, g.floor, dw - 2, 2, 'SAND.1');
+      KD.Screen.rect(dx + 1, g.floor + 2, dw - 2, 1, 'SAND.0');
     }
     /* dressing, back to front */
     for (const q of room.wall) KD.PX.blit(ctx, q.n, q.x, q.y, {});
@@ -385,9 +420,9 @@ KD.Scenes.interior = (function () {
   function hud(ctx, g) {
     const title = b.kind.title;
     const tw = KD.Text.width(title) + 16;
-    KD.Screen.rect(Math.round((KD.W - tw) / 2), g.y - 17, tw, 14, 'INK.0');
-    KD.Screen.frame(Math.round((KD.W - tw) / 2), g.y - 17, tw, 14, 'GOLD.0');
-    KD.Text.draw(title, KD.W / 2, g.y - 13, 'GOLD.3', { align: 'center' });
+    KD.Screen.rect(Math.round((KD.W - tw) / 2), g.y - 28, tw, 14, 'INK.0');
+    KD.Screen.frame(Math.round((KD.W - tw) / 2), g.y - 28, tw, 14, 'GOLD.0');
+    KD.Text.draw(title, KD.W / 2, g.y - 24, 'GOLD.3', { align: 'center' });
     KD.Text.draw(S.S.clams + ' CLAMS', 8, 6, 'GOLD.2', { tiny: true });
     KD.Text.draw(Math.round(S.S.weight) + ' KG', 8, 15, 'BONE.1', { tiny: true });
     if (!KD.touch) {
@@ -395,11 +430,11 @@ KD.Scenes.interior = (function () {
       if (nearNpc()) hint = 'E talk   -   F ' + serviceWord().toLowerCase();
       else if (nearDoor()) hint = 'E to step outside';
       else if (b.kind.station) hint = 'E to use the ' + b.kind.station;
-      KD.Text.draw(hint, KD.W / 2, g.y + g.h + 7, 'INK.3', { align: 'center', tiny: true });
+      KD.Text.draw(hint, KD.W / 2, g.y + g.h + 14, 'BONE.1', { align: 'center', tiny: true, shadow: 'INK.0' });
     }
     if (talkT > 0 && line) {
       const bw = Math.min(KD.W - 44, 296);
-      const bx = Math.round((KD.W - bw) / 2), by = g.y + g.h + (KD.touch ? 2 : 18);
+      const bx = Math.round((KD.W - bw) / 2), by = g.y + g.h + (KD.touch ? 12 : 26);
       KD.UI.panel(bx, by, bw, 26);
       KD.Text.block(line, bx + 6, by + 5, 'BONE.2', { tiny: true, max: bw - 12, maxLines: 2 });
     }
