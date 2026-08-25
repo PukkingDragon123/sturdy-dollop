@@ -57,7 +57,7 @@ KD.Player = (function () {
        also what a man trying to get back in shape would notice. */
     P.swim = KD.Water.submersion(P.x, P.y, P.h);
     const wet = P.swim > 0.45;
-    P.stam = Math.min(1, (P.stam === undefined ? 1 : P.stam) + dt * (0.16 + st.breath * 0.004));
+    P.stam = Math.min(1, (P.stam === undefined ? 1 : P.stam) + dt * 0.16 * (st.stamRegen || 1));
     P.breath = P.stam;                    // the HUD reads one field
     /* pressure: the abyss crushes you unless you are geared for it */
     const depth = (P.y / TS) | 0;
@@ -68,7 +68,8 @@ KD.Player = (function () {
 
     /* ---- horizontal ---- */
     const v = In.stick();
-    const want = v.x * (wet ? RUN * st.swimSpeed : (P.onGround ? RUN : RUN_AIR)) * (1 - S.fat / 260);
+    /* the lighter you get, the better you move - that is the whole point */
+    const want = v.x * (wet ? RUN * st.swimSpeed : (P.onGround ? RUN : RUN_AIR)) * (st.moveMul || 1);
     if (Math.abs(v.x) > 0.1) {
       P.vx += Math.sign(want) * ACC * dt;
       if (Math.abs(P.vx) > Math.abs(want)) P.vx = want;
@@ -93,7 +94,7 @@ KD.Player = (function () {
       P.vy += GRAV * dt;
       if (P.vy > TERM) P.vy = TERM;
       if (P.jumpBuf > 0 && (P.onGround || P.coyote > 0)) {
-        P.vy = -JUMP; P.jumpBuf = 0; P.coyote = 0; P.onGround = false;
+        P.vy = -JUMP * (st.jumpMul || 1); P.jumpBuf = 0; P.coyote = 0; P.onGround = false;
         KD.Sfx.play('jump');
       }
       /* short hop: let go early and you rise less */
@@ -108,6 +109,7 @@ KD.Player = (function () {
       else { P.vx = 0; nx = P.x; }
     }
     P.x = Math.max(P.w, Math.min(Wd.W * TS - P.w, nx));
+    zoneGate(S);
     /* Squeeze assist: in a one-tile-wide gap, ease toward the column centre.
        Without this, threading a doorway or a dug shaft is a pixel-hunt. */
     const col = (P.x / TS) | 0;
@@ -161,7 +163,28 @@ KD.Player = (function () {
     if (P.iframe > 0) P.iframe -= dt;
     if (P.swingCd > 0) P.swingCd -= dt;
     /* swinging and swimming burn the beer off */
-    if (Math.abs(P.vx) > 20 || P.swingT > 0) S.burnFat(dt * (wet ? 0.5 : 0.3));
+    /* honest effort burns weight: swimming, walking, swinging, digging */
+    if (Math.abs(P.vx) > 20 || P.swingT > 0) S.burnFat(dt * (wet ? 0.22 : 0.14));
+  }
+
+  /* A zone you have not earned pushes you back out and tells you why. This is
+     the weight-loss spine made physical: the world literally will not let a
+     man in this condition go any deeper. */
+  let gateMsg = 0;
+  function zoneGate(S) {
+    if (!KD.Zones || !KD.Goal) return;
+    const z = KD.Zones.atPx(P.x);
+    if (!z || !KD.Goal.milestone(z.id)) { P.zone = z; return; }
+    if (KD.Goal.allowed(S.S, z.id)) { P.zone = z; return; }
+    /* shove them back toward the edge they came from */
+    const fromLeft = P.x / TS - z.x0 < (z.x1 - z.x0) / 2;
+    P.x = (fromLeft ? z.x0 - 1 : z.x1 + 1) * TS;
+    P.vx = fromLeft ? -40 : 40;
+    if (KD.Game.t - gateMsg > 3) {
+      gateMsg = KD.Game.t;
+      S.say('Not yet: ' + KD.Goal.why(S.S, z.id), 'BLOOD.3');
+      KD.Sfx.play('deny');
+    }
   }
 
   /* the reticle: mouse if we have one, otherwise the stick direction */
@@ -210,6 +233,7 @@ KD.Player = (function () {
       /* the material the rock was hiding, at its own odds */
       if (T.drop2 && Math.random() < (T.drop2p || 0.2) * (1 + S.stats.oreLuck)) S.give(T.drop2, 1);
       S.S.mined++;
+      S.burnFat(0.05 + (T.hard || 0) * 0.03);
       S.addXp(T.hard >= 2 ? 4 : 2);
       KD.Fx.chunks(tx * TS + 4, ty * TS + 4, 5, T.art || 'stone');
       KD.Water.touch(tx, ty);
@@ -275,7 +299,19 @@ KD.Player = (function () {
       return true;
     }
     if (T.station) { KD.Panels.toggle('craft'); return true; }
+    /* standing in a building that does something? do that thing */
+    const b = buildingAt(tx, ty);
+    if (b && b.kind.gym) { KD.Game.go('gym', {}); return true; }
     return false;
+  }
+  /* which village building, if any, contains this tile */
+  function buildingAt(tx, ty) {
+    const v = KD.Gen.meta.village;
+    if (!v) return null;
+    for (const b of v.buildings) {
+      if (tx >= b.x && tx < b.x + b.w && ty >= b.y && ty < b.y + b.h) return b;
+    }
+    return null;
   }
   function openChest(S, tx, ty) {
     const key = tx + ',' + ty;
@@ -308,6 +344,6 @@ KD.Player = (function () {
     if (P.hp <= 0) S.die(from);
   }
   const heal = (n) => { P.hp = Math.min(P.hpMax, P.hp + n); };
-  return { P, spawn, update, hurt, heal, interact, openChest,
+  return { P, spawn, update, hurt, heal, interact, openChest, zoneGate, buildingAt,
            get x() { return P.x; }, get y() { return P.y; } };
 })();

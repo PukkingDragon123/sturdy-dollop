@@ -60,7 +60,7 @@ KD.Scenes.gen = (function () {
   function enter(args) {
     t = 0; done = false;
     seed = (args && args.seed) || ((Math.random() * 2147483647) | 0);
-    total = KD.Gen.begin(1400, 420, seed);
+    total = KD.Gen.begin(KD.Zones.WORLD_W, KD.Zones.WORLD_H, seed);
     step = { done: 0, total, label: 'waking up' };
     KD.State.fresh();
     KD.Mobs.clear();

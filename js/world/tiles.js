@@ -56,6 +56,8 @@ KD.Tiles = (function () {
   def({ id: 'door',     name: 'Door',      solid: true,  deco: 'bk_door_closed',  big: [2, 3], hp: 6, drop: 'door', build: true, door: true });
   def({ id: 'platform', name: 'Platform',  solid: false, art: 'plank', plat: true, hp: 5, drop: 'platform', build: true });
   def({ id: 'statue',   name: 'Statue',    solid: false, deco: 'dc_statue', big: [2, 4], hp: 30 });
+  /* the Sea Gate: solid until the guard lets you through */
+  def({ id: 'gate',     name: 'The Sea Gate', solid: true, art: 'masonry', hard: 9, hp: 250, gate: true });
   def({ id: 'pillar',   name: 'Pillar',    solid: true,  deco: 'bk_pillar_mid', hp: 30, drop: 'brick' });
 
   const AIR = byId.air.i, WATER = byId.water.i;

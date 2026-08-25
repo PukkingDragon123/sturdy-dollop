@@ -41,8 +41,21 @@ function load(files) {
       getElementById: () => null, addEventListener() {}, body: { appendChild() {}, style: {} }
     },
     Image: function () {}, Audio: function () {},
-    AudioContext: function () { return { createGain: () => ({ connect() {}, gain: { value: 0 } }), destination: {} }; }
+    /* enough of WebAudio that sound cues are no-ops instead of crashes */
+    AudioContext: function () {
+      const node = () => ({ connect() {}, disconnect() {}, start() {}, stop() {},
+        gain: { value: 0, setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} },
+        frequency: { value: 0, setValueAtTime() {}, exponentialRampToValueAtTime() {} },
+        type: '', buffer: null });
+      return {
+        currentTime: 0, sampleRate: 44100, state: 'running', destination: {},
+        resume() {}, createGain: node, createOscillator: node, createBufferSource: node,
+        createBiquadFilter: () => Object.assign(node(), { frequency: { value: 0 } }),
+        createBuffer: (ch, n) => ({ getChannelData: () => new Float32Array(n) })
+      };
+    }
   };
+  sandbox.webkitAudioContext = sandbox.AudioContext;
   sandbox.window = sandbox;
   sandbox.globalThis = sandbox;
   sandbox.self = sandbox;

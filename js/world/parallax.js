@@ -30,8 +30,16 @@ KD.Parallax = (function () {
     return avail[h % avail.length];
   }
 
-  /* tile one band horizontally across the screen */
-  function band(ctx, cfg, cam, baseY, sy) {
+  /* The ground under a band is not one height. Sampling the surface once at
+     screen centre and tiling the whole row at that Y buries the sprites in
+     rock on one side and floats them on the other, so every band samples the
+     terrain under its own slot. `lift` raises a band off the floor, which is
+     how a distant ridge reads as being further away and higher up. */
+  function groundAt(worldX) {
+    const tx = Math.max(0, Math.min(KD.World.W - 1, (worldX / TS) | 0));
+    return KD.Gen.surfaceAt(tx) * TS;
+  }
+  function band(ctx, cfg, cam, lift) {
     const first = pickFor(cfg.spr, 0);
     if (!first) return false;
     const w = KD.PX.get(first).w;
@@ -44,8 +52,12 @@ KD.Parallax = (function () {
       if (!name) continue;
       const s = KD.PX.get(name);
       const px = slot * w - ox;
-      const py = baseY - s.h - (sy || 0);
       if (px > KD.W || px + s.w < 0) continue;
+      /* the world x this slot sits over, so the ground sample is honest */
+      const wx = cam.x + px + s.w / 2;
+      const g = groundAt(wx) - cam.y - (lift || 0);
+      const py = Math.round(g - s.h);
+      if (py > KD.H || py + s.h < -20) continue;
       KD.PX.blit(ctx, name, px, py, { anchor: false, shade: cfg.shade });
     }
     return true;
@@ -160,12 +172,10 @@ KD.Parallax = (function () {
   function back(ctx, cam, t) {
     const horizon = water(ctx, cam);
     shafts(ctx, cam, t);
-    /* the far bands sit on the seabed silhouette line near the surface */
-    const seabed = Math.round((KD.Gen.surfaceAt((cam.x + KD.W / 2) / TS) + 6) * TS - cam.y);
-    if (seabed > -120) {
-      for (const cfg of FAR) band(ctx, cfg, cam, Math.min(KD.H + 40, seabed + 24), 0);
-      for (const cfg of MID) band(ctx, cfg, cam, Math.min(KD.H + 30, seabed + 12), 0);
-    }
+    /* far bands stand on an implied distant floor, lifted well clear of the
+       real seabed; mid bands sit closer to it */
+    for (let i = 0; i < FAR.length; i++) band(ctx, FAR[i], cam, 26 - i * 10);
+    for (let i = 0; i < MID.length; i++) band(ctx, MID[i], cam, 10 - i * 6);
     life(ctx, cam, false);
     return horizon;
   }
@@ -192,8 +202,31 @@ KD.Parallax = (function () {
   /* everything in front of the world */
   function front(ctx, cam, t) {
     life(ctx, cam, true);
-    const seabed = Math.round((KD.Gen.surfaceAt((cam.x + KD.W / 2) / TS) + 8) * TS - cam.y);
-    for (const cfg of NEAR) band(ctx, cfg, cam, Math.min(KD.H + 60, seabed + 40), 0);
+    /* Foreground plants must stand ON the ground and rise into the WATER.
+       Drawn at a fixed row they cover the rock instead, which reads as damage
+       on the terrain rather than as a plant in front of the camera. */
+    for (const cfg of NEAR) {
+      const first = pickFor(cfg.spr, 0);
+      if (!first) continue;
+      const step = KD.PX.get(first).w + 40;
+      const ox = Math.floor(cam.x * cfg.f);
+      const s0 = Math.floor(ox / step) - 1;
+      for (let i = 0; i < Math.ceil(KD.W / step) + 2; i++) {
+        const slot = s0 + i;
+        if (((slot * 2246822519) >>> 0) % 3 === 0) continue;    // gaps, not a hedge
+        const name = pickFor(cfg.spr, slot);
+        if (!name) continue;
+        const s = KD.PX.get(name);
+        const px = slot * step - ox;
+        if (px > KD.W || px + s.w < 0) continue;
+        const wx = cam.x + px + s.w / 2;
+        const tx = Math.max(0, Math.min(KD.World.W - 1, (wx / TS) | 0));
+        /* only where there is actually water above the floor to grow into */
+        if (KD.World.water(tx, KD.Gen.surfaceAt(tx) - 2) < 3) continue;
+        const g = KD.Gen.surfaceAt(tx) * TS - cam.y;
+        KD.PX.blit(ctx, name, px, Math.round(g - s.h + 2), { anchor: false, shade: cfg.shade });
+      }
+    }
     /* silt and bubbles, drifting fastest of all */
     if (KD.PX.hasAny('fg_silt')) {
       const s = KD.PX.get('fg_silt');

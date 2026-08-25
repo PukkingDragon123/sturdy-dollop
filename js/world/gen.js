@@ -27,7 +27,7 @@ KD.Gen = (function () {
   let surface = null;                 // surface[x] = first solid y
   let dry = new Set();                // tiles the flood must not fill: air pockets
   let steps = null, si = 0;
-  const meta = { spawn: { x: 0, y: 0 }, village: null, throne: null, seed: 0, structures: [] };
+  const meta = { spawn: { x: 0, y: 0 }, village: null, throne: null, gate: null, seed: 0, structures: [] };
 
   /* ---------- the pipeline ---------- */
   function begin(w, h, seed) {
@@ -66,18 +66,27 @@ KD.Gen = (function () {
   function terrain() {
     const Wd = W(), w = Wd.W, h = Wd.H;
     const T = KD.Tiles;
-    const shelfX = (w >> 1);
+    const Zn = KD.Zones;
+    const vill = Zn.byId.village;
+    const shelfX = ((vill.x0 + vill.x1) / 2) | 0;
     for (let x = 0; x < w; x++) {
-      /* two octaves of hills plus a flat shelf near spawn so you can stand up */
+      const z = Zn.at(x);
+      /* two octaves of hills, flattened right across the village so a town
+         can actually be built on it */
       let s = 44 + Wd.fbm(x * 0.012, 0.5, 4) * 26 + Wd.fbm(x * 0.05, 9.5, 2) * 6;
-      const d = Math.abs(x - shelfX);
-      if (d < 90) s = s * (d / 90) + 52 * (1 - d / 90);
+      if (z.id === 'village' || z.id === 'gate') {
+        const d = Math.min(1, Math.abs(x - shelfX) / 190);
+        s = s * d + 56 * (1 - d);
+      } else if (z.open) {
+        s = 30 + Wd.fbm(x * 0.008, 4.5, 3) * 8;   // the Open Blue has almost no floor up here
+      }
       surface[x] = Math.round(s);
       for (let y = 0; y < h; y++) {
         const i = y * w + x;
         if (y < surface[x]) { Wd.fg[i] = T.AIR; continue; }
         const L = layerAt(y);
-        let t = T.id(L.fill);
+        /* the zone owns the surface rock; the depth layer owns the deep rock */
+        let t = T.id(y < 110 ? (z.rock || L.fill) : (y < 240 ? (z.deep || L.fill) : L.fill));
         /* dithered transition bands, so layers blend instead of striping */
         const band = 7;
         const prev = LAYERS[LAYERS.indexOf(L) - 1];
@@ -85,10 +94,9 @@ KD.Gen = (function () {
           const f = (y - L.y0) / band;
           if (Wd.noise2(x * 0.4, y * 0.4) > f) t = T.id(prev.fill);
         }
-        /* mud pockets in the shallows, sand pockets in the reef */
-        if (L.id === 'shallows' && Wd.fbm(x * 0.06, y * 0.06, 2) > 0.62) t = T.id('mud');
-        if (L.id === 'reef' && Wd.fbm(x * 0.05 + 7, y * 0.05, 2) > 0.70) t = T.id('sand');
-        if (L.id === 'abyss' && Wd.fbm(x * 0.04 + 3, y * 0.04, 2) > 0.66) t = T.id('dark');
+        if (Wd.fbm(x * 0.06, y * 0.06, 2) > 0.66) {
+          t = T.id(y < 110 ? 'mud' : (y < 240 ? 'sand' : 'dark'));
+        }
         Wd.fg[i] = t;
       }
     }
@@ -129,12 +137,15 @@ KD.Gen = (function () {
     for (let y = 46; y < h; y++) {
       const L = layerAt(y);
       const sc = L.id === 'reef' ? 0.055 : L.id === 'ruins' ? 0.045 : L.id === 'trench' ? 0.032 : 0.026;
-      /* lower threshold = more hollow. The deep layers are cathedral-sized. */
-      const thresh = L.id === 'shallows' ? 0.60 : L.id === 'reef' ? 0.52
-                   : L.id === 'ruins' ? 0.50 : L.id === 'trench' ? 0.455 : 0.44;
+      const base = L.id === 'shallows' ? 0.60 : L.id === 'reef' ? 0.52
+                 : L.id === 'ruins' ? 0.50 : L.id === 'trench' ? 0.455 : 0.44;
       for (let x = 1; x < w - 1; x++) {
         const i = y * w + x;
         if (!T.isSolid(Wd.fg[i])) continue;
+        const z = KD.Zones.at(x);
+        if (z.safe && y < 96) continue;                       // never hollow the town out
+        /* a zone with denser caves gets a lower threshold */
+        const thresh = base - (((z.caves || 1) - 1) * 0.06) - (z.open ? 0.10 : 0);
         if (Wd.fbm(x * sc, y * sc, 3, 0.55) > thresh) Wd.fg[i] = T.AIR;
       }
     }
@@ -192,10 +203,13 @@ KD.Gen = (function () {
     const Wd = W(), w = Wd.W, T = KD.Tiles;
     for (const o of ORES) {
       const id = T.id(o.t);
-      for (let n = 0; n < o.tries; n++) {
+      for (let n = 0; n < o.tries * 2; n++) {
         if (!Wd.chance(o.rare)) continue;
         const x = Wd.rint(3, w - 4), y = Wd.rint(o.y0, o.y1 - 1);
         if (!T.isSolid(Wd.at(x, y))) continue;
+        const z = KD.Zones.at(x);
+        if (z.safe) continue;
+        if (Wd.rnd() > (z.ore === undefined ? 1 : z.ore)) continue;
         /* blob growth from the seed */
         let cx = x, cy = y;
         const n2 = Wd.rint(2, o.size);
@@ -259,65 +273,45 @@ KD.Gen = (function () {
     }
   }
 
-  /* ---------- 7. the village ---------- */
+  /* ---------- 7. Fruitfall ---------- */
   function village() {
     const Wd = W(), w = Wd.W, T = KD.Tiles;
-    const cx = meta.spawn.x;
-    const houses = [];
-    let x = cx - 70;
-    for (let n = 0; n < 7; n++) {
-      const hw = Wd.rint(9, 13), hh = Wd.rint(6, 8);
-      x += Wd.rint(hw + 3, hw + 9);
-      if (x + hw > w - 20) break;
-      /* sit the house on the seabed */
-      let gy = surface[Math.min(w - 1, x + (hw >> 1))];
-      for (let i = 0; i < hw; i++) gy = Math.max(gy, surface[Math.min(w - 1, x + i)]);
-      const y = gy - hh;
-      if (y < 20) continue;
-      /* flatten the ground under it */
-      for (let i = -1; i <= hw; i++) {
-        const tx = Math.min(w - 1, Math.max(0, x + i));
-        for (let j = gy; j < gy + 4; j++) if (Wd.inside(tx, j)) Wd.fg[j * w + tx] = T.id('sand');
-        for (let j = 20; j < gy; j++) if (Wd.inside(tx, j) && T.isSolid(Wd.at(tx, j))) Wd.fg[j * w + tx] = T.AIR;
-      }
-      room(x, y, hw, hh, 'plank', 'plank', true);
-      for (let j = 1; j < hh - 1; j++) for (let i = 1; i < hw - 1; i++) markDry(x + i, y + j);
-      /* roof, door, window, lantern */
-      for (let i = 0; i < hw; i++) Wd.fg[(y - 1) * w + x + i] = T.id('coral');
-      /* The doorway is a hole in a SIDE WALL, three tiles tall, standing on the
-         floor. Punching it in the middle of the room - which is already air -
-         builds a house you cannot leave. */
-      const side = Wd.chance(0.5) ? x : x + hw - 1;
-      const dx = side;
-      const floorRow = y + hh - 1;
-      for (let j = 1; j <= 3; j++) {
-        Wd.fg[(floorRow - j) * w + dx] = T.AIR;
-        Wd.bg[(floorRow - j) * w + dx] = T.id('plank');
-        markDry(dx, floorRow - j);
-        /* and clear the ground just outside, so there is somewhere to step */
-        const ox = side === x ? x - 1 : x + hw;
-        if (Wd.inside(ox, floorRow - j)) Wd.fg[(floorRow - j) * w + ox] = T.AIR;
-      }
-      Wd.fg[(y + 2) * w + (x + 2)] = T.id('glass');
-      Wd.fg[(y + 2) * w + (x + hw - 3)] = T.id('glass');
-      Wd.fg[(y + 1) * w + (x + (hw >> 1))] = T.id('lantern');
-      houses.push({ x, y, w: hw, h: hh, door: dx });
-      meta.structures.push({ kind: 'house', x, y, w: hw, h: hh });
+    const z = KD.Zones.byId.village;
+    const plan = KD.Village.plan(Wd, z, surfaceAt);
+    for (const b of plan.buildings) {
+      KD.Village.carve(Wd, T, b, markDry);
+      meta.structures.push({ kind: 'house', x: b.x, y: b.y, w: b.w, h: b.h, b });
     }
-    meta.village = { x: cx, houses };
-    /* the player's own shack gets a workbench and a furnace to start with */
-    if (houses.length) {
-      const h0 = houses[0];
-      Wd.fg[(h0.y + h0.h - 2) * w + (h0.x + 2)] = T.id('workbench');
-      Wd.fg[(h0.y + h0.h - 2) * w + (h0.x + 5)] = T.id('furnace');
+    KD.Village.connect(Wd, T, plan.terraces);
+    meta.village = { x: (z.x0 + z.x1) >> 1, buildings: plan.buildings, terraces: plan.terraces };
+    /* spawn in front of your own shack */
+    const home = plan.buildings.find((b) => b.kind.home) || plan.buildings[0];
+    if (home) {
+      meta.spawn.x = home.x + (home.w >> 1);
+      meta.spawn.y = home.y + home.h - 2;
     }
+    /* THE SEA GATE: a masonry wall across the gate zone with a doorway a
+       guard keeps shut until you have earned your way out */
+    const g = KD.Zones.byId.gate;
+    const gx = ((g.x0 + g.x1) / 2) | 0;
+    const top = Math.max(4, surfaceAt(gx) - 26);
+    for (let j = top; j < surfaceAt(gx) + 6; j++) {
+      for (let i = -2; i <= 2; i++) {
+        if (Wd.inside(gx + i, j)) Wd.fg[j * w + gx + i] = T.id('masonry');
+      }
+    }
+    const doorTop = surfaceAt(gx) - 4;
+    for (let j = doorTop; j < surfaceAt(gx); j++) {
+      for (let i = -2; i <= 2; i++) if (Wd.inside(gx + i, j)) Wd.fg[j * w + gx + i] = T.id('gate');
+    }
+    meta.gate = { x: gx, y: surfaceAt(gx) - 2, top: doorTop };
   }
 
   /* ---------- 8. the throne ---------- */
   function throne() {
     const Wd = W(), w = Wd.W, T = KD.Tiles;
-    const rw = 44, rh = 20;
-    const x = w - rw - 24, y = 372;
+    const rw = 56, rh = 26;
+    const x = w - rw - 30, y = 392;
     for (let j = 0; j < rh; j++) for (let i = 0; i < rw; i++) {
       const tx = x + i, ty = y + j;
       if (!Wd.inside(tx, ty)) continue;
@@ -331,7 +325,7 @@ KD.Gen = (function () {
     for (let i = 4; i < rw - 4; i += 8) Wd.fg[(y + 2) * w + x + i] = T.id('lantern');
     Wd.fg[(y + rh - 2) * w + (x + rw - 8)] = T.id('statue');
     /* a way in from above */
-    for (let j = y - 8; j < y; j++) { Wd.fg[j * w + (x + 4)] = T.AIR; Wd.fg[j * w + (x + 5)] = T.AIR; }
+    for (let j = y - 30; j < y; j++) { Wd.fg[j * w + (x + 5)] = T.AIR; Wd.fg[j * w + (x + 6)] = T.AIR; }
     meta.throne = { x: x + (rw >> 1), y: y + rh - 3, room: { x, y, w: rw, h: rh } };
     meta.structures.push({ kind: 'throne', x, y, w: rw, h: rh });
   }
@@ -361,7 +355,8 @@ KD.Gen = (function () {
         if (!T.isSolid(below)) continue;
         const B = T.get(below);
         const L = layerAt(y);
-        const r = Wd.rnd();
+        const zn = KD.Zones.at(x);
+        const r = Wd.rnd() / Math.max(0.4, (zn.reef || 0) + (zn.kelp || 0) + 1);
         if (L.id === 'shallows' || L.id === 'reef') {
           if (B.id === 'sand' || B.id === 'mud') {
             if (r < 0.10) Wd.fg[i] = T.id('kelp');
@@ -371,6 +366,7 @@ KD.Gen = (function () {
         } else if (L.id === 'ruins') {
           if (r < 0.05) Wd.fg[i] = T.id('bones');
           else if (r < 0.09) Wd.fg[i] = T.id('urchin_d');
+          else if (zn.ruins && r < 0.13) Wd.fg[i] = T.id('bones');
         } else if (L.id === 'trench') {
           if (r < 0.045) Wd.fg[i] = T.id('glowpod');
           else if (r < 0.075) Wd.fg[i] = T.id('bones');

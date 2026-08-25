@@ -13,6 +13,8 @@ KD.State = (function () {
     hot: 0,
     clams: 0, xp: 0, level: 1, points: 0,
     alloc: {}, stats: {}, fat: 24, beer: null,
+    weight: 100, train: { strength: 0, wind: 0, grit: 0 },
+    trainXp: { strength: 0, wind: 0, grit: 0 }, champs: {},
     frags: [], flags: {}, quests: {},
     kills: 0, mined: 0, crafted: 0, deaths: 0, playtime: 0,
     seed: 0, msg: null, msgT: 0, msgCol: 'BONE.2',
@@ -268,8 +270,9 @@ KD.State = (function () {
     if (S.beer.t <= 0) { S.beer = null; say('The courage wears off.', 'BONE.0'); }
   }
   const dmgMult = () => (1 + (S.beer ? S.beer.dmg : 0)) * (1 + (S.stats.melee || 0));
-  const addFat = (n) => { S.fat = Math.min(100, S.fat + n); };
-  const burnFat = (n) => { S.fat = Math.max(0, S.fat - n); };
+  /* One number, two names: the HUD calls it WEIGHT, the beer calls it fat. */
+  const addFat = (n) => { if (KD.Goal) KD.Goal.gain(S, n); S.fat = S.weight; };
+  const burnFat = (n) => { if (KD.Goal) KD.Goal.burn(S, n); S.fat = S.weight; };
 
   /* ---- xp and skills ---- */
   const xpFor = (lvl) => Math.round(28 * Math.pow(lvl, 1.42));
@@ -302,6 +305,8 @@ KD.State = (function () {
        reach the tile under their own feet. */
     st.reach = 5 + (st.reach || 0);
     const fx = st.effects || [];
+    /* the disciplines and the weight fold in on top of the skill tree */
+    if (KD.Goal) KD.Goal.apply(S, st);
     st.noFall = fx.indexOf('no_fall') >= 0;
     st.gills = fx.indexOf('gills') >= 0;
     st.xray = fx.indexOf('ore_xray') >= 0;
@@ -406,6 +411,7 @@ KD.State = (function () {
         points: S.points, alloc: S.alloc, fat: S.fat, frags: S.frags, flags: S.flags,
         quests: S.quests, kills: S.kills, mined: S.mined, crafted: S.crafted, equip: S.equip,
         deaths: S.deaths, playtime: S.playtime, npcs: S.npcs, chests: S.chests,
+        weight: S.weight, train: S.train, trainXp: S.trainXp, champs: S.champs,
         world: KD.World.save(), px: KD.Player.P.x, py: KD.Player.P.y
       }));
       return true;
@@ -423,7 +429,11 @@ KD.State = (function () {
         quests: d.quests || {}, kills: d.kills || 0, mined: d.mined || 0,
         crafted: d.crafted || 0, deaths: d.deaths || 0, playtime: d.playtime || 0,
         npcs: d.npcs || [], chests: d.chests || {}, beer: null,
-        equip: d.equip || { head: null, body: null, legs: null, shield: null }
+        equip: d.equip || { head: null, body: null, legs: null, shield: null },
+        weight: d.weight === undefined ? 100 : d.weight,
+        train: d.train || { strength: 0, wind: 0, grit: 0 },
+        trainXp: d.trainXp || { strength: 0, wind: 0, grit: 0 },
+        champs: d.champs || {}
       });
       while (S.inv.length < SLOTS) S.inv.push(null);
       KD.World.loadFrom(d.world);
@@ -444,6 +454,11 @@ KD.State = (function () {
     S.kills = 0; S.mined = 0; S.crafted = 0; S.deaths = 0; S.playtime = 0;
     S.npcs = []; S.chests = {};
     S.equip = { head: null, body: null, legs: null, shield: null };
+    S.weight = KD.Goal ? KD.Goal.START_WEIGHT : 100;
+    S.fat = S.weight;
+    S.train = { strength: 0, wind: 0, grit: 0 };
+    S.trainXp = { strength: 0, wind: 0, grit: 0 };
+    S.champs = {};
     recalc();
     /* you start with nothing but a stick and a bad hangover */
     give('torch', 6);
