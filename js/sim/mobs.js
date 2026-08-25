@@ -106,9 +106,41 @@ KD.Mobs = (function () {
     }
   }
 
+  /* ---- champions: one named fight per zone -------------------------- *
+   * They are not in the spawn table. Each stands at a fixed spot in its
+   * own zone, waits, and stays there until it is killed - so the ocean has
+   * five landmarks in it that fight back, rather than five more sharks. */
+  function champAt(zoneId) {
+    for (const m of list) if (m.champ && m.champ.zone === zoneId && m.dead <= 0) return m;
+    return null;
+  }
+  function champSpawner(S) {
+    const P = KD.Player.P;
+    const z = KD.Zones.atPx(P.x);
+    const C = KD.Goal.CHAMPIONS.find((c) => c.zone === z.id);
+    if (!C || S.S.champs[z.id]) return;
+    if (champAt(z.id)) return;
+    const tx = Math.round(z.x0 + (z.x1 - z.x0) * C.at);
+    if (Math.abs((P.x / TS) - tx) > 46) return;
+    /* drop it on the first open tile at or below the surface */
+    const Wd = KD.World;
+    let ty = KD.Gen.surfaceAt(tx) - 2;
+    for (let k = 0; k < 24 && (Wd.solid(tx, ty) || Wd.solid(tx, ty - 1)); k++) ty--;
+    const m = spawn(C.kind, tx, ty);
+    if (!m) return;
+    m.champ = C;
+    m.hp = m.hpMax = C.hp;
+    /* a champion is a boss: it does not despawn, and it hits harder */
+    m.K = Object.assign({}, m.K, { boss: true, dmg: m.K.dmg + 1, xp: m.K.xp * 8, spd: m.K.spd * 1.15 });
+    S.say(C.name + ' is here.', 'BLOOD.3');
+    KD.Sfx.play('deny');
+    KD.Fx.shake(6);
+  }
+
   function update(dt, S) {
     const P = KD.Player.P;
     spawner(dt, S);
+    champSpawner(S);
     for (let i = list.length - 1; i >= 0; i--) {
       const m = list[i];
       m.t += dt; m.anim += dt;
@@ -283,12 +315,39 @@ KD.Mobs = (function () {
     KD.Fx.blood(m.x, m.y - m.K.h / 2, 14);
     for (const d of m.K.drop) if (Math.random() < 0.6) S.give(d, 1);
     S.earn(2 + Math.round(m.K.xp * 0.8));
-    if (m.K.boss) {
+    /* A champion is flagged boss so it will not despawn, so this has to
+       check WHICH boss - otherwise killing the first shark in the reef won
+       the whole game. */
+    if (m.champ) {
+      S.S.champs[m.champ.zone] = 1;
+      S.giveFrag(m.champ.zone);
+      S.earn(120 + m.champ.hp);
+      S.say(m.champ.name + ' is dead.', 'GOLD.3');
+      KD.Fx.shake(9);
+      KD.Sfx.play('levelup');
+      S.save();
+      return;
+    }
+    if (m.kind === 'baron') {
       S.S.flags.baronDead = 1;
       S.give('crown', 1);
       S.save();
       KD.Game.win();
     }
+  }
+
+  /* a champion gets its name and its health over its head, so a landmark
+     fight reads as one instead of as an unusually stubborn shark */
+  function champBar(m, cam) {
+    const s = KD.PX.has(KD.PX.frameOf(m.K.spr, m.anim)) ? KD.PX.get(KD.PX.frameOf(m.K.spr, m.anim)) : null;
+    const w = Math.max(40, (s ? s.w : m.K.w) + 12);
+    const x = Math.round(m.x - w / 2 - cam.x);
+    const y = Math.round(m.y - (s ? s.h : m.K.h) - cam.y) - 14;
+    KD.Screen.rect(x, y, w, 5, 'INK.0');
+    KD.Screen.rect(x + 1, y + 1, Math.round((w - 2) * Math.max(0, m.hp / m.hpMax)), 3, 'BLOOD.2');
+    KD.Screen.rect(x + 1, y + 1, Math.round((w - 2) * Math.max(0, m.hp / m.hpMax)), 1, 'BLOOD.3');
+    KD.Text.draw(m.champ.name.toUpperCase(), Math.round(m.x - cam.x), y - 11, 'BLOOD.3',
+      { tiny: true, align: 'center', shadow: 'INK.0' });
   }
 
   function draw(ctx, cam) {
@@ -317,8 +376,10 @@ KD.Mobs = (function () {
       const lit = Math.max(l, pl < 40 ? KD.Light.MAX - 4 : 0);
       KD.PX.blit(ctx, name, px, py, { anchor: false, flipX: m.face < 0, shade: KD.PX.bandFor(lit, KD.Light.MAX) });
       if (m.hurtT > 0) KD.Dither.fill(ctx, px, py, s.w, s.h, 'WHITE', 0.7);
-      /* a boss gets a health bar */
-      if (m.K.boss) {
+      /* a champion carries its name over its own head; the Baron gets the
+         whole top of the screen, because he is the one you came for */
+      if (m.champ) champBar(m, cam);
+      else if (m.K.boss) {
         const bw = 70;
         KD.Screen.rect(KD.W / 2 - bw / 2 - 1, 15, bw + 2, 6, 'INK.0');
         KD.Screen.rect(KD.W / 2 - bw / 2, 16, Math.round(bw * (m.hp / m.hpMax)), 4, 'BLOOD.2');
@@ -331,5 +392,5 @@ KD.Mobs = (function () {
     }
   }
   const count = () => list.length;
-  return { KINDS, list, spawn, clear, update, updateShots, hitArc, hurtMob, draw, count, shots };
+  return { KINDS, list, spawn, clear, update, updateShots, hitArc, hurtMob, draw, count, shots, champAt };
 })();

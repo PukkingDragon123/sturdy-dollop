@@ -202,8 +202,27 @@ KD.Scenes.interior = (function () {
     return 'BUY';
   }
 
+  /* TALK is the quest button when there is quest business, and flavour
+     otherwise. One button, and it always does the useful thing first. */
   function talk() {
-    const lines = LINES[room.job] || ['...'];
+    const job = room.job;
+    const biz = KD.Quests.forJob(job);
+    if (biz) {
+      if (biz.offer) {
+        line = '"' + biz.q.text + '"';
+        KD.Quests.accept(biz.q);
+        talkT = 5.4;
+        return;
+      }
+      if (biz.ready) {
+        if (KD.Quests.turnIn(biz.q)) { line = '"That will do. Take this."'; talkT = 4.4; return; }
+      }
+      line = '"' + biz.q.hint + '"';
+      talkT = 4.6;
+      KD.Sfx.play('click');
+      return;
+    }
+    const lines = LINES[job] || ['...'];
     line = lines[lineI % lines.length];
     lineI++; talkT = 4.4;
     KD.Sfx.play('click');
@@ -382,6 +401,15 @@ KD.Scenes.interior = (function () {
       const npc = npcSprite();
       const c = px_('fu_counter');
       if (npc) KD.PX.blit(ctx, npc, room.counter.x + 16, room.counter.y - 2, {});
+      /* a mark over the shopkeeper when they have work, or want it back */
+      const biz = KD.Quests.forJob(room.job);
+      if (biz) {
+        const mx = room.counter.x + 16, my = room.counter.y - 34 + (Math.sin(t * 3) > 0 ? 0 : 1);
+        const col = biz.offer ? 'GOLD.3' : (biz.ready ? 'KELP.2' : 'BONE.0');
+        KD.Screen.rect(mx - 1, my, 3, 6, col);
+        KD.Screen.rect(mx - 1, my + 8, 3, 3, col);
+        KD.Screen.rect(mx - 2, my - 1, 5, 1, 'INK.0');
+      }
       KD.PX.blit(ctx, 'fu_counter', room.counter.x, room.counter.y - (c ? c.h : 16), {});
       for (const q of room.on) KD.PX.blit(ctx, q.n, q.x, q.y, {});
     }

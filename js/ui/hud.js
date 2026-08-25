@@ -79,6 +79,13 @@ KD.Hud = (function () {
         KD.Screen.frame(fx, fy + 1, 7, 5, 'INK.0');
       }
     }
+    /* The one line telling you what you are supposed to be doing. Without
+       it a 2600-tile world is just a big cave with fish in it. */
+    const task = KD.Quests && KD.Quests.current();
+    if (task) {
+      KD.Text.draw(task, KD.W - 6, 38, task.startsWith('READY') ? 'KELP.2' : 'BONE.1',
+        { tiny: true, align: 'right', shadow: 'INK.0', max: Math.min(210, KD.W - 120) });
+    }
     /* depth read-out, so the layers are legible as progress */
     const d = (KD.Player.P.y / 8) | 0;
     const L = KD.Gen.layerAt(d);
