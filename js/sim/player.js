@@ -285,6 +285,8 @@ KD.Player = (function () {
      place whatever is in your hand. */
   function place(S) {
     if (!(KD.In.actHit('use', 'KeyE') || (KD.In.mouse.rclick && KD.touch))) return;
+    /* a doorway beats everything else standing in it */
+    if (tryEnter(S)) return;
     if (interact(S)) return;
     const slot = S.hotbarItem();
     if (!slot) return;
@@ -320,10 +322,16 @@ KD.Player = (function () {
       return true;
     }
     if (T.station) { KD.Panels.toggle('craft'); return true; }
-    /* standing in a building that does something? do that thing */
-    const b = buildingAt(tx, ty);
-    if (b && b.kind.gym) { KD.Game.go('gym', {}); return true; }
     return false;
+  }
+  /* Standing in a fruit doorway? Then ACT walks you in. The room is its
+     own scene, which is why you can never be sealed inside one. */
+  function tryEnter(S) {
+    const b = KD.Village.doorAt(P.x, P.y - 4);
+    if (!b) return false;
+    if (b.kind.gym) { KD.Game.go('gym', {}); return true; }
+    KD.Game.go('interior', { b: b });
+    return true;
   }
   /* which village building, if any, contains this tile */
   function buildingAt(tx, ty) {
@@ -365,6 +373,6 @@ KD.Player = (function () {
     if (P.hp <= 0) S.die(from);
   }
   const heal = (n) => { P.hp = Math.min(P.hpMax, P.hp + n); };
-  return { P, spawn, update, hurt, heal, interact, openChest, zoneGate, buildingAt,
+  return { P, spawn, update, hurt, heal, interact, tryEnter, openChest, zoneGate, buildingAt,
            get x() { return P.x; }, get y() { return P.y; } };
 })();

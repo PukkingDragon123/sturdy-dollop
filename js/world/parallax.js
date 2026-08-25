@@ -10,12 +10,12 @@ KD.Parallax = (function () {
      and how much it dims. Factor < 1 scrolls slower than the world (further
      away); > 1 scrolls faster (in front of it). */
   const FAR = [
-    { spr: ['bg_far_reef', 'bg_far_spires', 'bg_far_arch', 'bg_far_wreck'], f: 0.12, shade: 3 },
-    { spr: ['bg_mid_rocks', 'bg_mid_coral'], f: 0.26, shade: 2 }
+    { spr: ['bg_far_reef', 'bg_far_spires', 'bg_far_arch', 'bg_far_wreck'], f: 0.12, shade: 2, haze: 0.50 },
+    { spr: ['bg_mid_rocks', 'bg_mid_coral'], f: 0.26, shade: 1, haze: 0.34 }
   ];
   const MID = [
-    { spr: ['bg_mid_kelp'], f: 0.44, shade: 2 },
-    { spr: ['bg_mid_coral', 'bg_mid_rocks'], f: 0.58, shade: 1 }
+    { spr: ['bg_mid_kelp'], f: 0.44, shade: 1, haze: 0.22 },
+    { spr: ['bg_mid_coral', 'bg_mid_rocks'], f: 0.58, shade: 0, haze: 0.06 }
   ];
   const NEAR = [
     { spr: ['fg_near_coral'], f: 1.35, shade: 0 },
@@ -74,7 +74,7 @@ KD.Parallax = (function () {
     if (horizon > 0) {
       /* above the surface: sky, and a sun the game can actually see */
       KD.Screen.rect(0, 0, KD.W, Math.min(KD.H, horizon), 'DEEP.4');
-      KD.Dither.fill(ctx, 0, Math.max(0, horizon - 14), KD.W, 14, 'WATER.3', 0.55);
+      KD.Dither.wash(ctx, 0, Math.max(0, horizon - 14), KD.W, 14, 'WATER.3', 0.55);
     }
     for (let i = 0; i < BANDS.length; i++) {
       const y0 = BANDS[i][0] * TS - cam.y;
@@ -83,7 +83,7 @@ KD.Parallax = (function () {
       const a = Math.max(0, y0), b = Math.min(KD.H, y1);
       KD.Screen.rect(0, a, KD.W, b - a, BANDS[i][1]);
       /* dither the seam between two bands so depth reads as a gradient */
-      if (y0 > -8 && y0 < KD.H) KD.Dither.fill(ctx, 0, y0 - 7, KD.W, 14, BANDS[i][1], 0.5);
+      if (y0 > -8 && y0 < KD.H) KD.Dither.wash(ctx, 0, y0 - 7, KD.W, 14, BANDS[i][1], 0.5);
     }
     return horizon;
   }
@@ -168,14 +168,48 @@ KD.Parallax = (function () {
     }
   }
 
+  /* Which water colour is in front of the camera at this depth. A haze
+     pass dithers THAT over a band, which is what actually makes a
+     backdrop read as distant underwater: things do not go black with
+     distance down here, they wash out toward the colour of the water in
+     front of them. Darkening alone turned every far ridge into a black
+     scribble against bright shallows. */
+  function waterColAt(y) {
+    let col = BANDS[0][1];
+    for (const bnd of BANDS) { if (y >= bnd[0] * TS) col = bnd[1]; else break; }
+    return col;
+  }
+  function haze(ctx, cam, amount) {
+    if (!amount) return;
+    /* wash in the two or three colours the visible column actually is, so
+       the veil matches the water at every depth on screen at once */
+    let y = 0;
+    while (y < KD.H) {
+      const col = waterColAt(cam.y + y);
+      let end = KD.H;
+      for (const bnd of BANDS) {
+        const sy = bnd[0] * TS - cam.y;
+        if (sy > y) { end = Math.min(end, sy); break; }
+      }
+      KD.Dither.wash(ctx, 0, y, KD.W, Math.max(1, end - y), col, amount);
+      y = end;
+    }
+  }
+
   /* ---- the whole back half of the frame ---- */
   function back(ctx, cam, t) {
     const horizon = water(ctx, cam);
     shafts(ctx, cam, t);
-    /* far bands stand on an implied distant floor, lifted well clear of the
-       real seabed; mid bands sit closer to it */
-    for (let i = 0; i < FAR.length; i++) band(ctx, FAR[i], cam, 26 - i * 10);
-    for (let i = 0; i < MID.length; i++) band(ctx, MID[i], cam, 10 - i * 6);
+    /* Far bands stand on an implied distant floor, lifted well clear of the
+       real seabed; mid bands sit closer to it. Each one is veiled by the
+       water in front of it before the next is drawn, so the layers really
+       do sit at different distances instead of stacking flat. */
+    for (let i = 0; i < FAR.length; i++) {
+      if (band(ctx, FAR[i], cam, 26 - i * 10)) haze(ctx, cam, FAR[i].haze);
+    }
+    for (let i = 0; i < MID.length; i++) {
+      if (band(ctx, MID[i], cam, 10 - i * 6)) haze(ctx, cam, MID[i].haze);
+    }
     life(ctx, cam, false);
     return horizon;
   }

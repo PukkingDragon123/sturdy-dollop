@@ -35,6 +35,8 @@ KD.Scenes.play = (function () {
       if (m.dead > 0) continue;
       if (Math.hypot(m.x - P.x, m.y - m.K.h / 2 - (P.y - P.h / 2)) < 34) return 'hit';
     }
+    /* standing in a fruit doorway? then the button is the door */
+    if (KD.Village.doorAt(P.x, P.y - 4)) return 'door';
     /* something interactive under the reticle? then it is USE */
     const T = KD.Tiles.get(Wd.at(P.tgx, P.tgy));
     if (T && (T.container || T.door || T.station)) return 'use';
@@ -43,8 +45,8 @@ KD.Scenes.play = (function () {
     if (held && held.tile && Wd.at(P.tgx, P.tgy) === KD.Tiles.AIR) return 'use';
     return 'dig';
   }
-  const ACT_LABEL = { dig: 'DIG', hit: 'HIT', use: 'USE' };
-  const ACT_ICON = { dig: 'ic_pick', hit: 'ic_sword', use: 'ic_check' };
+  const ACT_LABEL = { dig: 'DIG', hit: 'HIT', use: 'USE', door: 'ENTER' };
+  const ACT_ICON = { dig: 'ic_pick', hit: 'ic_sword', use: 'ic_check', door: 'ic_check' };
 
   function layout(S) {
     BTNS.length = 0;
@@ -53,7 +55,10 @@ KD.Scenes.play = (function () {
     const R = 22, r = 16;
     const bx = KD.W - R - 12, by = KD.H - R - 12;
     /* the two big ones, under the right thumb */
-    BTNS.push({ name: actMode, x: bx, y: by, r: R, label: ACT_LABEL[actMode], icon: ACT_ICON[actMode], big: true });
+    /* ENTER is a USE under the hood, so the door and the chest share one
+       button rather than two that do almost the same thing */
+    const actName = actMode === 'door' ? 'use' : actMode;
+    BTNS.push({ name: actName, x: bx, y: by, r: R, label: ACT_LABEL[actMode], icon: ACT_ICON[actMode], big: true });
     BTNS.push({ name: 'jump', x: bx - R - r - 6, y: by - 6, r, label: 'UP', icon: 'ic_arrow_up' });
     /* three small tabs, top right, out of the way of the action */
     const tx = KD.W - 16;
@@ -169,6 +174,9 @@ KD.Scenes.play = (function () {
     const cam = { x: Math.round(KD.Cam.x + sh.x), y: Math.round(KD.Cam.y + sh.y) };
     KD.Parallax.back(ctx, cam, dayT);
     KD.Render.draw(ctx, cam);
+    /* the fruit skins sit on top of the tiles they were carved from, so a
+       house can lean over the street and still be walked in front of */
+    KD.Village.draw(ctx, cam);
     KD.Parallax.surface(ctx, cam, dayT);
     const st = S.stats;
     const lightR = 26 + (st.lightRadius || 0) * 10;

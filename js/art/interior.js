@@ -341,9 +341,482 @@ KD.art.interior = (function () {
     ]);
   }
 
+
+  /* ============================================================
+     B. THE ROOM ITSELF - surfaces, then the furniture that goes
+     on them. Every piece is built like real cheap joinery: a
+     WOOD.0 top lip catching the light, WOOD.3 in the shadow, an
+     INK.0 outline only where the shape turns away. Legs are
+     always thinner than they should be.
+     ============================================================ */
+  function room() {
+    S('in_floor', [
+      '33333333',
+      '32222223',
+      '22222222',
+      '21111112',
+      'oooooooo',
+      '33333333',
+      '32222223',
+      '22111122'
+    ]);
+    S('in_floor2', [
+      '32222223',
+      '22222222',
+      '21122112',
+      'oooooooo',
+      '33333333',
+      '32222223',
+      '22222222',
+      '21212112'
+    ]);
+    S('in_wall', [
+      'RRRRxxxx',
+      'RRxxxxxx',
+      'RxxxxXxx',
+      'xxxXxxxx',
+      'xxxxxxXx',
+      'xXxxXxxx',
+      'xxxxxxxx',
+      'xxXxxxXX'
+    ]);
+    S('in_wall2', [
+      'RRxxxxxx',
+      'RxxxXxxx',
+      'xxxxxxxx',
+      'xxXxxxxX',
+      'xxxxxXxx',
+      'xxxxxxxx',
+      'xXxxxxXx',
+      'xxxxXxxx'
+    ]);
+    S('in_wainscot', [
+      'oooooooo',
+      '33333333',
+      '32222223',
+      '32211223',
+      '32211223',
+      '32222223',
+      '31111113',
+      'oooooooo'
+    ]);
+    S('in_beam', [
+      'o111111o',
+      'o322223o',
+      'o321123o',
+      'o321123o',
+      'o321123o',
+      'o322223o',
+      'o333333o',
+      'oooooooo'
+    ]);
+    S('in_ceil', [
+      'oooooooo',
+      'rrrrrrrr',
+      'rRRrrRrr',
+      'RRRRRRRR',
+      'RxRRxRRR',
+      'xxxxxxxx',
+      'xxXxxxxX',
+      'xxxxxxxx'
+    ]);
+    S('fu_counter', [
+      '.4444444444444444444444444444444',
+      '.4222222222222222222222222222243',
+      '42222222222222222222222222222224',
+      'o111111111111111111111111111113o',
+      'o3222223oo3222223oo3222223oo223o',
+      'o3211123oo3211123oo3211123oo213o',
+      'o3211123oo3211123oo3211123oo213o',
+      'o3211123oo3211123oo3211123oo213o',
+      'o3211123oo3211123oo3211123oo213o',
+      'o3222223oo3222223oo3222223oo223o',
+      'o111111111111111111111111111113o',
+      'o33333333333333333333333333333o.',
+      'oooooooooooooooooooooooooooooo..',
+      '.o.o........................o.o.',
+      '.o.o........................o.o.',
+      '.ooo........................ooo.'
+    ]);
+    S('fu_shelf', [
+      'o1111111111111111111111111o',
+      'o3222222222222222222222223o',
+      'ooooooooooooooooooooooooooo',
+      '..oBBo...oGGo....offo..oww.',
+      '.oBWBBo.oGYGGo..oFfFFo.oWwo',
+      '.oBWBBo.oGYGGo..oFfFFo.oWwo',
+      '.oBBBBo.oGGGGo..offFFo.owwo',
+      '.oobboo.oogyoo..oo+foo.obbo',
+      'o1111111111111111111111111o',
+      'o3222222222222222222222223o',
+      'ooooooooooooooooooooooooooo',
+      '...oxxo....orro...ottTo....',
+      '..oxXxxo..orRrro.ottTTo....',
+      '..oxXxxo..orRrro.ottTTo..oB',
+      '..oxxxxo..orrrro.ottTTo.oBW',
+      '..ooxxoo..oorroo.oottoo.oBB',
+      'o1111111111111111111111111o',
+      'oooooooooooooooooooooooooo.'
+    ]);
+    S('fu_bed', [
+      '.........ooooooooo..................',
+      '......ooowwwBwwwBwwooo..............',
+      '....oowwwBwwBwwBwwBwwwoo............',
+      '...owwBwwBwwBwwBwwBwwBwwo...........',
+      '..owBwwBwwBwwBwwBwwBwwBwwo..........',
+      '..oBwwBwwBwwBwwBwwBwwBwwBwo.........',
+      '.oowwwwwwwwwwwwwwwwwwwwwwwwoooooooo.',
+      '.oWWWWWWWWWWWWo#############$$$$$$#o',
+      'oBoWWWWWWWWWWo$$$$$$$$$$$$$$$$$$$$#o',
+      'oBoWWWWWWWWoo$%%%%%%%%%%%%%%%%%%%$#o',
+      'oBoooooooooo$%%YY%%%%YY%%%%YY%%%%%$o',
+      'o#############################$$$$#o',
+      'o1111111111111111111111111111111111o',
+      'o3222222222222222222222222222222223o',
+      'o3211111111111111111111111111111123o',
+      'o3333333333333333333333333333333333o',
+      'oooooooooooooooooooooooooooooooooooo',
+      '.o.o..........................o.o...'
+    ]);
+    S('fu_table', [
+      '.111111111111111111111.',
+      '.322222222222222222223.',
+      'o222222222222222222222o',
+      'o111111111111111111111o',
+      'o333333333333333333333o',
+      'ooooooooooooooooooooooo',
+      '..o22o............o22o.',
+      '..o21o............o21o.',
+      '..o21o............o21o.',
+      '..o21o............o21o.',
+      '..o21o............o21o.',
+      '..o33o............o33o.',
+      '.o3333o..........o3333o',
+      '.oooooo..........oooooo'
+    ]);
+    S('fu_stool', [
+      'o11111111o',
+      'o32222223o',
+      'o33333333o',
+      'oooooooooo',
+      '.o2o..o2o.',
+      '.o1o..o1o.',
+      '.o1o..o1o.',
+      '.o1o..o1o.',
+      '.o3o..o3o.',
+      'o33o..o33o',
+      'o3o....o3o',
+      'ooo....ooo'
+    ]);
+    S('fu_rug', [
+      '..oooooooooooooooooooooooooooooooooo...',
+      '.o####################################.',
+      'o#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$#o.',
+      'o#$%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%$#o.',
+      'o#$%GGYY%%GGYY%%GGYY%%GGYY%%GGYY%%%$#o.',
+      'o#$%YY%%%%YY%%%%YY%%%%YY%%%%YY%%%%%$#o.',
+      'o#$%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%$#o.',
+      'o#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$#o.',
+      'o######################################',
+      '.oooooooooooooooooooooooooooooooooooo..',
+      'w.w.w.w.w.w.w.w.w.w.w.w.w.w.w.w.w.w.w..',
+      'B.B.B.B.B.B.B.B.B.B.B.B.B.B.B.B.B.B.B..'
+    ]);
+    S('fu_barrel', [
+      '..oo3333oo..',
+      '.o33222233o.',
+      'o3322112233o',
+      'o3221111223o',
+      'ovvvvvvvvvvo',
+      'o3221111223o',
+      'o3221111223o',
+      'o3221111223o',
+      'ovvvvvvvvvvo',
+      'o3221111223o',
+      'o3221111223o',
+      'o3321122333o',
+      'o3332222333o',
+      '.o33333333o.',
+      '..oo3333oo..',
+      '...oooooo...'
+    ]);
+    S('fu_crate', [
+      'o111111111111o',
+      'o322222222223o',
+      'o321111111123o',
+      'o321oooooo123o',
+      'o321o3223o123o',
+      'o321o2112o123o',
+      'o321o2112o123o',
+      'o321o3223o123o',
+      'o321oooooo123o',
+      'o321111111123o',
+      'o322222222223o',
+      'o333333333333o',
+      'oooooooooooooo',
+      '.o..........o.'
+    ]);
+    S('fu_lamp', [
+      '.....oo.....',
+      '.....oo.....',
+      '.....oo.....',
+      '.....oo.....',
+      '.....oo.....',
+      '...oooooo...',
+      '..oGGGGGGo..',
+      '.oGYYYYYYGo.',
+      'oGYWWWWWYYGo',
+      'oYWWWWWWWYYo',
+      'oYWWWWWWWYYo',
+      'oGYWWWWWYYGo',
+      '.oGYYYYYYGo.',
+      '..oGGGGGGo..',
+      '...oogyoo...',
+      '....oyo.....',
+      '.....o......',
+      '............',
+      '............',
+      '............'
+    ]);
+    S('fu_window', [
+      'oo11111111111111111111oo',
+      'o1322222222222222222221o',
+      'o32ooooooooooooooooooo3o',
+      'o32ttttttttttoTTTTTTTo3o',
+      'o32ttttTtttttoTTTTTTTo3o',
+      'o32tttttttttcoTTTTcTTo3o',
+      'o32ttcttttttcoTTcTTTTo3o',
+      'o32tttttFttttoTTTTTTTo3o',
+      'o32ttttFFttttoTfTTTTTo3o',
+      'o32tttFFFtttcoTFfTTTTo3o',
+      'o32ooooooooooooooooooo3o',
+      'o32ttttttttttoTTTTTTTo3o',
+      'o32ttttttcTttoTTTTTTTo3o',
+      'o32tttWttttttoTTTTcTTo3o',
+      'o32ttWWWttttcoTTTTTTTo3o',
+      'o32tttWttFtttoTTfTTTTo3o',
+      'o32ttttttFtttoTfFTTTTo3o',
+      'o32ooooooooooooooooooo3o',
+      'o1333333333333333333331o',
+      'oo333333333333333333331o',
+      '.oooooooooooooooooooooo.',
+      '..o..................o..'
+    ]);
+    S('fu_pot', [
+      '.......of.....',
+      '......off*....',
+      '.....offF*....',
+      '....oFfF*.....',
+      '...oFfFF*.o+..',
+      '..offFF*.of*..',
+      '..oFfF*.oFf*..',
+      '.oFfFF*oFfF*..',
+      '.ofFF*oFfFF*..',
+      '..oFF*ofFF*...',
+      '..ooffFF*o....',
+      '...oofF*o.....',
+      '.....offo.....',
+      '..ouuuuuuuo...',
+      '.oUUUUUUUUUo..',
+      'oUVVVVVVVVVUo.',
+      'oUVuuuuuuuVUo.',
+      'oUVVVVVVVVVUo.',
+      '.oUVVVVVVVUo..',
+      '..oooooooooo..'
+    ]);
+    S('fu_picture', [
+      'oGGGGGGGGGGGGGGGGGGo',
+      'oGYYYYYYYYYYYYYYYYGo',
+      'oGYooooooooooooooYGo',
+      'oGYoiiiiiiiiiiiioYGo',
+      'oGYoiiiiiwwiiiiioYGo',
+      'oGYoiiiiwbbwiiiioYGo',
+      'oGYoiiiiwWbwiiiioYGo',
+      'oGYoiiiiobboiiiioYGo',
+      'oGYoiiiitTTtiiiioYGo',
+      'oGYoiiitTTTTtiiioYGo',
+      'oGYoiitTTTTTTtiioYGo',
+      'oGYoiitTTTTTTtiioYGo',
+      'oGYooooooooooooooYGo',
+      'oGyyyyyyyyyyyyyyyygo',
+      'oGGGGGGGGGGGGGGGGGgo',
+      '.oooooooooooooooooo.'
+    ]);
+    S('fu_rack', [
+      'o1111111111111111o',
+      'o3222222222222223o',
+      'oooooooooooooooooo',
+      '..ow....oB....og..',
+      '..oW....oW....oY..',
+      '..oW....oW....oY..',
+      '..oWo...oWo...oYo.',
+      '..obwo..obBo..ogyo',
+      '..o11o..o11o..o11o',
+      '..o32o..o32o..o32o',
+      '..o32o..o32o..o32o',
+      '..o32o..o32o..o32o',
+      '..o32o..o32o..o32o',
+      '..o32o..o32o..o32o',
+      '..o33o..o33o..o33o',
+      'o1111111111111111o',
+      'o3222222222222223o',
+      'oooooooooooooooooo',
+      '.o..............o.',
+      '.o..............o.',
+      '.o..............o.',
+      '.oo............oo.'
+    ]);
+    S('fu_stove', [
+      '....oo........oo......',
+      '...oPPo......oPPo.....',
+      '...oPPo.....oPPo......',
+      '..ohhhhhhhhhhhhhho...',
+      '.oHHHHHHHHHHHHHHHHo..',
+      'oHJJJJJJJJJJJJJJJJHo.',
+      'oHJhhhhhhhhhhhhhhJHo.',
+      'oHJhoooooooooooohJHo.',
+      'oHJho$$$&&&$$$#ohJHo.',
+      'oHJho$&&YYY&&$#ohJHo.',
+      'oHJho$&YYYYY&$#ohJHo.',
+      'oHJho$$&&YY&&$#ohJHo.',
+      'oHJho##$$$$$$##ohJHo.',
+      'oHJhoooooooooooohJHo.',
+      'oHJJJJJJJJJJJJJJJJHo.',
+      'oHHHHHHHHHHHHHHHHHHo.',
+      'oHJhhhhhhhhhhhhhhJHo.',
+      'oHHHHHHHHHHHHHHHHHHo.',
+      'ooooooooooooooooooo..',
+      '.o.o............o.o..'
+    ]);
+    S('fu_sink', [
+      '.......ohho.......',
+      '.......oHHo.......',
+      '......ooHHoo......',
+      'ohhhhhhhhhhhhhhho.',
+      'oHHHHHHHHHHHHHHHHo',
+      'oHJttttttttttttJHo',
+      'oHJtTTTTTTTTTTtJHo',
+      'oHJtTcccccccTTtJHo',
+      'oHJttTTTTTTTTtJHo.',
+      'oHHHHHHHHHHHHHHHo.',
+      'o1111111111111111o',
+      'o3222222222222223o',
+      'o3333333333333333o',
+      'oooooooooooooooooo'
+    ]);
+    S('fu_books', [
+      '................',
+      '...ooooooooo....',
+      '..o###$$$$#Bo...',
+      '..o#$$$$$$$Bo...',
+      '..ooooooooooo...',
+      '.offfff++fffBo..',
+      '.of++++++++fBo..',
+      '.ooooooooooooo..',
+      'oGGGGyyyyyyyGBo.',
+      'oGyyyyyyyyyyyBo.',
+      'ooooooooooooooo.',
+      'ottttcccccctTBo.',
+      'otccccccccccTBo.',
+      'ooooooooooooooo.'
+    ]);
+    S('fu_bunting', [
+      'oooooooooooooooooooooooooooooooooooooooo',
+      'BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
+      'o####oo++++oooGGGGoo####oo++++oooGGGGooo',
+      '.o$$$o.o+F+o.oGYYo.o$$$o.o+F+o.oGYYo.o$.',
+      '.o$%$o.o+F+o.oGYYo.o$%$o.o+F+o.oGYYo.o$.',
+      '..o$o...o*o...oYo...o$o...o*o...oYo...o.',
+      '..o$o...o*o...oYo...o$o...o*o...oYo...o.',
+      '...o.....o.....o.....o.....o.....o....o.',
+      '........................................',
+      '........................................',
+      '........................................',
+      '........................................'
+    ]);
+    S('fu_towel', [
+      'o11111111111111o',
+      'o32222222222233o',
+      'oooooooooooooooo',
+      '.o####o..o####o.',
+      '.o$$$$o..o$$$$o.',
+      '.o$%%$o..o$%%$o.',
+      '.o$%%$o..o$%%$o.',
+      '.oWWWWo..oGGGGo.',
+      '.o$%%$o..o$%%$o.',
+      '.o$%%$o..o$%%$o.',
+      '.o$%%$o..o$%%$o.',
+      '.o$$$$o..o$$$$o.',
+      '.oo$%$oo.o$%$oo.',
+      '..o$%$o..o$%$o..',
+      '..o$$$o..o$$$o..',
+      '..oo#oo..oo#oo..',
+      '...ooo....ooo...',
+      '................',
+      '................',
+      '................'
+    ]);
+    S('fu_board', [
+      'o1111111111111111111o',
+      'o3222222222222222223o',
+      'o32ooooooooooooooo23o',
+      'o32ozzzzzzzzzzzzzo23o',
+      'o32ozBBBBzzBBBBBzo23o',
+      'o32ozzzzzzzzzzzzzo23o',
+      'o32ozBBBzzzBBzzzzo23o',
+      'o32ozzzzzzzzzzzzzo23o',
+      'o32ozBBBBBzzzBBzzo23o',
+      'o32ozzzzzzzzzzzzzo23o',
+      'o32ozzBBzzBBBzzzzo23o',
+      'o32ozzzzzzzzzzzzzo23o',
+      'o32ooooooooooooooo23o',
+      'o3333333333333333333o',
+      'ooooooooooooooooooooo',
+      '..o...............o..'
+    ]);
+    S('fu_taps', [
+      'o111111111111111111o',
+      'o322222222222222223o',
+      'oooooooooooooooooooo',
+      '..og....og....og....',
+      '..oY....oY....oY....',
+      '.ooYoo.ooYoo.ooYoo..',
+      '.oGYYo.oGYYo.oGYYo..',
+      '.ooYoo.ooYoo.ooYoo..',
+      '...oo...oo....oo....',
+      '...og...og....og....',
+      '..oooo.oooo..oooo...',
+      '..oWWo.oWWo..oWWo...',
+      '..oGGo.oGGo..oGGo...',
+      '..oYYo.oYYo..oYYo...',
+      '..oGgo.oGgo..oGgo...',
+      '..oooo.oooo..oooo...',
+      'o111111111111111111o',
+      'oooooooooooooooooooo'
+    ]);
+    S('fu_forge', [
+      '.....oooooo.........',
+      '...oo$$$&&$oo.......',
+      '..o$&&YYY&&$o.......',
+      '..o$&YYYYY&$o...oo..',
+      '..o$$&&Y&&$$o..oHHo.',
+      '.oohhhhhhhhhoo.oHHo.',
+      'oHHHHHHHHHHHHHooHHo.',
+      'oHJJJJJJJJJJJHoHJHo.',
+      'oHJhhhhhhhhhJHoHJHo.',
+      'oHHHHHHHHHHHHHoHHHo.',
+      'o1111111111111ooooo.',
+      'o3222222222223o.....',
+      'o3211111111123o.....',
+      'o3222222222223o.....',
+      'o3333333333333o.....',
+      'oooooooooooooo......'
+    ]);
+  }
+
   /* ---------------------------------------------------------- */
   function build() {
-    plush();
+    plush(); room();
   }
 
   return { build };

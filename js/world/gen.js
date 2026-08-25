@@ -278,8 +278,9 @@ KD.Gen = (function () {
     const Wd = W(), w = Wd.W, T = KD.Tiles;
     const z = KD.Zones.byId.village;
     const plan = KD.Village.plan(Wd, z, surfaceAt);
+    KD.Village.shelve(Wd, T, plan.terraces);
     for (const b of plan.buildings) {
-      KD.Village.carve(Wd, T, b, markDry);
+      KD.Village.carve(Wd, T, b);
       meta.structures.push({ kind: 'house', x: b.x, y: b.y, w: b.w, h: b.h, b });
     }
     KD.Village.connect(Wd, T, plan.terraces);

@@ -749,7 +749,248 @@ KD.art.village = (function () {
   }
 
   function ground() {}
-  function signs() {}
+  /* ---------------------------------------------------------- *
+   * C. TRADE SIGNS - 26x20 hanging boards. Plank face, shadow
+   *    lip, two chain links up to a bracket, then ONE symbol
+   *    in ONE accent ramp so the trade reads from across the
+   *    street with no lettering at all.
+   * ---------------------------------------------------------- */
+  const SIGNPAL = {
+    o: 'INK.0', p: 'INK.1', q: 'INK.2', P: 'INK.3',
+    b: 'BONE.0', B: 'BONE.1', w: 'BONE.2', W: 'WHITE',
+    g: 'GOLD.0', G: 'GOLD.1', y: 'GOLD.2', Y: 'GOLD.3',
+    t: 'WATER.0', T: 'WATER.1', c: 'WATER.2', C: 'WATER.3',
+    n: 'SAND.0', N: 'SAND.1', m: 'SAND.2', M: 'SAND.3',
+    r: 'CORAL.0', R: 'CORAL.1', x: 'CORAL.2', X: 'CORAL.3',
+    f: 'KELP.0', F: 'KELP.1', '+': 'KELP.2', '*': 'KELP.3',
+    u: 'RUST.0', U: 'RUST.1', v: 'RUST.2', V: 'RUST.3',
+    h: 'STONE.0', H: 'STONE.1', j: 'STONE.2', J: 'STONE.3',
+    1: 'WOOD.0', 2: 'WOOD.1', 3: 'WOOD.2', 4: 'WOOD.3'
+  };
+  function G(name, rows) { P.def(name, { pal: SIGNPAL, px: rows }); }
+
+  function signs() {
+    G('vs_smith', [
+      '...oo..........oo.........',
+      '...ob..........ob.........',
+      '...oB..........oB.........',
+      '.oooooooooooooooooooooooo.',
+      'o111111111111111111111111o',
+      'o133..................331o',
+      'o133.....ohhho........331o',
+      'o133....oHJJJHo.......331o',
+      'o133....oHJJJHo..ouo..331o',
+      'o133.....oh1ho..oUVo..331o',
+      'o133......o1o..oUVo...331o',
+      'o133....ouuuuuuuuo....331o',
+      'o133...oUUUUUUUUUUo...331o',
+      'o133...oUVVVVVVVVUo...331o',
+      'o133....oUVo..oVUo....331o',
+      'o133.....oUUUUUUo.....331o',
+      'o133......oooooo......331o',
+      'o133333333333333333333331o',
+      'o111111111111111111111111o',
+      '.oooooooooooooooooooooooo.'
+    ]);
+    G('vs_tackle', [
+      '...oo..........oo.........',
+      '...ob..........ob.........',
+      '...oB..........oB.........',
+      '.oooooooooooooooooooooooo.',
+      'o111111111111111111111111o',
+      'o133.......o..........331o',
+      'o133.......W..........331o',
+      'o133.......W..........331o',
+      'o133.......W....orro..331o',
+      'o133.......W...oRxxRo.331o',
+      'o133.......W...oRxxRo.331o',
+      'o133.....ooWoo..orro..331o',
+      'o133....oWWbWWo.......331o',
+      'o133....oWo.oWo.......331o',
+      'o133.....o...Wo.......331o',
+      'o133.........Wo.......331o',
+      'o133........oo........331o',
+      'o133333333333333333333331o',
+      'o111111111111111111111111o',
+      '.oooooooooooooooooooooooo.'
+    ]);
+    G('vs_tavern', [
+      '...oo..........oo.........',
+      '...ob..........ob.........',
+      '...oB..........oB.........',
+      '.oooooooooooooooooooooooo.',
+      'o111111111111111111111111o',
+      'o133....oWWWWWWo......331o',
+      'o133...oWWWWWWWWo.....331o',
+      'o133..oWWWWWWWWWWo....331o',
+      'o133..oGGGGGGGGGGoooo.331o',
+      'o133..oGYYYYYYYYGo11o.331o',
+      'o133..oGYYYYYYYYGo33o.331o',
+      'o133..oGYYYYYYYYGo11o.331o',
+      'o133..oGYYYYYYYYGo33o.331o',
+      'o133..oGgggggggggoooo.331o',
+      'o133..oGGGGGGGGGGo....331o',
+      'o133...oooooooooo.....331o',
+      'o133..................331o',
+      'o133333333333333333333331o',
+      'o111111111111111111111111o',
+      '.oooooooooooooooooooooooo.'
+    ]);
+    G('vs_stable', [
+      '...oo..........oo.........',
+      '...ob..........ob.........',
+      '...oB..........oB.........',
+      '.oooooooooooooooooooooooo.',
+      'o111111111111111111111111o',
+      'o133........oo++oo....331o',
+      'o133.......oFF++FFo...331o',
+      'o133......oFFFFFFFo...331o',
+      'o133.ooooooFFFFFFFo...331o',
+      'o133oFFFFFFFFWFFFFo...331o',
+      'o133oFFFFFFFFFFFFFo...331o',
+      'o133.oooooooFFFFFo....331o',
+      'o133........oFFFo.....331o',
+      'o133.......oFFFFFo....331o',
+      'o133.......oFF+FFo....331o',
+      'o133........oFFFo.....331o',
+      'o133.......oFFo.......331o',
+      'o133333333333333333333331o',
+      'o111111111111111111111111o',
+      '.oooooooooooooooooooooooo.'
+    ]);
+    G('vs_gym', [
+      '...oo..........oo.........',
+      '...ob..........ob.........',
+      '...oB..........oB.........',
+      '.oooooooooooooooooooooooo.',
+      'o111111111111111111111111o',
+      'o133..................331o',
+      'o133..ohho......ohho..331o',
+      'o133.oHJJHo....oHJJHo.331o',
+      'o133.oHJJHo....oHJJHo.331o',
+      'o133.oHJJHooooooHJJHo.331o',
+      'o133.oHJJHHHHHHHHJJHo.331o',
+      'o133.oHJJJJJJJJJJJJHo.331o',
+      'o133.oHJJHoooooohJJHo.331o',
+      'o133.oHJJHo....oHJJHo.331o',
+      'o133.oHJJHo....oHJJHo.331o',
+      'o133..ohho......ohho..331o',
+      'o133..................331o',
+      'o133333333333333333333331o',
+      'o111111111111111111111111o',
+      '.oooooooooooooooooooooooo.'
+    ]);
+    G('vs_bookie', [
+      '...oo..........oo.........',
+      '...ob..........ob.........',
+      '...oB..........oB.........',
+      '.oooooooooooooooooooooooo.',
+      'o111111111111111111111111o',
+      'o133..................331o',
+      'o133...oWWWWWo........331o',
+      'o133..oWbWWbWWo.......331o',
+      'o133..oWWWWWWWo.oWWWo.331o',
+      'o133..oWbWWbWWo.oWbWo331o.',
+      'o133..oWWWWWWWooWWWWo.331o',
+      'o133..oBBBBBBBooWbWWo.331o',
+      'o133...ooooooo.oWWWWo.331o',
+      'o133...........oBBBBo.331o',
+      'o133...........oooooo.331o',
+      'o133..................331o',
+      'o133..................331o',
+      'o133333333333333333333331o',
+      'o111111111111111111111111o',
+      '.oooooooooooooooooooooooo.'
+    ]);
+    G('vs_apothecary', [
+      '...oo..........oo.........',
+      '...ob..........ob.........',
+      '...oB..........oB.........',
+      '.oooooooooooooooooooooooo.',
+      'o111111111111111111111111o',
+      'o133.......oo.........331o',
+      'o133......o11o........331o',
+      'o133......oWWo........331o',
+      'o133......oWWo..o+o...331o',
+      'o133.....oWWWWo.......331o',
+      'o133....oWfffWo..o*o..331o',
+      'o133...oWffFffWo......331o',
+      'o133..oWfFFFFfWWo.....331o',
+      'o133..oWfFF+FFfWo.....331o',
+      'o133..oWffFFFffWo.....331o',
+      'o133...oWWWWWWWo......331o',
+      'o133....ooooooo.......331o',
+      'o133333333333333333333331o',
+      'o111111111111111111111111o',
+      '.oooooooooooooooooooooooo.'
+    ]);
+    G('vs_market', [
+      '...oo..........oo.........',
+      '...ob..........ob.........',
+      '...oB..........oB.........',
+      '.oooooooooooooooooooooooo.',
+      'o111111111111111111111111o',
+      'o133.....orro..offo...331o',
+      'o133....oRxxRo.oFFo...331o',
+      'o133....oRxxRoofFFo...331o',
+      'o133.....orroooofo....331o',
+      'o133..onnnnnnnnnnno...331o',
+      'o133.oNNNNNNNNNNNNNo..331o',
+      'o133oNMmMmMmMmMmMmMNo.331o',
+      'o133oNmMmMmMmMmMmMmNo.331o',
+      'o133oNMmMmMmMmMmMmMNo.331o',
+      'o133.oNNNNNNNNNNNNNo..331o',
+      'o133..ooooooooooooo...331o',
+      'o133..................331o',
+      'o133333333333333333333331o',
+      'o111111111111111111111111o',
+      '.oooooooooooooooooooooooo.'
+    ]);
+    G('vs_barber', [
+      '...oo..........oo.........',
+      '...ob..........ob.........',
+      '...oB..........oB.........',
+      '.oooooooooooooooooooooooo.',
+      'o111111111111111111111111o',
+      'o133..oo..........oo..331o',
+      'o133..oWo........oWo..331o',
+      'o133...oWo......oWo...331o',
+      'o133....oWo....oWo....331o',
+      'o133.....oWo..oWo.....331o',
+      'o133......oWooWo......331o',
+      'o133.......oWWo.......331o',
+      'o133......oWooWo......331o',
+      'o133.....oGo..oGo.....331o',
+      'o133....oGYo..oGYo....331o',
+      'o133....oGGo..oGGo....331o',
+      'o133.....ooo...ooo....331o',
+      'o133333333333333333333331o',
+      'o111111111111111111111111o',
+      '.oooooooooooooooooooooooo.'
+    ]);
+    G('vs_bathhouse', [
+      '...oo..........oo.........',
+      '...ob..........ob.........',
+      '...oB..........oB.........',
+      '.oooooooooooooooooooooooo.',
+      'o111111111111111111111111o',
+      'o133...o......o.......331o',
+      'o133..oWo....oWo..o...331o',
+      'o133..oWo...oWo..oWo..331o',
+      'o133...o.....o....o...331o',
+      'o133..oo..........oo..331o',
+      'o133.o1111111111111o331o..',
+      'o133o1ttttttttttttt1o.331o',
+      'o133o1tTTTTTTTTTTTt1o.331o',
+      'o133o1tTcccccccccTt1o.331o',
+      'o133o13tTTTTTTTTTt31o.331o',
+      'o133.o3333333333333o.331o.',
+      'o133..oooooooooooo....331o',
+      'o133333333333333333333331o',
+      'o111111111111111111111111o',
+      '.oooooooooooooooooooooooo.'
+    ]);
+  }
   function life() {}
 
   /* ---------------------------------------------------------- */
