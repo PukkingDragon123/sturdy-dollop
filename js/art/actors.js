@@ -1485,6 +1485,348 @@ KD.art.actors = (function () {
     ], 20, 22));
 
     P.anim('mt_whale_move', ['mt_whale0', 'mt_whale1', 'mt_whale2'], 6);
+
+    /* =========================================================
+       D. NPCs. 12x18, anchored at the feet, and each one has to be
+       recognisable from across a room: the hat, the tool and the
+       palette do all the work at this size.
+       ======================================================== */
+
+    /* smith - apron, hammer, soot, no patience */
+    P.def('npc_smith0', A([
+      '....oooo....',
+      '...oKKkooooo',
+      '...oKKKkoJHo',
+      '...okokooJHo',
+      '...okkkSojHo',
+      '...oppppoooo',
+      '..oppppSoo3o',
+      '.okuuuuuuo3o',
+      '.okuUUUUuo3o',
+      '.okuqVVUuo3o',
+      '.okuUVVUuoKo',
+      '.oSuUUUUuoKo',
+      '..ouUVVUuo..',
+      '..ouUUUUuo..',
+      '...o55o55o..',
+      '...o55o55o..',
+      '..ovUuovUuo.',
+      '..ouuoouuo..'
+    ], 6, 18));
+
+    P.def('npc_smith1', A([
+      '....oooo....',
+      '...oKKkooooo',
+      '...oKKKkoJHo',
+      '...okokooJHo',
+      '...okkkSojHo',
+      '...oppppoooo',
+      '..oppppSoo3o',
+      '.okuuuuuuo3o',
+      '.okuUUUUuo3o',
+      '.okuUqVUuo3o',
+      '.okuUVVUuoKo',
+      '.oSuUUUUuoKo',
+      '..ouUVVUuo..',
+      '..ouUUUUuo..',
+      '...o55o55o..',
+      '...o56o55o..',
+      '..ovUuovUuo.',
+      '..ouuoouuo..'
+    ], 6, 18));
+
+    P.anim('npc_smith_idle', ['npc_smith0', 'npc_smith1'], 3);
+
+    /* stablemaster - wide hat, tall boots, coil of rope */
+    P.def('npc_stabler0', A([
+      '....oooo....',
+      '...o3333o...',
+      'o3333333333o',
+      '.oooooooooo.',
+      '...okokoo...',
+      '...okkkSo...',
+      '...oSSSo....',
+      '.okNNNNNNko.',
+      '.okNMMMMNko.',
+      '.okNMMMMNn3.',
+      '.okNMMMMNn3.',
+      '..oNMMMMNo..',
+      '..oNMMMMNo..',
+      '..onNNNNno..',
+      '...ovvoovvo.',
+      '...ovUoovUo.',
+      '...ovUoovUo.',
+      '..ouuuoouuuo'
+    ], 6, 18));
+
+    P.def('npc_stabler1', A([
+      '....oooo....',
+      '...o3333o...',
+      'o3333333333o',
+      '.oooooooooo.',
+      '...okokoo...',
+      '...okkkSo...',
+      '...oSSSo....',
+      '.okNNNNNNko.',
+      '.okNMMMMNko.',
+      '.okNMMMMNnN.',
+      '.okNMMMMNnN.',
+      '..oNMMMMNo..',
+      '..oNMMMMNo..',
+      '..onNNNNno..',
+      '...ovvoovvo.',
+      '...ovUoovUo.',
+      '...oUvoovUo.',
+      '..ouuuoouuuo'
+    ], 6, 18));
+
+    P.anim('npc_stabler_idle', ['npc_stabler0', 'npc_stabler1'], 3);
+
+    /* tackler - green vest, rod over the shoulder */
+    P.def('npc_tackler0', A([
+      '....oooo....',
+      '...offfo...3',
+      '...oFFFFo..3',
+      '...okokoo.3.',
+      '...okkkSo.3.',
+      '...oSSSo.3..',
+      '..okSSSko3..',
+      '.okfFFFfkK..',
+      '.okfF++Ffko.',
+      '.okfF++Ffko.',
+      '.okfFFFFfko.',
+      '..ofFFFFfo..',
+      '..ofFFFFfoB.',
+      '..offFFffo..',
+      '...o55o55o..',
+      '...o55o55o..',
+      '..ovUuovUuo.',
+      '..ouuoouuo..'
+    ], 6, 18));
+
+    P.def('npc_tackler1', A([
+      '....oooo....',
+      '...offfo...3',
+      '...oFFFFo..3',
+      '...okokoo.3.',
+      '...okkkSo.3.',
+      '...oSSSo.3..',
+      '..okSSSko3..',
+      '.okfFFFfkK..',
+      '.okfF++Ffko.',
+      '.okfF++Ffko.',
+      '.okfFFFFfko.',
+      '..ofFFFFfo..',
+      '..ofFFFFfow.',
+      '..offFFffo..',
+      '...o55o55o..',
+      '...o55o55o..',
+      '..ovUuovUuo.',
+      '..ouuoouuo..'
+    ], 6, 18));
+
+    P.anim('npc_tackler_idle', ['npc_tackler0', 'npc_tackler1'], 3);
+
+    /* bookie - visor, waistcoat, ledger */
+    P.def('npc_bookie0', A([
+      '....oooo....',
+      '...oqqqo....',
+      '..oFFFFFFo..',
+      '...okokoo...',
+      '...okkkSo...',
+      '...oSSSo....',
+      '..ok777ko...',
+      '.ok76667ko..',
+      '.ok76667ko..',
+      '.ok76667ko..',
+      '.ok7owwwoo..',
+      '..o7owBwo...',
+      '..o7ooooo...',
+      '..o76667o...',
+      '...o55o55o..',
+      '...o55o55o..',
+      '..ovUuovUuo.',
+      '..ouuoouuo..'
+    ], 6, 18));
+
+    P.def('npc_bookie1', A([
+      '....oooo....',
+      '...oqqqo....',
+      '..oFFFFFFo..',
+      '...okokoo...',
+      '...okkkSo...',
+      '...oSSSo....',
+      '..ok777ko...',
+      '.ok76667ko..',
+      '.ok76667ko..',
+      '.ok76667ko..',
+      '.oS7owwwoo..',
+      '..o7owwwo...',
+      '..o7ooooo...',
+      '..o76667o...',
+      '...o55o55o..',
+      '...o55o55o..',
+      '..ovUuovUuo.',
+      '..ouuoouuo..'
+    ], 6, 18));
+
+    P.anim('npc_bookie_idle', ['npc_bookie0', 'npc_bookie1'], 3);
+
+    /* scholar - rot-purple robe, spectacles, scroll */
+    P.def('npc_scholar0', A([
+      '....oooo....',
+      '...oBBBo....',
+      '..oBBBBBo...',
+      '..okwowko...',
+      '..okkkSSo...',
+      '..oBBBBo....',
+      '...ozZZzo...',
+      '..ozZaaZzo..',
+      '.ozZaaaZzooo',
+      '.ozZaaaZzoww',
+      '.ozZaaaZzoww',
+      '.ozZaaaZzooo',
+      '.ozZaaaZzo..',
+      '.ozZaaaZzo..',
+      '.ozZaaaZzo..',
+      'ozZaaaaZzo..',
+      'ozZaaaaaZzo.',
+      'ooooooooooo.'
+    ], 6, 18));
+
+    P.def('npc_scholar1', A([
+      '....oooo....',
+      '...oBBBo....',
+      '..oBBBBBo...',
+      '..okwowko...',
+      '..okkkSSo...',
+      '..oBBBBo....',
+      '...ozZZzo...',
+      '..ozZaaZzo..',
+      '.ozZaaaZzooo',
+      '.ozZaaaZzowB',
+      '.ozZaaaZzowB',
+      '.ozZaaaZzooo',
+      '.ozZaaaZzo..',
+      '.ozZaaaZzo..',
+      '.ozZaaaZzo..',
+      'ozZaaaaZzo..',
+      'ozZaaaaaZzo.',
+      'ooooooooooo.'
+    ], 6, 18));
+
+    P.anim('npc_scholar_idle', ['npc_scholar0', 'npc_scholar1'], 3);
+
+    /* guard - cap, shades, zero expression */
+    P.def('npc_guard0', A([
+      '...oooooo...',
+      '..o555555o..',
+      '..o5yYy55o..',
+      '.oooooooooo.',
+      '...okkkko...',
+      '...owpppo...',
+      '...okkSo....',
+      '..ok555ko...',
+      '.ok55g55ko..',
+      '.ok5yY55ko..',
+      '.ok55555ko..',
+      '.oSS555SSo..',
+      '.oSS555SSo..',
+      '..o55555o...',
+      '...o55o55o..',
+      '...o55o55o..',
+      '..ovUuovUuo.',
+      '..ouuoouuo..'
+    ], 6, 18));
+
+    P.def('npc_guard1', A([
+      '...oooooo...',
+      '..o555555o..',
+      '..o5yYY55o..',
+      '.oooooooooo.',
+      '...okkkko...',
+      '...oBpppo...',
+      '...okkSo....',
+      '..ok555ko...',
+      '.ok55g55ko..',
+      '.ok5yY55ko..',
+      '.ok55555ko..',
+      '.oSS555SSo..',
+      '.oSS555SSo..',
+      '..o55555o...',
+      '...o55o55o..',
+      '...o55o55o..',
+      '..ovUuovUuo.',
+      '..ouuoouuo..'
+    ], 6, 18));
+
+    P.anim('npc_guard_idle', ['npc_guard0', 'npc_guard1'], 3);
+
+    /* THE PRINCESS - a keg, a dress, a crooked tiara, a tap for a mouth */
+    P.def('npc_princess0', A([
+      '....w.ww.w....',
+      '...w.w..ww....',
+      '....Y.Y.y.....',
+      '...oyYyYyo....',
+      '..oooooooyo...',
+      '.oHHHHHHHHHHo.',
+      'o44ww3332ww11o',
+      'o4woow33woow1o',
+      'o4woow33woow1o',
+      'o4wwww22woow1o',
+      'o4333322wwww1o',
+      '.o3332gYg21o..',
+      '.oHHHHHgHHHHo.',
+      '..oxXXXXXXxo..',
+      '.oxXXXXXXXXxo.',
+      'oxXXXXXXXXXXxo',
+      'oxwXXwwXXwXXxo',
+      'oooooooooooooo'
+    ], 7, 18));
+
+    P.def('npc_princess1', A([
+      '...ww..w..w...',
+      '....w.ww.w....',
+      '....Y.y.Y.....',
+      '...oyYyYyo....',
+      '..oooooooYo...',
+      '.oHHHHHHHHHHo.',
+      'o44ww3332ww11o',
+      'o4wwow33woww1o',
+      'o4wwow33woww1o',
+      'o4wwww22woww1o',
+      'o4333322wwww1o',
+      '.o3332gYg21o..',
+      '.oHHHHHgHHHHo.',
+      '..oxXXXXXXxo..',
+      '.oxXXXXXXXXxo.',
+      'oxXXXXXXXXXXxo',
+      'oxXwwXXwwXXXxo',
+      'oooooooooooooo'
+    ], 7, 18));
+
+    P.def('npc_princess2', A([
+      '.....w..ww....',
+      '...ww.w..w....',
+      '....Y.Y.y.....',
+      '...oyYyYyo....',
+      '..oooooooyo...',
+      '.oHHHHHHHHHHo.',
+      'o44ww3332ww11o',
+      'o4woww33wwow1o',
+      'o4woww33wwow1o',
+      'o4wwww22wwow1o',
+      'o4333322wwww1o',
+      '.o3332gYg21o..',
+      '.oHHHHHgHHHHo.',
+      '..oxXXXXXXxo..',
+      '.oxXXXXXXXXxo.',
+      'oxXXXXXXXXXXxo',
+      'oxwXXwwXXwXXxo',
+      'oooooooooooooo'
+    ], 7, 18));
+
+    P.anim('npc_princess_idle', ['npc_princess0', 'npc_princess1', 'npc_princess2'], 4);
   }
 
   return { build };

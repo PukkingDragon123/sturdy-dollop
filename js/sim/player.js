@@ -7,7 +7,9 @@ KD.Player = (function () {
   const TS = 8;
   const P = {
     x: 0, y: 0, vx: 0, vy: 0,
-    w: 10, h: 16,                     // collision box, narrower than the sprite
+    w: 6, h: 16,                      // narrower than one 8px tile ON PURPOSE:
+                                      // a doorway or a dug shaft is 1 tile wide,
+                                      // and a wider box could never enter either
     face: 1, onGround: false, mode: 'stand',
     swim: 0,                          // 0..1 submersion
     breath: 1, hp: 6, hpMax: 6,
@@ -105,6 +107,14 @@ KD.Player = (function () {
       else { P.vx = 0; nx = P.x; }
     }
     P.x = Math.max(P.w, Math.min(Wd.W * TS - P.w, nx));
+    /* Squeeze assist: in a one-tile-wide gap, ease toward the column centre.
+       Without this, threading a doorway or a dug shaft is a pixel-hunt. */
+    const col = (P.x / TS) | 0;
+    const midY = P.y - P.h / 2;
+    if (solidAt((col - 1) * TS + 4, midY) && solidAt((col + 1) * TS + 4, midY)) {
+      const want = col * TS + TS / 2;
+      P.x += (want - P.x) * Math.min(1, dt * 14);
+    }
 
     const wasFalling = P.vy > 0;
     let ny = P.y + P.vy * dt;

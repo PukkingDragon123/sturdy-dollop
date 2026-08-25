@@ -284,10 +284,20 @@ KD.Gen = (function () {
       for (let j = 1; j < hh - 1; j++) for (let i = 1; i < hw - 1; i++) markDry(x + i, y + j);
       /* roof, door, window, lantern */
       for (let i = 0; i < hw; i++) Wd.fg[(y - 1) * w + x + i] = T.id('coral');
-      const dx = x + 1 + ((hw - 3) >> 1);
-      Wd.fg[(y + hh - 2) * w + dx] = T.AIR;
-      Wd.fg[(y + hh - 3) * w + dx] = T.AIR;
-      Wd.bg[(y + hh - 2) * w + dx] = T.id('plank');
+      /* The doorway is a hole in a SIDE WALL, three tiles tall, standing on the
+         floor. Punching it in the middle of the room - which is already air -
+         builds a house you cannot leave. */
+      const side = Wd.chance(0.5) ? x : x + hw - 1;
+      const dx = side;
+      const floorRow = y + hh - 1;
+      for (let j = 1; j <= 3; j++) {
+        Wd.fg[(floorRow - j) * w + dx] = T.AIR;
+        Wd.bg[(floorRow - j) * w + dx] = T.id('plank');
+        markDry(dx, floorRow - j);
+        /* and clear the ground just outside, so there is somewhere to step */
+        const ox = side === x ? x - 1 : x + hw;
+        if (Wd.inside(ox, floorRow - j)) Wd.fg[(floorRow - j) * w + ox] = T.AIR;
+      }
       Wd.fg[(y + 2) * w + (x + 2)] = T.id('glass');
       Wd.fg[(y + 2) * w + (x + hw - 3)] = T.id('glass');
       Wd.fg[(y + 1) * w + (x + (hw >> 1))] = T.id('lantern');
