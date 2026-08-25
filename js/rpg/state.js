@@ -81,6 +81,36 @@ KD.State = (function () {
     res('beer_keg', 'Her Own Brew', 'it_beer_keg', { value: 240, beer: { dmg: 1.0, fat: 22, dur: 90 } });
   }
   const resOf = (id) => RES[id] || null;
+
+  /* The recipe table and the art files were authored against each other's
+     names, not identical ones. This is the one place the two vocabularies
+     meet: a recipe's sprite name resolved to a sprite that really exists. */
+  const SPRITE_ALIAS = {
+    pl_torch: 'it_torch', pl_lantern: 'bk_lantern_lit', pl_workbench: 'st_workbench',
+    pl_furnace: 'st_furnace', pl_anvil: 'st_anvil', pl_loom: 'st_loom', pl_vat: 'st_vat',
+    pl_reroll: 'st_reroll', pl_cookpot: 'st_cookpot', pl_chest: 'dc_chest_closed',
+    pl_door: 'bk_door_closed', pl_platform: 'bk_stair_l', pl_block: 'it_brick_i',
+    it_cuirass: 'it_chest', it_tunic: 'it_chest', it_shell: 'it_shield',
+    it_beer: 'it_beer_mug', it_meal: 'it_bread',
+    it_beer1: 'it_beer_mug', it_beer2: 'it_beer_mug', it_beer3: 'it_beer_mug',
+    it_beer4: 'it_beer_keg', it_brew: 'it_beer_mug'
+  };
+  /* first name in the chain that actually exists, else a shape-appropriate stand-in */
+  function art(name, kind) {
+    if (!name) return fallbackArt(kind);
+    if (KD.PX.has(name)) return name;
+    const a = SPRITE_ALIAS[name];
+    if (a && KD.PX.has(a)) return a;
+    return fallbackArt(kind);
+  }
+  function fallbackArt(kind) {
+    const order = kind === 'tool' ? ['it_pick', 'it_bar']
+      : kind === 'weapon' ? ['it_shortblade', 'it_bar']
+      : kind === 'armour' ? ['it_helm', 'it_bar']
+      : ['it_brick_i', 'it_bar', 'stone_mid'];
+    for (const n of order) if (KD.PX.has(n)) return n;
+    return KD.PX.names()[0];
+  }
   /* which world tile a crafted placeable turns into */
   const PLACE_TILE = {
     platform: 'platform', door: 'door', chest: 'chest', torch: 'torch', lantern: 'lantern',
@@ -113,9 +143,9 @@ KD.State = (function () {
   }
   function spriteOf(it) {
     if (!it) return null;
-    if (isGear(it)) return KD.PX.has(it.sprite) ? it.sprite : 'it_shortblade';
+    if (isGear(it)) return art(it.sprite, it.kind);
     const r = resOf(it.id);
-    return r && KD.PX.has(r.sprite) ? r.sprite : 'it_bar';
+    return art(r && r.sprite, 'res');
   }
   function count(id) {
     let n = 0;
@@ -310,8 +340,14 @@ KD.State = (function () {
       const tile = tileForPlaceable(item);
       if (tile) {
         const rid = 'pl_' + tile;
-        if (!RES[rid]) res(rid, item.name, KD.PX.has(item.sprite) ? item.sprite : 'it_brick_i',
-                          { tile, stack: 99, value: item.value || 1 });
+        if (!RES[rid]) {
+          /* a generic block has no icon of its own - show the actual tile it
+             places, which is both accurate and free */
+          const T = KD.Tiles.byId[tile];
+          const tileArt = T && T.art && KD.PX.has(T.art + '_mid') ? T.art + '_mid' : null;
+          res(rid, item.name, item.shape === 'block' && tileArt ? tileArt : art(item.sprite, 'place'),
+              { tile, stack: 99, value: item.value || 1 });
+        }
         give(rid, n);
       } else { say('Cannot place that.', 'BLOOD.2'); }
     } else if (isGear(item)) {
@@ -319,7 +355,7 @@ KD.State = (function () {
     } else {
       /* a consumable: a beer, a potion, a loaf */
       const rid = 'cn_' + item.shape + '_' + (item.mats && item.mats.brew ? item.mats.brew : 'x');
-      if (!RES[rid]) res(rid, item.name, KD.PX.has(item.sprite) ? item.sprite : 'it_beer_mug',
+      if (!RES[rid]) res(rid, item.name, art(item.sprite, 'res'),
                         { stack: 20, value: item.value || 1,
                           beer: item.shape.indexOf('beer') === 0 ? { dmg: 0.18 + item.tier * 0.14, fat: 4 + item.tier * 3, dur: 40 + item.tier * 12 } : null,
                           food: item.shape === 'bread' || item.shape === 'meal' ? 1 + item.tier : 0 });
@@ -414,7 +450,7 @@ KD.State = (function () {
     give('plank_i', 20);
   }
   return { S, SLOTS, HOT, RES, buildResources, resOf, isGear, nameOf, spriteOf,
-           count, give, giveGear, stampUid, take, takeSlot, hotbarItem, tool, weapon, useItem,
+           count, give, giveGear, stampUid, take, takeSlot, hotbarItem, tool, weapon, useItem, art,
            equip, unequip, equipped, armourTotal, tileForPlaceable,
            drink, tickBeer, dmgMult, addFat, burnFat, xpFor, addXp, recalc, takeSkill, earn, spend,
            craft, inventoryView, giveFrag, fragCount, die, say, tick,

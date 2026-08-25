@@ -22,9 +22,11 @@ KD.Screen = (function () {
     fit();
   }
 
+  let cssScale = 1;
   function fit() {
     const cw = Math.max(160, window.innerWidth);
     const ch = Math.max(120, window.innerHeight);
+    const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
     /* internal width from the window aspect, clamped and even */
     let w = Math.round(H * (cw / ch));
     w = Math.max(WMIN, Math.min(WMAX, w));
@@ -34,23 +36,27 @@ KD.Screen = (function () {
       buf.width = w; buf.height = H;
       bctx.imageSmoothingEnabled = false;
     }
-    /* integer scale only. 1x minimum, letterboxed. */
-    scale = Math.max(1, Math.floor(Math.min(cw / w, ch / H)));
-    KD.scale = scale;
+    /* Scale is chosen against DEVICE pixels, not CSS pixels. A phone at
+       390 CSS px tall with DPR 2 has 780 real pixels to play with; picking
+       the scale from 390 would render the game at 1x in a big black frame. */
+    scale = Math.max(1, Math.floor(Math.min(cw * dpr / w, ch * dpr / H)));
+    cssScale = scale / dpr;
+    KD.scale = scale; KD.dpr = dpr; KD.cssScale = cssScale;
     out.width = w * scale;
     out.height = H * scale;
-    out.style.width = (w * scale) + 'px';
-    out.style.height = (H * scale) + 'px';
+    /* the backing store is device pixels; CSS lays it out at the real size */
+    out.style.width = (w * cssScale) + 'px';
+    out.style.height = (H * cssScale) + 'px';
     octx.imageSmoothingEnabled = false;
-    ox = Math.floor((cw - w * scale) / 2);
-    oy = Math.floor((ch - H * scale) / 2);
+    ox = Math.floor((cw - w * cssScale) / 2);
+    oy = Math.floor((ch - H * cssScale) / 2);
     out.style.left = ox + 'px';
     out.style.top = oy + 'px';
   }
 
-  /* window px -> internal px, for the mouse and touches */
+  /* CSS px -> internal px, for the mouse and touches */
   function toBuf(cx, cy) {
-    return { x: (cx - ox) / scale, y: (cy - oy) / scale };
+    return { x: (cx - ox) / cssScale, y: (cy - oy) / cssScale };
   }
 
   function present() {
@@ -88,5 +94,6 @@ KD.Screen = (function () {
     }
   }
   return { attach, fit, toBuf, present, ctx, clear, rect, frame, line,
-           get scale() { return scale; }, get buf() { return buf; } };
+           get scale() { return scale; }, get cssScale() { return cssScale; },
+           get buf() { return buf; } };
 })();

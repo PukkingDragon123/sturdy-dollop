@@ -330,10 +330,23 @@ KD.Gen = (function () {
   function decorate() {
     const Wd = W(), w = Wd.W, h = Wd.H, T = KD.Tiles;
     const AIR = T.AIR;
+    /* Anything a builder put there is off limits - anemones growing on the
+       village rooftops looked like the houses had grown antlers. */
+    const built = new Uint8Array(w * h);
+    for (const st of meta.structures) {
+      for (let j = -2; j < st.h + 1; j++) {
+        for (let i = -1; i < st.w + 1; i++) {
+          const tx = st.x + i, ty = st.y + j;
+          if (Wd.inside(tx, ty)) built[ty * w + tx] = 1;
+        }
+      }
+    }
+    const isBuilt = (x, y) => Wd.inside(x, y) && built[y * w + x] === 1;
     for (let x = 1; x < w - 1; x++) {
       for (let y = 30; y < h - 1; y++) {
         const i = y * w + x;
         if (Wd.fg[i] !== AIR) continue;
+        if (isBuilt(x, y)) continue;
         const below = Wd.at(x, y + 1);
         if (!T.isSolid(below)) continue;
         const B = T.get(below);
@@ -359,7 +372,8 @@ KD.Gen = (function () {
     /* moss on cave walls, on the background layer so it never blocks you */
     for (let n = 0; n < 9000; n++) {
       const x = Wd.rint(1, w - 2), y = Wd.rint(60, h - 2);
-      if (Wd.at(x, y) === AIR && T.isSolid(Wd.at(x, y + 1)) && y < 240 && Wd.chance(0.3)) {
+      if (Wd.at(x, y) === AIR && !isBuilt(x, y) && !Wd.bg[y * w + x] &&
+          T.isSolid(Wd.at(x, y + 1)) && y < 240 && Wd.chance(0.3)) {
         Wd.bg[y * w + x] = T.id('moss');
       }
     }

@@ -110,7 +110,8 @@ KD.Panels = (function () {
       const can = R.canCraft(s.id, inv);
       const hot = KD.UI.inside(x + 4, ry, listW, rowH - 2);
       KD.Screen.rect(x + 4, ry, listW, rowH - 2, hot ? 'INK.2' : (k & 1 ? 'INK.1' : 'DEEP.0'));
-      if (KD.PX.has(s.sprite)) KD.PX.blit(KD.Screen.ctx(), s.sprite, x + 6, ry + 3, { anchor: false });
+      const spr = KD.State.art(s.sprite, s.kind);
+      if (spr) KD.PX.blit(KD.Screen.ctx(), spr, x + 6, ry + 3, { anchor: false });
       KD.Text.draw(s.noun || s.id, x + 22, ry + 2, can ? 'BONE.2' : 'INK.3', { max: listW - 60 });
       const need = (s.needs || []).map((n) => n.n + 'x ' + n.role).join('  ');
       KD.Text.draw(need, x + 22, ry + 11, can ? 'BONE.0' : 'INK.3', { tiny: true, max: listW - 60 });

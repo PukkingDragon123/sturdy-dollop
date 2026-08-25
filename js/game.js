@@ -31,6 +31,10 @@ KD.Game = (function () {
     frames++; fpsT += dt;
     if (fpsT >= 0.5) { fps = Math.round(frames / fpsT); frames = 0; fpsT = 0; }
     swap();
+    /* The click guard must tick in the LOOP, not per scene. Leaving it to each
+       scene meant the title screen armed it and never counted it down, so the
+       mouse and every touch were dead on the first screen of the game. */
+    KD.UI.tickGuard(dt);
     try {
       if (cur && cur.update) cur.update(dt);
       const ctx = KD.Screen.ctx();

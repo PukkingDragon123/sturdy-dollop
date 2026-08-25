@@ -441,6 +441,464 @@ KD.art.actors = (function () {
       'king_walk3', 'king_walk4', 'king_walk5'], 10);
     P.anim('king_swim', ['king_swim0', 'king_swim1', 'king_swim2', 'king_swim3'], 8);
     P.anim('king_mine', ['king_mine0', 'king_mine1', 'king_mine2'], 12);
+
+    /* =========================================================
+       B. ENEMIES. Silhouette first: every one of these has to be
+       nameable from its black shape. Anchors are bottom-centre.
+       ======================================================== */
+
+    /* reef crawler - low armoured woodlouse, five leg pairs, ribbed shell */
+    P.def('crawler0', A([
+      '....ooooo.H.',
+      '..oJJpJjpJo.',
+      '.oJJpJjpJjho',
+      'oJjpJjpJjHyo',
+      'ojHpjHpjHhho',
+      '.ohHphHphHo.',
+      '..oooooooo..',
+      '.H.H.H.H.H..',
+      '.H.H.H.H.H..',
+      'h.h.h.h.h...'
+    ], 6, 10));
+
+    P.def('crawler1', A([
+      '....ooooo..H',
+      '..oJJpJjpJo.',
+      '.oJJpJjpJjho',
+      'oJjpJjpJjHyo',
+      'ojHpjHpjHhho',
+      '.ohHphHphHo.',
+      '..oooooooo..',
+      '..H.H.H.H.H.',
+      '..H.H.H.H.H.',
+      '..h.h.h.h.h.'
+    ], 6, 10));
+
+    P.def('crawler2', A([
+      '....oooooH..',
+      '..oJJpJjpJo.',
+      '.oJJpJjpJjho',
+      'oJjpJjpJjHyo',
+      'ojHpjHpjHhho',
+      '.ohHphHphHo.',
+      '..oooooooo..',
+      '.H.H.H.H.H..',
+      '..H.H.H.H.H.',
+      '...h.h.h.h.h'
+    ], 6, 10));
+
+    P.anim('crawler_move', ['crawler0', 'crawler1', 'crawler2'], 8);
+
+    /* snapper crab - the claw is the silhouette, the body is an afterthought */
+    P.def('snapper0', A([
+      '................',
+      '................',
+      '...w............',
+      '...R.w....oooo..',
+      '...R.R...oXXXxo.',
+      '..oooooo.oXXxxxo',
+      '.oXXxxRoRRxRo...',
+      '.oXxxRRrRRRRrro.',
+      '.oxRRrro..oRrrro',
+      '..ooooo....oooo.',
+      '..R.R.R.........',
+      '.r.r.r..........'
+    ], 8, 12));
+
+    P.def('snapper1', A([
+      '................',
+      '................',
+      '...R............',
+      '...R.w....oooo..',
+      '...R.R...oXXXxo.',
+      '..oooooo.oXXxxo.',
+      '.oXXxxRoRRxRoo..',
+      '.oXxxRRrRRRRrro.',
+      '.oxRRrro..oRrrro',
+      '..ooooo....oooo.',
+      '..R.R.R.........',
+      '..r.r.r.........'
+    ], 8, 12));
+
+    P.def('snapper2', A([
+      '................',
+      '................',
+      '...w............',
+      '...R.w....ooo...',
+      '...R.R...oXXxo..',
+      '..oooooo.oXXxxxo',
+      '.oXXxxRoRRxRrro.',
+      '.oXxxRRrRRRRrro.',
+      '.oxRRrro..oRrro.',
+      '..ooooo....ooo..',
+      '...R.R.R........',
+      '...r.r.r........'
+    ], 8, 12));
+
+    P.anim('snapper_idle', ['snapper0', 'snapper1', 'snapper2'], 6);
+
+    /* urchin - spiked ball of rot. Spines are 1-2px and asymmetric */
+    P.def('urchin0', A([
+      '...A.a....',
+      '..oAoao...',
+      '.AoAaaZoa.',
+      '.oAaaaZZo.',
+      'AAaaaZZZo.',
+      '.oaaZZZzaa',
+      '.oZaZZzzo.',
+      '.ZoZZzzoz.',
+      '..oZozo...',
+      '...Z.z....'
+    ], 5, 10));
+
+    P.def('urchin1', A([
+      '....A.a...',
+      '..ooAoa...',
+      '.AoAaaZoa.',
+      'AAaaaaZZo.',
+      '.oAaaZZZaa',
+      '.oaaZZZzo.',
+      '.ZoZaZzzo.',
+      '..oZZzzoz.',
+      '..oZoZo...',
+      '...Z.z....'
+    ], 5, 10));
+
+    P.anim('urchin_idle', ['urchin0', 'urchin1'], 4);
+
+    /* jelly - bell is 50% dither so you can see through it; coral fringe */
+    P.def('jelly0', A([
+      '....qqqq....',
+      '..qCCCCcq...',
+      '.qCCcCcccq..',
+      'qC.c.c.c.cTq',
+      'q.c.c.c.c.Tq',
+      'qc.c.c.c.cTq',
+      'q.c.c.c.c.Tq',
+      '.qcxcxcxcTq.',
+      '..qxRxRxRq..',
+      '..R.R..R.R..',
+      '..R.R..R.R..',
+      '.R..R...R.R.',
+      '.x..x...x.x.',
+      '..x.x..x.x..',
+      '..x.x..x.x..',
+      '...x.x.x.x..'
+    ], 6, 16));
+
+    P.def('jelly1', A([
+      '............',
+      '....qqqq....',
+      '..qCCCCcq...',
+      '.qCCcCcccq..',
+      'qC.c.c.c.cTq',
+      'q.c.c.c.c.Tq',
+      '.qcxcxcxcTq.',
+      '..qxRxRxRq..',
+      '...R.R.R.R..',
+      '..R.R..R.R..',
+      '.R..R..R..R.',
+      '.x..x..R..x.',
+      '.x.x...x..x.',
+      '..x.x..x.x..',
+      '...x.x.x.x..',
+      '...x.x.x.x..'
+    ], 6, 16));
+
+    P.def('jelly2', A([
+      '....qqqq....',
+      '...qCCCcq...',
+      '..qCcCcccq..',
+      '.qC.c.c.cTq.',
+      'qc.c.c.c.cTq',
+      'q.c.c.c.c.Tq',
+      'qc.c.c.c.cTq',
+      '.qcxcxcxcTq.',
+      '..qxRxRxRq..',
+      '..R.R..R.R..',
+      '.R..R..R..R.',
+      '.x..x..R..x.',
+      '.x.x...x..x.',
+      '..x.x..x.x..',
+      '...x.x.x.x..',
+      '...x.x.x.x..'
+    ], 6, 16));
+
+    P.def('jelly3', A([
+      '............',
+      '....qqqq....',
+      '..qCCCCcq...',
+      '.qCCcCcccq..',
+      'qC.c.c.c.cTq',
+      'q.c.c.c.c.Tq',
+      '.qcxcxcxcTq.',
+      '..qxRxRxRq..',
+      '..R.R..R.R..',
+      '..R.R..R.R..',
+      '..R.R..R.R..',
+      '.R..R...R.R.',
+      '.x..x...x.x.',
+      '..x.x..x.x..',
+      '..x.x..x.x..',
+      '...x.x.x.x..'
+    ], 6, 16));
+
+    P.anim('jelly_idle', ['jelly0', 'jelly1', 'jelly2', 'jelly3'], 6);
+
+    /* reef shark - DEEP back, BONE belly, teeth on the front of the mouth */
+    P.def('shark0', A([
+      '.............oo.................',
+      '............oeeo................',
+      'oo..........oeDDo...............',
+      'odo.........oeDDdo..............',
+      'oddo.......oeDDDddo.............',
+      'odddo....oeeDDDDdddoooooooooooo.',
+      'oddddddddDDDDDDDDDDDDDDDDDDoDddo',
+      'odddddddddDDeeeeeeeeeeeeeeeeeDdo',
+      'odddddddbbBBBBBBBBBBBBBBBBwowowo',
+      'odddddo.obBBBBBBBBBBBBBBBBbboooo',
+      'oddddo..ooooooobbbbbbbbbbboooo..',
+      'oddo..............oobbbbbboo....',
+      '......................oobboo....',
+      '........................ooooo...'
+    ], 16, 14));
+
+    P.def('shark1', A([
+      'oo...........oo.................',
+      'odo.........oeeo................',
+      'oddo........oeDDo...............',
+      'odddo.......oeDDdo..............',
+      'oddddo.....oeDDDddo.............',
+      'oddddddo.oeeDDDDdddoooooooooooo.',
+      'oddddddddDDDDDDDDDDDDDDDDDDoDddo',
+      'odddddddddDDeeeeeeeeeeeeeeeeeDdo',
+      'odddddo.bbBBBBBBBBBBBBBBBBwowowo',
+      'oddddo..obBBBBBBBBBBBBBBBBbboooo',
+      'oddo....ooooooobbbbbbbbbbboooo..',
+      '..................oobbbbbboo....',
+      '......................oobboo....',
+      '........................ooooo...'
+    ], 16, 14));
+
+    P.def('shark2', A([
+      '.............oo.................',
+      '............oeeo................',
+      '............oeDDo...............',
+      'oo..........oeDDdo..............',
+      'odo........oeDDDddo.............',
+      'oddo.....oeeDDDDdddoooooooooooo.',
+      'oddddddddDDDDDDDDDDDDDDDDDDoDddo',
+      'odddddddddDDeeeeeeeeeeeeeeeeeDdo',
+      'odddddddbbBBBBBBBBBBBBBBBBwowowo',
+      'oddddddoobBBBBBBBBBBBBBBBBbboooo',
+      'odddddo.ooooooobbbbbbbbbbboooo..',
+      'oddddo............oobbbbbboo....',
+      'oddo..................oobboo....',
+      'oo......................ooooo...'
+    ], 16, 14));
+
+    P.anim('shark_swim', ['shark0', 'shark1', 'shark2'], 8);
+
+    /* beer bandit - hood, rust straps, and somebody elses tankard */
+    P.def('bandit0', A([
+      '.....oo.....',
+      '....o66o....',
+      '...o6677o...',
+      '..o66pp77o..',
+      '..o66pwp7o..',
+      '..o6677p7o..',
+      '..o66777o...',
+      '.o66677778o.',
+      '.o6u6777778o',
+      '.o66u677778o',
+      '.o6uUUUUowwo',
+      '.o667778o32o',
+      '.o667778oU2o',
+      '.o66777oo21o',
+      '.o66777oooo.',
+      '..o6677o....',
+      '..ovUuovUo..',
+      '..ouuoouuo..'
+    ], 6, 18));
+
+    P.def('bandit1', A([
+      '......oo....',
+      '.....o66o...',
+      '....o6677o..',
+      '...o66pp77o.',
+      '...o66pBp7o.',
+      '...o6677p7o.',
+      '...o66777o..',
+      '.o66677778o.',
+      '.o6u6777778o',
+      '.o66u677778o',
+      '.o6uUUUUowBo',
+      '.o667778o32o',
+      '.o667778oU2o',
+      '.o66777oo21o',
+      '.o66777oooo.',
+      '..o6677o....',
+      '..ovUuovUo..',
+      '..ouuoouuo..'
+    ], 6, 18));
+
+    P.anim('bandit_idle', ['bandit0', 'bandit1'], 5);
+
+    /* ruin sentinel - animated masonry, one gold slit for a face */
+    P.def('sentinel0', A([
+      '....................',
+      '......oooooooo......',
+      '.....oJJjjjjHo......',
+      '....oJJjjjjjHHo.....',
+      '....oJjpppppHHo.....',
+      '....oJjoyYYyoHo.....',
+      '....oJjjjjjjjHo.....',
+      '....ojjHHHHHHho.....',
+      '.....ojHHHHHho......',
+      '.......ojHHho.......',
+      '.oooooooooooooooooo.',
+      '.oJJJJjjjjjjHHHHHho.',
+      '.oJJjjjjjjjjjHHHHho.',
+      '.oJjjjjjjjjjjjHHhho.',
+      '.ojjojjjjjjjjjHooho.',
+      '.ojjojpJjjjjJpHooho.',
+      '.ojjojjpJjjJpHHooho.',
+      '.ojjojjjpJJpHHHooho.',
+      '.ohhojjjjHHHHHHooho.',
+      '....ohHHHHHHHHho....',
+      '.....oJjo..oHho.....',
+      '.....oJjo..oHho.....',
+      '.....ojHo..ohho.....',
+      '....ohhhhoohhhho....'
+    ], 10, 24));
+
+    P.def('sentinel1', A([
+      '....................',
+      '....................',
+      '......oooooooo......',
+      '.....oJJjjjjHo......',
+      '....oJJjjjjjHHo.....',
+      '....oJjpppppHHo.....',
+      '....oJjoYYYYoHo.....',
+      '....oJjjjjjjjHo.....',
+      '....ojjHHHHHHho.....',
+      '.....ojHHHHHho......',
+      '.oooooooooooooooooo.',
+      '.oJJJJjjjjjjHHHHHho.',
+      '.oJJjjjjjjjjjHHHHho.',
+      '.oJjjjjjjjjjjjHHhho.',
+      '.ojjojjjjjjjjjHooho.',
+      '.ojjojpJjjjjJpHooho.',
+      '.ojjojjpJjjJpHHooho.',
+      '.ojjojjjpJJpHHHooho.',
+      '.ohhojjjjHHHHHHooho.',
+      '....ohHHHHHHHHho....',
+      '.....oJjo..oHho.....',
+      '.....oJjo..oHho.....',
+      '.....ojHo..ohho.....',
+      '....ohhhhoohhhho....'
+    ], 10, 24));
+
+    P.def('sentinel2', A([
+      '....................',
+      '......oooooooo......',
+      '.....oJJjjjjHo......',
+      '....oJJjjjjjHHo.....',
+      '....oJjpppppHHo.....',
+      '....oJjogGGgoHo.....',
+      '....oJjjjjjjjHo.....',
+      '....ojjHHHHHHho.....',
+      '.....ojHHHHHho......',
+      '.......ojHHho.......',
+      '.oooooooooooooooooo.',
+      '.oJJJJjjjjjjHHHHHho.',
+      '.oJJjjjjjjjjjHHHHho.',
+      '.oJjjjjjjjjjjjHHhho.',
+      '.ojHojjjjjjjjjHooho.',
+      '.ojHojpJjjjjJpHooho.',
+      '.ojHojjpJjjJpHHooho.',
+      '.ojHojjjpJJpHHHooho.',
+      '.ohhojjjjHHHHHHooho.',
+      '....ohHHHHHHHHho....',
+      '.....oJjo..oHho.....',
+      '.....oJjo..oHho.....',
+      '.....ojHo..ohho.....',
+      '....ohhhhoohhhho....'
+    ], 10, 24));
+
+    P.anim('sentinel_idle', ['sentinel0', 'sentinel1', 'sentinel2'], 4);
+
+    /* trench horror - no eyes at all, five mouths, rotting */
+    P.def('horror0', A([
+      '........................',
+      '.......oooo...ooo.......',
+      '.....oAAAAAaaooaaao.....',
+      '...oAAAAAAaaaaaZZzzoo...',
+      '..oAAAaaaaaaaZZZzzzzoo..',
+      '..oAaaaaaaaaZZZoooozoo..',
+      '..oAaaoooooaZZZwowozoo..',
+      '..oaaawowowaZZZoooozoo..',
+      '..oaaaoooooZZZzzzzzzoo..',
+      '..oaaaaaaZZZZZzzzzzzoo..',
+      '..oaaaaZZZZZZzzzooooo...',
+      '...oaaaZooooozzzwowo....',
+      '...oaaZZowowozzzzoo.....',
+      '....ooooZZZzzzzzoo......',
+      '....owowZZzzzzzoo.......',
+      '.....oZZZzzzzzoo........',
+      '.....oZoooZooZ..........',
+      '......Z...z..z..........',
+      '.....z....z...z.........',
+      '.....z.....z..z.........'
+    ], 12, 20));
+
+    P.def('horror1', A([
+      '........................',
+      '.......oooo...ooo.......',
+      '.....oAAAAAaaooaaao.....',
+      '...oAAAAAAaaaaaZZzzoo...',
+      '..oAAAaaaaaaaZZZzzzzoo..',
+      '..oAaaaaaaaaZZZoooozoo..',
+      '..oAaaoooooaZZZowowzoo..',
+      '..oaaaowowoaZZZoooozoo..',
+      '..oaaaoooooZZZzzzzzzoo..',
+      '..oaaaaaaZZZZZzzzzzzoo..',
+      '..oaaaaZZZZZZzzzooooo...',
+      '...oaaaZooooozzzowow....',
+      '...oaaZZwowowzzzzoo.....',
+      '....ooooZZZzzzzzoo......',
+      '....oowoZZzzzzzoo.......',
+      '.....oZZZzzzzzoo........',
+      '.....ooZooZoZo..........',
+      '.......Z...zz...........',
+      '.......z...z.z..........',
+      '......z.....zz..........'
+    ], 12, 20));
+
+    P.def('horror2', A([
+      '........................',
+      '.......oooo...ooo.......',
+      '.....oAAAAAaaooaaao.....',
+      '...oAAAAAAaaaaaZZzzoo...',
+      '..oAAAaaaaaaaZZZzzzzoo..',
+      '..oAaaaaaaaaZZZooozzoo..',
+      '..oAaaoooooaZZZwowzzoo..',
+      '..oaaawowowaZZZzzzzzoo..',
+      '..oaaaooooZZZZzzzzzzoo..',
+      '..oaaaaaaZZZZZzzzzzzoo..',
+      '..oaaaaZZZZZZzzzooooo...',
+      '...oaaaZoooooozzwowo....',
+      '...oaaZZowowowzzzoo.....',
+      '....oooooZZzzzzzoo......',
+      '....owowoZzzzzzoo.......',
+      '.....oZZZzzzzzoo........',
+      '.....oZooZoooZ..........',
+      '.....Z...z....z.........',
+      '.....z...z....z.........',
+      '....z.....z....z........'
+    ], 12, 20));
+
+    P.anim('horror_idle', ['horror0', 'horror1', 'horror2'], 5);
   }
 
   return { build };

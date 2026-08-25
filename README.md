@@ -1,152 +1,186 @@
-# King of Atlantic
+# CROWNDEEP
 
-A goofy side-scrolling underwater RPG that runs in a browser. No build step, no
-dependencies, no pixel art — every fish, coral, tankard and royal belly is drawn
-with vector paths and gradients at runtime.
+A hand-drawn pixel-art sandbox RPG in a drowned Atlantis. Dig, build, craft,
+fight and level your way down through six layers of seabed to take your crown
+back off Baron Foamhelm.
+
+Think **Terraria**, underwater, with a fat king and a beer problem.
 
 > You were KING OF THE ATLANTIC. Then you met her: a beer keg in a little dress
-> with a crooked tiara. You got fat, you lost the battle, and somebody walked off
-> with your crown in five pieces. Time to earn some clams, buy some beer, and take
-> it back.
+> with a crooked tiara. You got fat, you lost the battle, and somebody walked
+> off with your crown in five pieces.
 
-**Play it:** open `index.html` in any modern browser. Works straight off the
-filesystem (`file://`) — classic `<script>` tags, no modules, no server needed.
-Or run `npm start` for a local web server on port 8080.
+**Play it:** open `index.html` in any browser. No build step, no dependencies,
+no server — it runs straight off the filesystem. `npm start` if you want one.
 
 ---
 
-## The loop
+## The art rule
 
-1. **Spear fish** at fishing spots. Charge the throw on an oscillating power
-   meter, land the spear, then win the tug-of-war before the line snaps.
-2. **Sell the catch** at Bait & Tackle for clams, or keep it to feed your mount.
-3. **Feed your mount** in the feeding minigame — tip your whole larder into the
-   water and swim around catching it. Chain catches for a combo multiplier. Do
-   not catch the boot.
-4. **Gamble the level-up.** Mounts do not have a skill tree. Every level gives
-   you a token, and a token buys one pull on the ROLLING MACHINE: pick a stat
-   category, pull, and pray. DUD to LEGENDARY. DOUBLE DOWN doubles the payout or
-   busts the whole token.
-5. **Race.** Five cups from the Puddle Cup to the Atlantic Grand. Bet on your own
-   mount or against it. Rivals are seeded partly off your own power, so a bad
-   roll really is a bad race.
-6. **Fight, drink, upgrade.** Better weapons, better spears, better food, better
-   mounts, and beer that buffs your damage while it makes you fatter and slower.
-7. **Recover five crown fragments** and take the throne back off Baron Foamhelm.
+**Not one circle, curve, gradient, blur or web font in the entire game.**
 
-## Mounts
+Every visible pixel is placed by hand. `npm run check` greps the whole source
+for `arc`, `arcTo`, `ellipse`, `bezierCurveTo`, `quadraticCurveTo`,
+`createLinearGradient`, `createRadialGradient`, `createConicGradient`,
+`createPattern`, `shadowBlur`, `shadowColor`, `ctx.filter`, `roundRect`,
+`fillText`, `strokeText`, `measureText`, `ctx.font` and
+`imageSmoothingEnabled = true`, and **fails the build** on any hit. The lint
+self-tests against a known-bad string so it cannot quietly stop working.
 
-Seven species, a real ladder rather than palette swaps — some walk the seabed,
-some only swim, all of them are ridable.
+What that means in practice:
 
-| # | Mount | Clams | Notes |
-|---|-------|-------|-------|
-| 0 | Sea Horse | free | Starter. Tiny, upright, curls its tail when it idles. |
-| 1 | Clownfish | 380 | Fast and flappy, no stamina to speak of. |
-| 2 | War Crab | 1,250 | Walks. Eight legs, two claws, zero grace. |
-| 3 | Bluefin Tuna | 4,200 | The first mount that actually feels like a vehicle. |
-| 4 | Dolphin | 12,000 | Anatomical: melon, blowhole, falcate dorsal, notched flukes. |
-| 5 | Swordfish | 34,000 | A rapier with fins. |
-| 6 | Whale | 90,000 | Slow, unstoppable, enormous. |
+- **Sprites are character matrices.** One character per pixel, compiled once
+  at boot into a packed atlas and blitted from there.
+  ```js
+  P.def('king_idle0', {
+    pal: { '1': 'INK.0', '2': 'SKIN.2', '3': 'KELP.1', '.': null },
+    px: ['..111..', '.12321.', '1233321', ...]
+  });
+  ```
+- **One palette, 64 colours in 15 ramps.** Sprites name colours as `RAMP.step`,
+  never as hex, so the whole game recolours from `js/px/pal.js` and always
+  agrees with itself.
+- **The font is drawn glyph by glyph.** A 5x7 body face (90 glyphs) and a 3x5
+  face for dense numbers. There is no `fillText` anywhere.
+- **Darkness is banded, not dithered.** Six pre-darkened copies of the atlas,
+  picked per tile by light level. Dithering near-black over a mid tone at 50%
+  is just noise — a pixel artist reaches for a darker colour instead. Dither
+  is kept for what it is good at: transition bands and translucency.
+- **Integer scaling only.** The game renders into a 216px-tall buffer and is
+  blitted to the page at a whole-number scale with smoothing off, so pixels
+  stay square at every window size.
 
-Each mount has speed / stamina / power / grace / luck, gains EXP from food and
-races, and can pick up traits (Zoomy, Well Fed, Grumpy, Royal Blood...) from
-LEGENDARY rolls.
+---
 
-## Places
+## The world
 
-Seven outdoor areas — **Home Shallows, Coral Village, Seahorse Meadow, Crab
-Flats, Sunken Colonnade, The Beer Trench, Throne of Atlantic** — connected by
-side-scrolling travel, each darker and meaner than the last. Six interiors —
-**Your Shack, Bait & Tackle, The Foamy Keg, The Stable, The Armoury, Race
-Office** — every one hand-decorated with its own walls, floor, lamps, bunting,
-portholes and clutter.
+1400 x 420 tiles at 8px, generated fresh from a seed and rebuildable from it.
 
-Fourteen NPC kinds live out there, including a gull who has opinions, a guard in
-a police cap and shades, a hermit crab with a grudge, and the Princess herself
-(still a beer keg, still in the dress).
+| Layer | Depth | What is down there |
+|---|---|---|
+| Sky | 0–40 | above the water |
+| Shallows | 40–90 | bright sand, seagrass, crabs, the village |
+| Reef | 90–150 | coral, first ore, sharks, tight caves |
+| Ruins | 150–230 | Atlantean masonry, pillars, statues, sentinels |
+| Trench | 230–330 | dark, glowpods, bandit camps, pressure |
+| Abyss | 330–420 | rot-stone, abyssal ore, the throne room |
 
-## Combat and gear
+Generation runs in eleven visible steps: fractal seabed, cellular caves plus
+190 Perlin worms, two smoothing passes, depth-windowed ore veins, ruins and
+bandit camps placed by rule with collision rejection, a coral village of seven
+houses, the throne room, the flood, chest loot, decoration, then lighting.
 
-Six weapon tiers, each with its own silhouette, damage, swing speed, reach and
-knockback: **Bar Stool → Sharpened Bone → Bronze Trident → Coral Halberd →
-Kingsfork → Poseidon's Regalia.** Six enemy kinds from reef crawlers up to the
-Baron, with drops. Four beers that trade damage buff against fat, and fat is a
-real stat: it slows you down until you burn it off swimming and swinging.
+**Light** is a tile flood fill, applied as banded shade. Sunlight dims through
+water and is gone by the bottom of the reef; below that you bring your own.
+Caves are genuinely black.
 
-## Controls
+**Water** is cellular, eight levels per tile. Dig into a reservoir and your
+tunnel floods. Sealed rooms stay dry — which is exactly what makes an air
+pocket worth building.
 
-**Keyboard**
+---
+
+## Playing it
 
 | Key | Action |
 |-----|--------|
-| `WASD` / arrows | walk the seabed, swim the water column |
-| `Space` / `K` | jump, or rise while swimming |
-| `J` / `Z` / click | attack |
-| `L` / `X` | dash |
-| `F` | mount / dismount |
-| `E` / `Enter` | talk, doors, fishing spots, shop counters |
-| `M` | mount screen (feed, roll, race) |
-| `Esc` | pause / kingdom summary |
-| `F2` | rig test scene |
+| `WASD` / arrows | walk, swim, climb |
+| `Space` | jump, or rise while swimming |
+| hold left mouse / `J` | dig the tile under the cursor |
+| `F` / right mouse | swing what you are holding |
+| `E` | place, open a chest, use a station, open a door |
+| `1`–`8`, wheel | pick a hotbar slot |
+| `C` | crafting · `V` skills · `I` bag · `Esc` pause |
+| `F2` (title) | sprite viewer |
 
-**Touch** — detected automatically. A virtual joystick claims the left half of
-the screen, and labelled buttons (`HIT`, `UP`, `USE`, `DSH`, `RIDE`) sit on the
-right, relabelled per scene. Every scene defines its own button set, so fishing
-gets `THROW`, the race gets `SURGE` / `HOP`, and so on. Portrait phones get a
-"rotate me" nag.
+**Touch** is detected automatically: a stick on the left, `DIG` `HIT` `UP`
+`USE` `BAG` `MAKE` on the right. A tap that never travels still counts as a
+tap, so buttons under the stick zone stay reachable.
+
+### Procedural crafting
+
+A recipe is a **shape**, not a fixed output. The materials you feed it decide
+what comes out.
+
+```
+pick     = 1 handle-material + 2 head-material    at bare hands
+cleaver  = 1 handle-material + 3 edge-material    at an anvil
+```
+
+Damage, speed, reach, crit, durability, sprite colours and the item's *name*
+are all derived from the materials, then a weighted prefix is rolled on top —
+from Rusted (−15%) through no prefix at all (the most common outcome) to Kingly
+(+30%), plus three legendary prefixes that grant a real effect rather than just
+numbers. 22 materials across 12 roles and 37 shapes, so **crafting the same
+recipe twice never gives you the same item**. A *Sturdy Copper Pick* and a
+*Dull Iron Cleaver* were generated, not written.
+
+Stations: workbench, furnace, anvil, loom, alchemy vat, reroll anvil, cook pot.
+Each is a craftable placeable that unlocks its own recipe list when you stand
+next to it. Bare hands can make a pick, a shovel, a torch, a block and a
+workbench — that is the first two minutes.
+
+### Levels and skills
+
+XP from mining, crafting, kills and looting. Each level pays a skill point,
+plus a bonus every fifth. 27 nodes across three trunks — **DELVER** (mining
+speed, ore luck, light, breath, fall safety), **BRAWLER** (damage, crit,
+armour, knockback, lifesteal) and **TIDECALLER** (swim, grapple, mounts, water
+control) — laid out on one shared grid with cross-links, so hybrids exist.
+
+### Combat and the crown
+
+Nine enemy kinds, each with a telegraph → strike → recover cycle so fights are
+readable. They spawn off-screen, gated by depth and darkness, so a lit room is
+a safe room. Armour is worn in real slots. Beer buffs your damage and adds fat;
+fat slows you and burns off as you swim and swing.
+
+Five **Crown Fragments**, one per layer below the surface, each in that layer's
+deepest chest. Bring all five to the throne room and Baron Foamhelm stands up.
 
 ---
 
-## How it is built
-
-Vanilla JS, one canvas, one global namespace (`KA`), 31 files loaded in order by
-`index.html`.
+## Layout
 
 ```
-index.html            script list, viewport, favicon
-css/style.css         page chrome, touch-action guards
-js/lib/               engine
-  core.js             KA namespace, design-space sizing, math/random helpers
-  draw.js             vector primitives: gradients, blobs, ribbons, capsules
-  text.js             real font stack, wrapping, blocks
-  input.js            keyboard, mouse, touch pad + named buttons
-  audio.js            WebAudio blips, no asset files
-  fx.js               particles, shake, hitstop, flash, camera
-  rig.js              springs, soft bodies, verlet chains, 2-bone IK, body loft
-  ui.js               palette, buttons, panels, bars, tabs, scroll, toasts
-  dialog.js           typed dialogue with live animated portraits
-js/data/              content tables: pets, items, rolls, areas, npcs, quests, races
-js/model/             pet.js (levels, EXP, rolls), state.js (save, money, hp, fat, beer)
-js/rigs/              king.js, pets.js (7 species), sea.js (props/creatures), folk.js (NPCs)
-js/scenes/            menus, world, shop, petview, fishing, feeding, race, rigtest
-js/game.js            responsive fit, scene manager, main loop, HUD
-tools/                check.js (parse + load audit), smoke.js (headless driver)
+index.html            the script list, in load order
+css/style.css         page chrome; everything visible is drawn pixels
+js/px/                engine: palette, sprite atlas, render target, dither,
+                      pixel text, input, sound, particles
+js/art/               SPRITE DATA ONLY - font, tiles, built pieces, actors, items
+js/world/             tile table, tile store, generator, lighting, water, renderer
+js/sim/               player physics and verbs, enemies and combat
+js/rpg/               materials, recipes, prefixes, skills, game state and save
+js/ui/                widgets, HUD, bag / crafting / skill-tree panels
+js/scenes/            title, generation, play, pause, death, victory, sprite test
+js/game.js            boot, scene manager, frame loop
+MASTER_PROMPT.md      the full spec this was built from
 ```
-
-**Design space.** The game renders into a fixed 360px-tall space whose width
-follows the window aspect (clamped 460–980), then scales up by
-`devicePixelRatio`. One layout, sharp on a phone and on a 4K monitor.
-
-**Procedural animation.** Nothing is a sprite. Characters are built from scalar
-springs, 2D soft bodies, verlet chains and two-bone IK over a travelling-wave
-spine, so the king's cape trails, his belly wobbles, his feet plant where the
-IK actually lands, and every mount's fins and tail are driven by the same wave
-that moves its body. Anatomy is placed by fraction of body length, which is why
-the dolphin reads as a dolphin.
-
-**Saving.** localStorage, key `kingofatlantic.save.v1`. START OVER wipes it.
 
 ## Dev tools
 
 ```bash
-npm run check                  # every js file parses and is listed in index.html
-node tools/smoke.js my.json    # headless Chromium: drive the game, screenshot, fail on console errors
-MOBILE=1 node tools/smoke.js my.json   # same, in touch emulation at 844x390
+npm run check                          # parse + load audit + THE ART RULE lint
+node tools/sprite.js js/art/tiles.js   # ASCII + a PNG contact sheet of any art file
+node tools/sprite.js js/art/actors.js king    # filter to inspect one thing large
+node tools/worldmap.js 12345           # generate a world headlessly, write a PNG map,
+                                       # print layer openness, tile mix and ore totals
+node tools/smoke.js script.json        # headless Chromium; fails on any console error
+MOBILE=1 node tools/smoke.js s.json    # the same, in touch emulation
+VIEW=700x620 node tools/smoke.js s.json  # force a viewport to test a layout width
 ```
 
-A smoke script is a JSON array of ops: `["shot","name"]`, `["click",x,y]`,
-`["tap",x,y]`, `["drag",x0,y0,x1,y1,ms]`, `["key","KeyE"]`,
-`["hold","Space",ms]`, `["wait",ms]`, `["eval","expr"]`. Coordinates are in
-design space; the driver reads `KA.W` from the page and scales for you.
-Screenshots land in `tools/shots/`.
+`tools/sprite.js` exists because **art authored blind is bad art**. Every
+sprite in this game was rendered to a contact sheet and looked at.
+`tools/worldmap.js` exists for the same reason: the first generated world was
+too closed to walk through and almost pitch black, and only the map showed it.
+
+`tools/load.js` runs the browser scripts in a Node VM where `window` *is* the
+global, so the data tables can be fuzzed — 12,741 crafts and rerolls across
+every shape × material × luck combination, and a 20,000-sample check that luck
+bends the prefix table without ever guaranteeing the top tier.
+
+## Saving
+
+localStorage, key `crowndeep.save.v1`. The world is run-length encoded, so a
+588,000-tile map fits comfortably. NEW WORLD wipes it.

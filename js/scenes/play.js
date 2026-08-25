@@ -35,7 +35,6 @@ KD.Scenes.play = (function () {
 
   function update(dt) {
     layout();
-    KD.UI.tickGuard(dt);
     S.tick(dt);
     dayT += dt;
 

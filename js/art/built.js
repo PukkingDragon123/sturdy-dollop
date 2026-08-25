@@ -376,24 +376,24 @@ KD.art.built = (function () {
     /* ALCHEMY VAT - riveted tub, purple brew, bubbles leaving */
     P.def('st_vat', {
       pal: { '0': 'INK.0', 's': 'STONE.0', 'S': 'STONE.1', 'T': 'STONE.2',
-             'p': 'ROT.1', 'P': 'ROT.2', 'q': 'ROT.3' },
+             'H': 'STONE.3', 'p': 'ROT.1', 'P': 'ROT.2', 'q': 'ROT.3' },
       px: [
-        '.....qq.........',
-        '..........qq....',
-        '...qq...........',
+        '...qq...qq......',
+        '...qq...qq......',
+        '......qq........',
         '.00000000000000.',
         '.0TTTTTTTTTTTT0.',
-        '.0PqPqPqPqPqPq0.',
-        '.0pPpPpPpPpPpP0.',
+        '.0qqPqqPqqPqqP0.',
+        '.0PpPpPpPpPpPp0.',
         '.0pppppppppppp0.',
         '.0TTSSSSSSSSss0.',
-        '.0TTSSSSSSSSss0.',
+        '.0HHHHHHHHHHHH0.',
         '.0TTSSSSSSSSss0.',
         '.0TTSSSSSSSSss0.',
         '.0ssssssssssss0.',
         '.00000000000000.',
-        '..0S0....0S0....',
-        '..000....000....'
+        '..0S0......0S0..',
+        '..000......000..'
       ]
     });
 
@@ -466,7 +466,7 @@ KD.art.built = (function () {
     K('dc_chain', OSS, '..0WW0../.0W11W0./.0W11W0./..0WW0../..0WW0../..0BB0../..0BB0../..0WW0..');
 
     /* wall moss - clumps, mostly holes */
-    K('dc_moss', WEED, '.44..4../3433.44./.22.333./..1..22./......../..44..../.3433.4./..22.33.');
+    K('dc_moss', WEED, '.44..44./3443.443/.22..22./.2....2./......../..44.44./.3443.43/..22.22.');
 
     /* glowpod - a lamp: white core, purple shell, four sparks */
     P.def('dc_glowpod', {

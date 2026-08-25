@@ -47,12 +47,12 @@ async function main() {
   await page.waitForTimeout(900);
 
   const box = await page.locator('#game').boundingBox();
-  const dims = await page.evaluate(() => (window.KD ? { w: KD.W, h: KD.H, s: KD.scale } : null));
+  const dims = await page.evaluate(() => (window.KD ? { w: KD.W, h: KD.H, s: KD.scale, css: KD.cssScale, dpr: KD.dpr } : null));
   if (!dims) { console.log('KD never booted'); }
-  const scale = dims ? dims.s : 1;
+  const scale = dims ? (dims.css || dims.s) : 1;
   const toPage = (x, y) => ({ x: box.x + x * scale, y: box.y + y * scale });
-  console.log('internal ' + (dims ? dims.w + 'x' + dims.h + ' at ' + dims.s + 'x' : '?') +
-              '   canvas ' + Math.round(box.width) + 'x' + Math.round(box.height));
+  console.log('internal ' + (dims ? dims.w + 'x' + dims.h + ' at ' + dims.s + 'x (dpr ' + dims.dpr + ')' : '?') +
+              '   css ' + Math.round(box.width) + 'x' + Math.round(box.height));
 
   const script = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
   for (const step of script) {

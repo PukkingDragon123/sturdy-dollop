@@ -72,10 +72,12 @@ KD.Render = (function () {
         const b = band(Wd.lightAt(tx, ty));
         /* background wall first, one band darker, so caves read as carved */
         const bw = Wd.wall(tx, ty);
+        let walled = false;
         if (bw) {
           const bn = nameFor(bw, tx, ty) || (T.get(bw).deco);
           if (bn && KD.PX.has(bn)) {
             KD.PX.blit(x2, bn, px, py, { anchor: false, shade: Math.min(KD.PX.SHADES - 1, b + 1) });
+            walled = true;
           }
         }
         /* the water body, coloured by depth and brightness */
@@ -106,11 +108,20 @@ KD.Render = (function () {
             const s = KD.PX.get(TT.deco);
             const lit = TT.light ? 0 : b;      // a torch lights itself
             KD.PX.blit(x2, TT.deco, px, py + TS - s.h, { anchor: false, shade: lit });
+          } else {
+            /* art not drawn yet: a stepped marker, so it is never invisible */
+            const c = TT.light ? 'GOLD.3' : 'CORAL.2';
+            x2.fillStyle = KD.PAL.hex(c);
+            x2.fillRect(px + 3, py + 2, 2, 5);
+            x2.fillRect(px + 2, py + 1, 4, 2);
+            x2.fillStyle = KD.PAL.hex('INK.0');
+            x2.fillRect(px + 2, py + 7, 4, 1);
           }
         } else if (!wv) {
           /* A dug-out dry pocket must not show the water backdrop through it -
-             an air pocket you can breathe in should look like a room. */
-          if (ty >= (KD.Gen.meta.sea || 34)) {
+             an air pocket you can breathe in should look like a room. But if a
+             builder already put a wall behind it, that wall IS the room. */
+          if (!walled && ty >= (KD.Gen.meta.sea || 34)) {
             const AIR_BANDS = ['INK.3', 'INK.2', 'INK.1', 'INK.1', 'INK.0', 'INK.0'];
             x2.fillStyle = KD.PAL.hex(AIR_BANDS[b]);
             x2.fillRect(px, py, TS, TS);

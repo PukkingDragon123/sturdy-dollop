@@ -101,7 +101,6 @@ KD.Scenes.gen = (function () {
 KD.Scenes.pause = (function () {
   function enter() { KD.UI.guard(0.2); }
   function update(dt) {
-    KD.UI.tickGuard(dt);
     if (KD.In.isHit('Escape')) KD.Game.go('play', {});
   }
   function draw(ctx) {
@@ -142,7 +141,7 @@ KD.Scenes.pause = (function () {
 KD.Scenes.death = (function () {
   let t = 0, from = '';
   function enter(args) { t = 0; from = (args && args.from) || 'the deep'; KD.UI.guard(0.5); KD.Sfx.play('die'); }
-  function update(dt) { t += dt; KD.UI.tickGuard(dt); }
+  function update(dt) { t += dt; }
   function draw(ctx) {
     KD.Screen.clear('INK.0');
     KD.Dither.fill(ctx, 0, 0, KD.W, KD.H, 'BLOOD.0', Math.min(0.5, t * 0.4));
