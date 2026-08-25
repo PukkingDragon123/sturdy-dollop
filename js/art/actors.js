@@ -899,6 +899,592 @@ KD.art.actors = (function () {
     ], 12, 20));
 
     P.anim('horror_idle', ['horror0', 'horror1', 'horror2'], 5);
+
+    /* =========================================================
+       BARON FOAMHELM  48x40. He is wearing your crown. The keg on
+       his shoulder is a pauldron, the maul is another keg, and the
+       foam never stops. Four frames of him breathing at you.
+       ======================================================== */
+
+    /* boss idle 0 - maul low, coals banked */
+    P.def('baron0', A([
+      '...................oo..oo..oo..oo......ww..w....',
+      '..................oYYooYYooYYooYyo...wwww..ww...',
+      '.................oyYyyYyyYyyYyyyo...w.wwoowww...',
+      '................oGyYyGyYyGyYyGyGo....o4444333ow.',
+      '................oggGGggGGggGGggGo...oVVVVVVVVVo.',
+      '...............ooooooooooooooooooooo44443332211o',
+      '...............oJJJjjjjjHHHHHHhhhhoo44443332211o',
+      '.............ooJJJjjjjjjHHHHHHhhhhoo444p333p211o',
+      '............obJJjj.oooooooooooohhhbo344p333p211o',
+      '............BbJjj..oo&&oooo&oooHhhboo333222111o.',
+      '............oBJjj..ooooooooooooHhhBooUUUUUUUUUo.',
+      '.............ooJjjjjjHHHHHHHhhhhoo...o2221111o..',
+      '.......oooooooooJjjjjjHHHHHHHhhhho..oooooooo....',
+      '.....o4444444444ojjjjjHHHHHHhhho...oHJooHJo.....',
+      '....o44V444444V3oooooooooooooo....ooooooo33o..w.',
+      '...o444V4p4p43VV2ojjjjjjHHHHHHHhhoHHHHHHo33o..ww',
+      '...o444V4p4p43VV2ojjjjjjHHHHHHHHhoHHHHHHo33oo...',
+      '...o344V3p3p32UU1ojjjjjjHHHHHHHHhoHHHHHHo33oo..w',
+      '...o344V3p3p32UU1ojjjjjjHHHHHHHHhohHHHHHo33o....',
+      '...o334v3p3p32UU1ojjjjjjHHHHHHHHhohhhhhho33o....',
+      '...o334v3p3p32UU1oyjjjjjHHHHHHyghhooHHHHo33o....',
+      '...o233v2p2p21uu1ogyjjjjHHHHHygHhhhoHHHHo33o....',
+      '...o233v2p2p21uu1ojgyjjjHHHHygHHhhhoHHHHo33o....',
+      '....o22222211u11wwjjgyjjHHHygHHHhhhoHHHHo33o....',
+      '.....o2222211u1ojwjjjgyjHHygHHHHhhhhooooo33o....',
+      '.......oooooooojjjjjjjjgyygHHHHHhhhoJjjHhho.....',
+      '............oUUUwUUUUUgyYYygUUUUUUuoJjjHhho.....',
+      '............oUUUUUUUUUgyYYygUUUUUUuojjHHhho.....',
+      '.............ouuuuuuuuggGGGGgguuuuuoooooooo.....',
+      '.............oJjjjjjjjjHHHHHHhhho.......o32o....',
+      '..............oJjjjjjjjHHHHHhhho........o32o....',
+      '..............ooooooooo.oooooooooo......o32o....',
+      '..............oJjjjjjjo.oHHHHhhho.......o32o....',
+      '..............oJjjjjjjo.oHHHHhhho.......o32o....',
+      '..............ojjjjjjjo.oHHHhhhho.......oooo....',
+      '..............ojjjjjjjo.oHHhhhhho...............',
+      '.............ouUUUUUUUuouUUUUuuuuo..............',
+      '.............ouUUUUUUUuouUUUUuuuuo..............',
+      '............ouuUUUUUUUouuUUUUuuuuuo.............',
+      '............ooooooooooooooooooooooo.............'
+    ], 24, 40));
+
+    /* boss idle 1 - maul lifting */
+    P.def('baron1', A([
+      '...................oo..oo..oo..oo.....w...ww....',
+      '..................oYYooYYooYYooYyo..wwoowwwo....',
+      '.................oyYyyYyyYyyYyyyo....ww44w3wwo..',
+      '................oGyYyGyYyGyYyGyGo..woVVVVVVVVVww',
+      '................oggGGggGGggGGggGo..o44443332211o',
+      '...............ooooooooooooooooooooo44443332211o',
+      '...............oJJJjjjjjHHHHHHhhhhoo444p333p211o',
+      '.............ooJJJjjjjjjHHHHHHhhhhoo344p333p211o',
+      '............obJJjj.oooooooooooohhhboo333222111o.',
+      '............BbJjj..oo&&oooo&oooHhhbooUUUUUUUUUo.',
+      '............oBJjj..ooooooooooooHhhBo.o2221111o..',
+      '.............ooJjjjjjHHHHHHHhhhhoo....oooooo....',
+      '.......oooooooooJjjjjjHHHHHHHhhhho..oo..oo......',
+      '.....o4444444444ojjjjjHHHHHHhhho...oHJooo33o....',
+      '....o44V444444V3oooooooooooooo....ooooooo33o..ww',
+      '...o444V4p4p43VV2ojjjjjjHHHHHHHhhoHHHHHHo33o....',
+      '...o444V4p4p43VV2ojjjjjjHHHHHHHHhoHHHHHHo33oo.w.',
+      '...o344V3p3p32UU1ojjjjjjHHHHHHHHhoHHHHHHo33oo...',
+      '...o344V3p3p32UU1ojjjjjjHHHHHHHHhohHHHHHo33o...w',
+      '...o334v3p3p32UU1ojjjjjjHHHHHHHHhohhhhhho33o....',
+      '...o334v3p3p32UU1oyjjjjjHHHHHHyghhooHHHHo33o....',
+      '...o233v2p2p21uu1ogyjjjjHHHHHygHhhhoHHHHo33o....',
+      '...o233v2p2p21uu1ojgyjjjHHHHygHHhhhoHHHHo33o....',
+      '....o22222211u11wjjjgyjjHHHygHHHhhhoHHHHo33o....',
+      '.....o2222211u1ojjjjjgyjHHygHHHHhhhhooooooo.....',
+      '.......oooooooojwwjjjjjgyygHHHHHhhhoJjjHhho.....',
+      '............oUUUUUUUUUgyYYygUUUUUUuoJjjHhho.....',
+      '............oUUUUwUUUUgyYYygUUUUUUuojjHHhho.....',
+      '.............ouuuuuuuuggGGGGgguuuuuoooooo32o....',
+      '.............oJjjjjjjjjHHHHHHhhho.......o32o....',
+      '..............oJjjjjjjjHHHHHhhho........o32o....',
+      '..............ooooooooo.oooooooooo......o32o....',
+      '..............oJjjjjjjo.oHHHHhhho.......o32o....',
+      '..............oJjjjjjjo.oHHHHhhho.......oooo....',
+      '..............ojjjjjjjo.oHHHhhhho...............',
+      '..............ojjjjjjjo.oHHhhhhho...............',
+      '.............ouUUUUUUUuouUUUUuuuuo..............',
+      '.............ouUUUUUUUuouUUUUuuuuo..............',
+      '............ouuUUUUUUUouuUUUUuuuuuo.............',
+      '............ooooooooooooooooooooooo.............'
+    ], 24, 40));
+
+    /* boss idle 2 */
+    P.def('baron2', A([
+      '...................oo..oo..oo..oo.......w...w...',
+      '..................oYYooYYooYYooYyo....www.ww....',
+      '.................oyYyyYyyYyyYyyyo...wwoowooow...',
+      '................oGyYyGyYyGyYyGyGo..wwo4444333ow.',
+      '................oggGGggGGggGGggGo...oVVVVVVVVVo.',
+      '...............ooooooooooooooooooooo44443332211o',
+      '...............oJJJjjjjjHHHHHHhhhhoo44443332211o',
+      '.............ooJJJjjjjjjHHHHHHhhhhoo444p333p211o',
+      '............obJJjj.oooooooooooohhhbo344p333p211o',
+      '............BbJjj..oo%%oooo%oooHhhboo333222111o.',
+      '............oBJjj..ooooooooooooHhhBooUUUUUUUUUo.',
+      '.............ooJjjjjjHHHHHHHhhhhoo...o2221111o..',
+      '.......oooooooooJjjjjjHHHHHHHhhhho..oooooooo....',
+      '.....o4444444444ojjjjjHHHHHHhhho...oHJooHJo.....',
+      '....o44V444444V3oooooooooooooo....ooooooo33o....',
+      '...o444V4p4p43VV2ojjjjjjHHHHHHHhhoHHHHHHo33o..w.',
+      '...o444V4p4p43VV2ojjjjjjHHHHHHHHhoHHHHHHo33oo.ww',
+      '...o344V3p3p32UU1ojjjjjjHHHHHHHHhoHHHHHHo33oo...',
+      '...o344V3p3p32UU1ojjjjjjHHHHHHHHhohHHHHHo33o..w.',
+      '...o334v3p3p32UU1ojjjjjjHHHHHHHHhohhhhhho33o....',
+      '...o334v3p3p32UU1oyjjjjjHHHHHHyghhooHHHHo33o....',
+      '...o233v2p2p21uu1ogyjjjjHHHHHygHhhhoHHHHo33o....',
+      '...o233v2p2p21uu1ojgyjjjHHHHygHHhhhoHHHHo33o....',
+      '....o22222211u11ojjjgyjjHHHygHHHhhhoHHHHo33o....',
+      '.....o2222211u1owwjjjgyjHHygHHHHhhhhooooo33o....',
+      '.......oooooooojjjjjjjjgyygHHHHHhhhoJjjHhho.....',
+      '............oUUUUwUUUUgyYYygUUUUUUuoJjjHhho.....',
+      '............oUUUUUUUUUgyYYygUUUUUUuojjHHhho.....',
+      '.............ouuwuuuuuggGGGGgguuuuuoooooooo.....',
+      '.............oJjjjjjjjjHHHHHHhhho.......o32o....',
+      '..............oJjjjjjjjHHHHHhhho........o32o....',
+      '..............ooooooooo.oooooooooo......o32o....',
+      '..............oJjjjjjjo.oHHHHhhho.......o32o....',
+      '..............oJjjjjjjo.oHHHHhhho.......o32o....',
+      '..............ojjjjjjjo.oHHHhhhho.......oooo....',
+      '..............ojjjjjjjo.oHHhhhhho...............',
+      '.............ouUUUUUUUuouUUUUuuuuo..............',
+      '.............ouUUUUUUUuouUUUUuuuuo..............',
+      '............ouuUUUUUUUouuUUUUuuuuuo.............',
+      '............ooooooooooooooooooooooo.............'
+    ], 24, 40));
+
+    /* boss idle 3 - maul settling */
+    P.def('baron3', A([
+      '...................oo..oo..oo..oo......ww..w....',
+      '..................oYYooYYooYYooYyo...wwww..ww...',
+      '.................oyYyyYyyYyyYyyyo...w.ww..www...',
+      '................oGyYyGyYyGyYyGyGo.....oooooo..w.',
+      '................oggGGggGGggGGggGo....o4444333o..',
+      '...............oooooooooooooooooooo.oVVVVVVVVVo.',
+      '...............oJJJjjjjjHHHHHHhhhhoo44443332211o',
+      '.............ooJJJjjjjjjHHHHHHhhhhoo44443332211o',
+      '............obJJjj.oooooooooooohhhbo444p333p211o',
+      '............BbJjj..oo&&oooo&oooHhhbo344p333p211o',
+      '............oBJjj..ooooooooooooHhhBoo333222111o.',
+      '.............ooJjjjjjHHHHHHHhhhhoo..oUUUUUUUUUo.',
+      '.......oooooooooJjjjjjHHHHHHHhhhho..oo2221111o..',
+      '.....o4444444444ojjjjjHHHHHHhhho...oHJoooooo....',
+      '....o44V444444V3oooooooooooooo....oooooooo....w.',
+      '...o444V4p4p43VV2ojjjjjjHHHHHHHhhoHHHHHHo33o..ww',
+      '...o444V4p4p43VV2ojjjjjjHHHHHHHHhoHHHHHHo33oo...',
+      '...o344V3p3p32UU1ojjjjjjHHHHHHHHhoHHHHHHo33oo..w',
+      '...o344V3p3p32UU1ojjjjjjHHHHHHHHhohHHHHHo33o....',
+      '...o334v3p3p32UU1ojjjjjjHHHHHHHHhohhhhhho33o....',
+      '...o334v3p3p32UU1oyjjjjjHHHHHHyghhooHHHHo33o....',
+      '...o233v2p2p21uu1ogyjjjjHHHHHygHhhhoHHHHo33o....',
+      '...o233v2p2p21uu1ojgyjjjHHHHygHHhhhoHHHHo33o....',
+      '....o22222211u11ojjjgyjjHHHygHHHhhhoHHHHo33o....',
+      '.....o2222211u1owwjjjgyjHHygHHHHhhhhooooo33o....',
+      '.......oooooooojjjjjjjjgyygHHHHHhhhoJjjHo33o....',
+      '............oUUUUwUUUUgyYYygUUUUUUuoJjjHhho.....',
+      '............oUUUUUUUUUgyYYygUUUUUUuojjHHhho.....',
+      '.............ouuwuuuuuggGGGGgguuuuuoooooooo.....',
+      '.............oJjjjjjjjjHHHHHHhhho...............',
+      '..............oJjjjjjjjHHHHHhhho........o32o....',
+      '..............ooooooooo.oooooooooo......o32o....',
+      '..............oJjjjjjjo.oHHHHhhho.......o32o....',
+      '..............oJjjjjjjo.oHHHHhhho.......o32o....',
+      '..............ojjjjjjjo.oHHHhhhho.......o32o....',
+      '..............ojjjjjjjo.oHHhhhhho.......oooo....',
+      '.............ouUUUUUUUuouUUUUuuuuo..............',
+      '.............ouUUUUUUUuouUUUUuuuuo..............',
+      '............ouuUUUUUUUouuUUUUuuuuuo.............',
+      '............ooooooooooooooooooooooo.............'
+    ], 24, 40));
+
+    P.anim('baron_idle', ['baron0', 'baron1', 'baron2', 'baron3'], 6);
+
+    /* =========================================================
+       C. MOUNTS. All side-on, all facing right, all anchored at
+       the bottom-centre so the King sits in the same place on
+       every one of them. Three frames each.
+       ======================================================== */
+
+    /* sea horse - the curl is stepped pixels, there is no circle in it */
+    P.def('mt_seahorse0', A([
+      '.....y.y....',
+      '....oyYyo...',
+      '...oYYYYo...',
+      '...oYoYYGGGo',
+      '...oYYYGGGoo',
+      '...oYYYGo...',
+      '..oYYYGo....',
+      '..oYYYYGx...',
+      '..oYYYYGGx..',
+      '.oYYYYYGGx..',
+      '.oYYYYYGGx..',
+      '.oYYYYGGo...',
+      '..oYYYGGo...',
+      '..oGGGo.....',
+      '.oGGGo......',
+      'oGGoggo.....',
+      'ogGggo......',
+      '.ooooo......'
+    ], 6, 18));
+
+    P.def('mt_seahorse1', A([
+      '.....y.y....',
+      '....oyYyo...',
+      '...oYYYYo...',
+      '...oYoYYGGGo',
+      '...oYYYGGGoo',
+      '...oYYYGo...',
+      '..oYYYGo....',
+      '..oYYYYG....',
+      '..oYYYYGGx..',
+      '.oYYYYYGGx..',
+      '.oYYYYYGGx..',
+      '.oYYYYGGo...',
+      '..oYYYGGo...',
+      '..oGGGo.....',
+      '.oGGGGo.....',
+      '.oGGggo.....',
+      '.oggggo.....',
+      '..oooo......'
+    ], 6, 18));
+
+    P.def('mt_seahorse2', A([
+      '.....y.y....',
+      '....oyYyo...',
+      '...oYYYYo...',
+      '...oYoYYGGGo',
+      '...oYYYGGGoo',
+      '...oYYYGo...',
+      '..oYYYGo....',
+      '..oYYYYGx...',
+      '..oYYYYGGx..',
+      '.oYYYYYGGx..',
+      '.oYYYYYGG...',
+      '.oYYYYGGo...',
+      '..oYYYGGo...',
+      '..oGGGo.....',
+      'oGGGGo......',
+      'oGGgo.......',
+      'oggggo......',
+      '.ooooo......'
+    ], 6, 18));
+
+    P.anim('mt_seahorse_move', ['mt_seahorse0', 'mt_seahorse1', 'mt_seahorse2'], 8);
+
+    /* clownfish - orange, three bands, tiny and smug */
+    P.def('mt_clownfish0', A([
+      '................',
+      '.......oooo.....',
+      'o&o...o&&&o.....',
+      'o&&oo&&&&oooo...',
+      'o&&&&ww&&&&&&o..',
+      'o&&&owwo&&oww&&o',
+      'o&&&owwo&&oww&&o',
+      'o&&&owwo%%oww%%o',
+      'o&&o%ww%%%%ww%o.',
+      'o&oo%%o%%o$$o...',
+      '....ooooooooo...',
+      '................'
+    ], 8, 12));
+
+    P.def('mt_clownfish1', A([
+      '................',
+      '.......oooo.....',
+      'oo....o&&&o.....',
+      'o&ooo&&&&oooo...',
+      'o&&&&ww&&&&&&o..',
+      'o&&&&wwo&&oww&&o',
+      'o&&&&wwo&&oww&&o',
+      'o&&&owwo%%oww%%o',
+      'o&o%%ww%%%%ww%o.',
+      'oo.o%%o%o%$$o...',
+      '....ooooooooo...',
+      '................'
+    ], 8, 12));
+
+    P.def('mt_clownfish2', A([
+      '................',
+      '.......oooo.....',
+      'o&&o..o&&&o.....',
+      'o&&&o&&&&oooo...',
+      'o&&&&ww&&&&&&o..',
+      'o&&&owwo&&oww&&o',
+      'o&&&owwo&&oww&&o',
+      'o&&&owwo%%oww%%o',
+      'o&&&oww%%%%ww%o.',
+      'o&&o%%%o%%o$o...',
+      '....ooooooooo...',
+      '................'
+    ], 8, 12));
+
+    P.anim('mt_clownfish_move', ['mt_clownfish0', 'mt_clownfish1', 'mt_clownfish2'], 9);
+
+    /* war crab - digs, walks, does not care */
+    P.def('mt_crab0', A([
+      '......w...w.........',
+      '......R...R.........',
+      '.....ooooooo........',
+      '...ooXXXXXxxRooooo..',
+      '..oXXXXXXxxxxoXXXxo.',
+      '.oXXXXxxxxxxRoXxoo..',
+      '.oXxxxxRRRRRrRxRo...',
+      '.oxxRRRRRrrrrRRrrro.',
+      '..oooooooooooooorro.',
+      '..R..R..R..R........',
+      '..R..R..R..R........',
+      '.r..r..r..r.........',
+      '.r..r..r..r.........',
+      'o..o..o..o..........'
+    ], 10, 14));
+
+    P.def('mt_crab1', A([
+      '......w...w.........',
+      '......R...R.........',
+      '.....ooooooo........',
+      '...ooXXXXXxxRoooo...',
+      '..oXXXXXXxxxxoXXxo..',
+      '.oXXXXxxxxxxRoXxxo..',
+      '.oXxxxxRRRRRrRxRro..',
+      '.oxxRRRRRrrrrRRrrro.',
+      '..oooooooooooooorro.',
+      '...R..R..R..R.......',
+      '...R..R..R..R.......',
+      '...r..r..r..r.......',
+      '...r..r..r..r.......',
+      '...o..o..o..o.......'
+    ], 10, 14));
+
+    P.def('mt_crab2', A([
+      '......w...w.........',
+      '......R...R.........',
+      '.....ooooooo........',
+      '...ooXXXXXxxRooooo..',
+      '..oXXXXXXxxxxoXXXxo.',
+      '.oXXXXxxxxxxRoXxxxo.',
+      '.oXxxxxRRRRRrRxRrro.',
+      '.oxxRRRRRrrrrRRrrro.',
+      '..oooooooooooooorro.',
+      '..R..R..R..R........',
+      '...R..R..R..R.......',
+      '....r..r..r..r......',
+      '....r..r..r..r......',
+      '.....o..o..o..o.....'
+    ], 10, 14));
+
+    P.anim('mt_crab_move', ['mt_crab0', 'mt_crab1', 'mt_crab2'], 8);
+
+    /* bluefin tuna - all muscle, gold finlets */
+    P.def('mt_tuna0', A([
+      '.........oooo...........',
+      '........oeEEo...........',
+      '.......oeEEEo..yy.y.....',
+      'oddo.ooeEEEDdddoooo.....',
+      'odddddEEEDDDddddddDdo...',
+      'odddddEDDDddddddddDddo..',
+      'odddddbBBBBBBBBBBBbdo...',
+      'odddoobBBBBoddoBBBbo....',
+      'oddo..ooBBBBoddoyoy.....',
+      '........ooooooooo.......',
+      '........................',
+      '........................'
+    ], 12, 12));
+
+    P.def('mt_tuna1', A([
+      '.........oooo...........',
+      '........oeEEo...........',
+      '.......oeEEEo..yy.y.....',
+      'oddddooeEEEDdddoooo.....',
+      'oddddddEEDDDddddddDdo...',
+      'odddddEDDDddddddddDddo..',
+      'oddddbbBBBBBBBBBBBbdo...',
+      'oddo.obBBBBodoBBBBbo....',
+      'oo....ooBBBoddoyyoy.....',
+      '........ooooooooo.......',
+      '........................',
+      '........................'
+    ], 12, 12));
+
+    P.def('mt_tuna2', A([
+      '.........oooo...........',
+      '........oeEEo...........',
+      '.......oeEEEo..yy.y.....',
+      'oo...ooeEEEDdddoooo.....',
+      'odddoeEEEDDDddddddDdo...',
+      'odddddEDDDddddddddDddo..',
+      'oddddddBBBBBBBBBBBbdo...',
+      'oddddddBBBBBodoBBBbo....',
+      'oddddoooBBBBoddoyoy.....',
+      '........ooooooooo.......',
+      '........................',
+      '........................'
+    ], 12, 12));
+
+    P.anim('mt_tuna_move', ['mt_tuna0', 'mt_tuna1', 'mt_tuna2'], 9);
+
+    /* dolphin - melon forehead, real beak, swept dorsal, notched flukes */
+    P.def('mt_dolphin0', A([
+      '.............oo.............',
+      '............ojHo............',
+      '...........ojHHHo...........',
+      '..........ojHHHHHoooooooo...',
+      '.........ojjHHHHHHHHHhhjjo..',
+      '........ojjjHHHHHHHHHhhjjjo.',
+      '...ooooJjjHHHHHHHHHhhjjjjjo.',
+      'oJjHHHHjjjHHHHHHHHHhhjojjjjo',
+      'oJjjHHHBBBBBBBBBBBBBBBooooo.',
+      '.ooohHHBBBBBBBBBBBBBBBwwoo..',
+      '.....ooBBBBBBBBBBBBBBooo....',
+      '.......ooooooHHHHHHooo......',
+      '............oHHHHo..........',
+      '...........oHHo.............'
+    ], 14, 14));
+
+    P.def('mt_dolphin1', A([
+      '.............oo.............',
+      '............ojHo............',
+      '...........ojHHHo...........',
+      '..........ojHHHHHoooooooo...',
+      '.........ojjHHHHHHHHHhhjjo..',
+      '...oooo.ojjjHHHHHHHHHhhjjjo.',
+      'oJjHHHHJjjHHHHHHHHHhhjjjjjo.',
+      'oJjjHHHjjjHHHHHHHHHhhjojjjjo',
+      '.ooohHHBBBBBBBBBBBBBBBooooo.',
+      '.....ooBBBBBBBBBBBBBBBwwoo..',
+      '.......BBBBBBBBBBBBBBooo....',
+      '.......oooooooHHHHHooo......',
+      '............ooHHHo..........',
+      '...........oHHo.............'
+    ], 14, 14));
+
+    P.def('mt_dolphin2', A([
+      '.............oo.............',
+      '............ojHo............',
+      '...........ojHHHo...........',
+      '..........ojHHHHHoooooooo...',
+      '.........ojjHHHHHHHHHhhjjo..',
+      '........ojjjHHHHHHHHHhhjjjo.',
+      '.......JjjHHHHHHHHHhhjjjjjo.',
+      '...oooojjjHHHHHHHHHhhjojjjjo',
+      'oJjHHHHBBBBBBBBBBBBBBBooooo.',
+      'oJjjHHHBBBBBBBBBBBBBBBwwoo..',
+      '.ooohHHBBBBBBBBBBBBBBooo....',
+      '.......ooooooHHHHHoooo......',
+      '............oHHHoo..........',
+      '...........oHo..............'
+    ], 14, 14));
+
+    P.anim('mt_dolphin_move', ['mt_dolphin0', 'mt_dolphin1', 'mt_dolphin2'], 8);
+
+    /* swordfish - the bill is a third of the sprite */
+    P.def('mt_swordfish0', A([
+      'oo...........ooooo..............',
+      'oddo........oddDDdo.............',
+      'odddo...oooooddDDDddoooooo......',
+      'oddddo.oddDDDDDDdddddddDdo......',
+      'odddd.oddDDDDDDDDdddddddDDdo....',
+      'oddddoobbDDDDDDDDdddddddDDdBBBBB',
+      'oddddoobbbBBBBBBBBBBBBBBBdobbbBB',
+      'odddo..obbBBBBBBBBBBBBBBBdoo....',
+      'oddo....ooBBBBBBBBBBBBBBdo......',
+      'oo.........oooooooooooooo.......',
+      '..........odddo.................',
+      '...........ooo..................'
+    ], 16, 12));
+
+    P.def('mt_swordfish1', A([
+      '.............ooooo..............',
+      'oo..........oddDDdo.............',
+      'oddo....oooooddDDDddoooooo......',
+      'odddo..oddDDDDDDdddddddDdo......',
+      'oddddooddDDDDDDDDdddddddDDdo....',
+      'odddd.obbDDDDDDDDdddddddDDdBBBBB',
+      'oddddoobbbBBBBBBBBBBBBBBBdobbbBB',
+      'oddddo.obbBBBBBBBBBBBBBBBdoo....',
+      'odddo...ooBBBBBBBBBBBBBBdo......',
+      'oddo.......oooooooooooooo.......',
+      'oo........oddo..................',
+      '...........oo...................'
+    ], 16, 12));
+
+    P.def('mt_swordfish2', A([
+      'oddo.........ooooo..............',
+      'odddo.......oddDDdo.............',
+      'oddddo..oooooddDDDddoooooo......',
+      'odddd..oddDDDDDDdddddddDdo......',
+      'oddddooddDDDDDDDDdddddddDDdo....',
+      'oddddoobbDDDDDDDDdddddddDDdBBBBB',
+      'odddo.obbbBBBBBBBBBBBBBBBdobbbBB',
+      'oddo...obbBBBBBBBBBBBBBBBdoo....',
+      'oo......ooBBBBBBBBBBBBBBdo......',
+      '...........oooooooooooooo.......',
+      '..........odddddo...............',
+      '...........ooooo................'
+    ], 16, 12));
+
+    P.anim('mt_swordfish_move', ['mt_swordfish0', 'mt_swordfish1', 'mt_swordfish2'], 9);
+
+    /* whale - the top of the mount ladder */
+    P.def('mt_whale0', A([
+      '.............................ww..w......',
+      '............................wwwwwww.....',
+      '.............................ww..w......',
+      '.....................oooooooo...........',
+      '................ooooooiiiiddddoo........',
+      '...........oooooiiiidddddddddddddoo.....',
+      'oo..........ooiiiiddddddddddddddddddDdo.',
+      'oiio......ooiiiidddddddddddddddddddDDdo.',
+      'oiiio.....oiiidddddddddddddddddddddDDDdo',
+      'oiiiio....iiidddddddddddddddddddoDDDDDdo',
+      'oiiiiio...iiiddddddddddddddddddDDDDDDDdo',
+      'oiiiiiiii.iidddddddddddddddddDDDDDDDDDdo',
+      'oiiiiiiii.iddddddddddddddddDDDDDDDDDDddo',
+      'oiiiiio...obbbBBBBBBBBBBBBBBBBBBBBBBBBdo',
+      'oiiiio....obbBBBBBBBBBBBBBBBBBBBBBBBBBdo',
+      'oiiio......obBBBBBBBBBBBBBBBoBoBoBoBoBdo',
+      'oiio.......obBBBBBBBBBBBBBBoBoBoBoBoBoo.',
+      'oo..........ooBBBBBBBBBBBBBBBBBBBBBBoo..',
+      '..................ohhhhhoooooooooooo....',
+      '...................ohhhho...............',
+      '....................ohhho...............',
+      '.....................ooo................'
+    ], 20, 22));
+
+    P.def('mt_whale1', A([
+      '..............................w..ww.....',
+      '.............................wwwww......',
+      '..............................w..w......',
+      '.....................oooooooo...........',
+      '................ooooooiiiiddddoo........',
+      '...........oooooiiiidddddddddddddoo.....',
+      '............ooiiiiddddddddddddddddddDdo.',
+      'oo........ooiiiidddddddddddddddddddDDdo.',
+      'oiio......oiiidddddddddddddddddddddDDDdo',
+      'oiiio.....iiidddddddddddddddddddoDDDDDdo',
+      'oiiiio....iiiddddddddddddddddddDDDDDDDdo',
+      'oiiiiio...iidddddddddddddddddDDDDDDDDDdo',
+      'oiiiiiiii.iddddddddddddddddDDDDDDDDDDddo',
+      'oiiiiiiii.obbbBBBBBBBBBBBBBBBBBBBBBBBBdo',
+      'oiiiiio...obbBBBBBBBBBBBBBBBBBBBBBBBBBdo',
+      'oiiiio.....obBBBBBBBBBBBBBBBoBoBoBoBoBdo',
+      'oiiio......obBBBBBBBBBBBBBBoBoBoBoBoBoo.',
+      'oiio........ooBBBBBBBBBBBBBBBBBBBBBBoo..',
+      '..................ohhhhooooooooooooo....',
+      '...................ohhho................',
+      '....................ooo.................',
+      '........................................'
+    ], 20, 22));
+
+    P.def('mt_whale2', A([
+      '............................w..w..w.....',
+      '............................ww.www......',
+      '.............................w..ww......',
+      '.....................oooooooo...........',
+      '................ooooooiiiiddddoo........',
+      '...........oooooiiiidddddddddddddoo.....',
+      'oiio........ooiiiiddddddddddddddddddDdo.',
+      'oiiio.....ooiiiidddddddddddddddddddDDdo.',
+      'oiiiio....oiiidddddddddddddddddddddDDDdo',
+      'oiiiiio...iiidddddddddddddddddddoDDDDDdo',
+      'oiiiiiiii.iiiddddddddddddddddddDDDDDDDdo',
+      'oiiiiiiii.iidddddddddddddddddDDDDDDDDDdo',
+      'oiiiiio...iddddddddddddddddDDDDDDDDDDddo',
+      'oiiiio....obbbBBBBBBBBBBBBBBBBBBBBBBBBdo',
+      'oiiio.....obbBBBBBBBBBBBBBBBBBBBBBBBBBdo',
+      'oiio.......obBBBBBBBBBBBBBBBoBoBoBoBoBdo',
+      'oo.........obBBBBBBBBBBBBBBoBoBoBoBoBoo.',
+      '............ooBBBBBBBBBBBBBBBBBBBBBBoo..',
+      '..................ohhhhhoooooooooooo....',
+      '..................oohhhho...............',
+      '....................ohhho...............',
+      '.....................ooo................'
+    ], 20, 22));
+
+    P.anim('mt_whale_move', ['mt_whale0', 'mt_whale1', 'mt_whale2'], 6);
   }
 
   return { build };

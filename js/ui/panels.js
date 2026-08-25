@@ -48,7 +48,7 @@ KD.Panels = (function () {
   function bag(S) {
     const cols = 8, rows = Math.ceil(KD.State.SLOTS / cols);
     const w = cols * 17 + 11, h = rows * 17 + 26;
-    const x = ((KD.W - w) >> 1), y = 24;
+    const x = ((KD.W - w - 28) >> 1), y = 24;
     KD.UI.titled(x, y, w, h, 'THE BAG');
     for (let i = 0; i < KD.State.SLOTS; i++) {
       const sx = x + 6 + (i % cols) * 17, sy = y + 16 + ((i / cols) | 0) * 17;
@@ -74,16 +74,18 @@ KD.Panels = (function () {
         }
       }
     }
-    /* the worn kit sits beside the bag, so armour is visibly a thing you wear */
-    const ex = x + w + 3;
-    if (ex + 20 < KD.W) {
-      KD.Text.draw('WORN', ex + 8, y + 2, 'GOLD.2', { tiny: true, align: 'center' });
+    /* the worn kit gets its own panel beside the bag, so armour reads as
+       something you wear rather than four slots floating on the scrim */
+    const ew = 26, ex = x + w + 2;
+    if (ex + ew <= KD.W - 2) {
+      const eh = 4 * 17 + 22;
+      KD.UI.panel(ex, y, ew, eh);
+      KD.Text.draw('WORN', ex + ew / 2, y + 3, 'GOLD.2', { tiny: true, align: 'center' });
       ['head', 'body', 'legs', 'shield'].forEach((sl, k) => {
-        const sy = y + 10 + k * 17;
-        const r = KD.UI.slot(ex, sy, S.S.equip[sl], {});
+        const r = KD.UI.slot(ex + 5, y + 11 + k * 17, S.S.equip[sl], {});
         if (r) S.unequip(sl);
       });
-      KD.Text.draw(S.armourTotal() + ' AR', ex + 8, y + 10 + 4 * 17, 'BONE.1', { tiny: true, align: 'center' });
+      KD.Text.draw(S.armourTotal() + ' AR', ex + ew / 2, y + eh - 8, 'BONE.2', { tiny: true, align: 'center' });
     }
     KD.Text.draw('click to move  -  right-click to wear, drink or split  -  1-8 selects', KD.W / 2, y + h + 3,
       'INK.3', { tiny: true, align: 'center' });

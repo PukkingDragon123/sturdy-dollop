@@ -26,10 +26,11 @@ KD.art.items = (function () {
   const EDGE = ['STONE.0', 'STONE.1', 'STONE.2', 'STONE.3'];
 
   /* material ramps: dark, body, lit, spec.
-     copper RUST / bronze the GOLD ramp / iron BONE over an INK
+     copper RUST with a hot specular so it separates from the
+     wood grip / bronze the GOLD ramp / iron BONE over an INK
      shadow / gold the bright top of GOLD / abyssal ROT.          */
   const MATS = {
-    copper:  ['RUST.0', 'RUST.1', 'RUST.2', 'RUST.3'],
+    copper:  ['RUST.0', 'RUST.1', 'RUST.3', 'BLOOD.3'],
     bronze:  ['GOLD.0', 'GOLD.1', 'GOLD.2', 'GOLD.3'],
     iron:    ['INK.3', 'BONE.0', 'BONE.1', 'BONE.2'],
     gold:    ['GOLD.1', 'GOLD.2', 'GOLD.3', 'WHITE'],
