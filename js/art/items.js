@@ -645,7 +645,7 @@ KD.art.items = (function () {
 
     /* flask: corked neck, glass specular down the left, liquid recoloured per effect */
     P.def('it_potion', {
-      pal: { 'o': 'INK.0', 'b': 'WOOD.1', 'd': 'WOOD.3', 'v': 'WATER.0', 'w': 'WATER.2', '7': 'BLOOD.3', '6': 'BLOOD.2', '5': 'BLOOD.1' },
+      pal: { 'o': 'INK.0', 'b': 'WOOD.1', 'd': 'WOOD.3', 'v': 'BONE.0', 'w': 'BONE.2', '7': 'BLOOD.3', '6': 'BLOOD.2', '5': 'BLOOD.1' },
       px: [
       '....oooo....',
       '....obbo....',
@@ -831,6 +831,36 @@ KD.art.items = (function () {
       '............'
       ]
     });
+
+    /* ================= MATERIAL RECOLOURS =================
+       Procedural crafting picks a SHAPE and an edge material and
+       asks for '<shape>_<mat>'. The swap only ever touches the
+       STONE ramp, so wood grips, INK outlines and the maul's iron
+       bands come through every material untouched. 13 shapes x 5
+       materials, written as a loop rather than 65 calls.          */
+    const SHAPES = TOOLS.concat(WEAPONS);
+    for (const mat in MATS) {
+      const ramp = MATS[mat], swap = {};
+      EDGE.forEach((from, i) => { swap[from] = ramp[i]; });
+      for (let i = 0; i < SHAPES.length; i++) P.variant(SHAPES[i] + '_' + mat, SHAPES[i], swap);
+      P.variant('it_bar_' + mat, 'it_bar', swap);   /* smelted, same metal */
+    }
+
+    /* potions: the glass and cork are BONE and WOOD, only the
+       liquid moves, so one flask covers every brew in the game */
+    const BREW = {
+      heal:    ['BLOOD.1', 'BLOOD.2', 'BLOOD.3'],
+      breath:  ['WATER.1', 'WATER.2', 'WATER.3'],
+      vigour:  ['KELP.1', 'KELP.2', 'KELP.3'],
+      fortune: ['GOLD.1', 'GOLD.2', 'GOLD.3'],
+      venom:   ['ROT.1', 'ROT.2', 'ROT.3']
+    };
+    const LIQ = ['BLOOD.1', 'BLOOD.2', 'BLOOD.3'];
+    for (const fx in BREW) {
+      const swap = {};
+      LIQ.forEach((from, i) => { swap[from] = BREW[fx][i]; });
+      P.variant('it_potion_' + fx, 'it_potion', swap);
+    }
   }
 
   return { build, MATS, EDGE, TOOLS, WEAPONS };
