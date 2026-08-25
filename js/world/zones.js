@@ -21,23 +21,23 @@ KD.Zones = (function () {
     { id: 'reef',    name: 'Shallow Reef',      x0: 830,  x1: 1240,
       blurb: 'Warm, loud with fish, and full of things that bite.',
       rock: 'sand', deep: 'stone', ore: 0.7, caves: 0.9, reef: 2.2,
-      mobs: ['crawler', 'snapper', 'urchin', 'jelly'], music: 'reef' },
+      mobs: ['clown', 'parrot', 'mantis', 'urchin', 'snapper', 'jelly'], music: 'reef' },
     { id: 'kelp',    name: 'The Kelp Forest',   x0: 1240, x1: 1620,
       blurb: 'You cannot see far in here. Neither can they.',
       rock: 'mud', deep: 'stone', ore: 0.8, caves: 1.1, kelp: 3.0, dim: 3,
-      mobs: ['jelly', 'shark', 'snapper', 'crawler'], music: 'kelp' },
+      mobs: ['moray', 'cuttle', 'jelly', 'shark', 'parrot'], music: 'kelp' },
     { id: 'ruins',   name: 'The Sunken City',   x0: 1620, x1: 2000,
       blurb: 'Somebody built all this. Nobody says who.',
       rock: 'masonry', deep: 'stone', ore: 1.0, caves: 0.8, ruins: 2.4,
-      mobs: ['sentinel', 'bandit', 'shark', 'urchin'], music: 'ruins' },
+      mobs: ['sentinel', 'bandit', 'lion', 'cuda', 'urchin'], music: 'ruins' },
     { id: 'blue',    name: 'The Open Blue',     x0: 2000, x1: 2320,
       blurb: 'No floor for a long way. Big things pass through.',
       rock: 'dark', deep: 'dark', ore: 0.9, caves: 1.6, open: true, big: true,
-      mobs: ['shark', 'jelly', 'horror'], music: 'blue' },
+      mobs: ['manta', 'cuda', 'shark', 'jelly', 'horror'], music: 'blue' },
     { id: 'drop',    name: 'The Drop',          x0: 2320, x1: 2600,
       blurb: 'Down. Just down.',
       rock: 'rot', deep: 'rot', ore: 1.3, caves: 1.4, dim: 6, boss: 'king2',
-      mobs: ['horror', 'shark', 'sentinel'], music: 'deep' }
+      mobs: ['horror', 'manta', 'cuda', 'sentinel'], music: 'deep' }
   ];
   const byId = {};
   for (const z of Z) byId[z.id] = z;

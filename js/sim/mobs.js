@@ -6,7 +6,7 @@
 KD.Mobs = (function () {
   const TS = 8;
   const list = [];
-  const MAXN = 26;
+  const MAXN = 34;
 
   /* hp/dmg/speed are tuned against the player's 6 hearts and ~8 dps start */
   const KINDS = {
@@ -18,7 +18,17 @@ KD.Mobs = (function () {
     bandit:   { spr: 'bandit',   w: 10, h: 16, hp: 24, dmg: 1, spd: 44, xp: 8,  swim: false, y0: 200, y1: 340, drop: ['beer_lager', 'ore_iron'], steal: true },
     sentinel: { spr: 'sentinel', w: 16, h: 22, hp: 52, dmg: 2, spd: 26, xp: 16, swim: false, y0: 150, y1: 240, drop: ['brick_i', 'ore_gold'], armour: 4 },
     horror:   { spr: 'horror',   w: 20, h: 18, hp: 70, dmg: 2, spd: 34, xp: 24, swim: true,  y0: 280, y1: 420, drop: ['ore_abyssal', 'pearl'], spit: true },
-    baron:    { spr: 'baron',    w: 40, h: 36, hp: 420, dmg: 3, spd: 40, xp: 200, swim: false, boss: true, drop: [] }
+    baron:    { spr: 'baron',    w: 40, h: 36, hp: 420, dmg: 3, spd: 40, xp: 200, swim: false, boss: true, drop: [] },
+    /* ---- the ocean past the Gate. One shape per zone, so where you are
+       is legible from what is swimming at you. --------------------- */
+    clown:    { spr: 'an_clown',  w: 12, h: 9,  hp: 8,  dmg: 1, spd: 54, xp: 2,  swim: true,  y0: 34, y1: 150, drop: ['fish1'], shy: true },
+    parrot:   { spr: 'an_parrot', w: 18, h: 13, hp: 26, dmg: 1, spd: 34, xp: 6,  swim: true,  y0: 36, y1: 190, drop: ['coral', 'fish1'], armour: 3 },
+    mantis:   { spr: 'an_mantis', w: 20, h: 12, hp: 18, dmg: 2, spd: 40, xp: 8,  swim: false, y0: 40, y1: 210, drop: ['shell', 'flint'] },
+    moray:    { spr: 'an_moray',  w: 26, h: 11, hp: 34, dmg: 2, spd: 30, xp: 11, swim: true,  y0: 60, y1: 250, drop: ['bone', 'fish2'], dash: true },
+    cuttle:   { spr: 'an_cuttle', w: 15, h: 15, hp: 24, dmg: 1, spd: 26, xp: 9,  swim: true,  y0: 50, y1: 260, drop: ['cloth_i', 'pearl'], drift: true, spit: true },
+    cuda:     { spr: 'an_cuda',   w: 30, h: 10, hp: 30, dmg: 2, spd: 78, xp: 13, swim: true,  y0: 80, y1: 320, drop: ['bone', 'fish2'], dash: true },
+    lion:     { spr: 'an_lion',   w: 18, h: 17, hp: 40, dmg: 2, spd: 16, xp: 14, swim: true,  y0: 90, y1: 300, drop: ['urchin_spine', 'coral'], armour: 5 },
+    manta:    { spr: 'an_manta',  w: 42, h: 17, hp: 66, dmg: 2, spd: 44, xp: 22, swim: true,  y0: 120, y1: 400, drop: ['hide', 'pearl'], drift: true }
   };
 
   function spawn(kind, tx, ty) {
@@ -45,19 +55,37 @@ KD.Mobs = (function () {
   function spawner(dt, S) {
     spawnT -= dt;
     if (spawnT > 0 || list.length >= MAXN) return;
-    spawnT = 0.7;
+    spawnT = 0.42;
     const P = KD.Player.P, Wd = KD.World;
     const py = (P.y / TS) | 0;
+    /* Depth said WHAT could live here; the zone says what actually does.
+       Without the zone filter every region spawned the same four things at
+       a given depth, so the reef, the kelp forest and the ruins all felt
+       like the same place with different rock. */
+    const zone = KD.Zones.atPx(P.x);
+    if (zone.safe) return;
+    const listed = !!(zone.mobs && zone.mobs.length);
+    const table = listed ? zone.mobs : Object.keys(KINDS);
     const cands = [];
-    for (const k in KINDS) {
+    for (const k of table) {
       const K = KINDS[k];
-      if (K.boss) continue;
-      if (py >= K.y0 - 20 && py <= K.y1 + 20) cands.push(k);
+      if (!K || K.boss) continue;
+      /* A hand-written zone table IS the curation, so it only needs a loose
+         depth sanity check. The tight y0/y1 window is for the fallback: with
+         it applied to the tables, the ruins surface could only produce
+         urchins, because everything else in the ruins lives deeper than the
+         zone's own seabed. */
+      const slack = listed ? 90 : 20;
+      if (py >= K.y0 - slack && py <= K.y1 + slack) cands.push(k);
     }
     if (!cands.length) return;
     for (let tries = 0; tries < 24; tries++) {
       const side = Math.random() < 0.5 ? -1 : 1;
-      const tx = ((P.x / TS) | 0) + side * (14 + ((Math.random() * 22) | 0));
+      /* Far enough out to be off screen at ANY width. The old 14-36 tile
+         band was almost entirely inside a 486px viewport, so nearly every
+         candidate was rejected for being visible and the ocean was empty. */
+      const clear = Math.ceil((KD.W / 2 + 40) / TS);
+      const tx = ((P.x / TS) | 0) + side * (clear + ((Math.random() * 26) | 0));
       const ty = py + (((Math.random() * 22) | 0) - 11);
       if (!Wd.inside(tx, ty)) continue;
       /* must be open, and must not be visible on screen */
@@ -69,8 +97,10 @@ KD.Mobs = (function () {
       const inWater = Wd.water(tx, ty) >= 4;
       if (K.swim && !inWater) continue;
       if (!K.swim && !Wd.solid(tx, ty + 1)) continue;
-      /* darkness breeds: no spawns in a well-lit room */
-      if (Wd.lightAt(tx, ty) > 9 && Math.random() < 0.85) continue;
+      /* Darkness breeds - but only for the things that live in it. Gating
+         swimmers on light too meant no fish in a sunlit reef, which is
+         exactly backwards. */
+      if (!K.swim && Wd.lightAt(tx, ty) > 9 && Math.random() < 0.85) continue;
       spawn(kind, tx, ty);
       return;
     }
@@ -99,12 +129,27 @@ KD.Mobs = (function () {
       /* --- state machine: idle -> chase -> telegraph -> strike -> recover --- */
       m.stateT -= dt;
       if (m.state === 'idle') {
-        if (dist < 90) m.state = 'chase';
+        if (dist < 90) m.state = K.shy ? 'flee' : 'chase';
         if (K.drift) { m.vx = Math.sin(m.t * 0.7) * 12; m.vy = Math.sin(m.t * 0.45) * 9; }
-        else if (!K.still) m.vx = Math.sin(m.t * 0.5) * K.spd * 0.3;
+        else if (K.swim) {
+          /* An idle swimmer that only wobbles in place never arrives: it
+             spawns off screen and stays there. Cruise, and lean toward the
+             player, so the ocean actually has fish crossing it. */
+          m.vx = Math.sign(dx || 1) * K.spd * 0.45 + Math.sin(m.t * 0.6) * 8;
+          m.vy = Math.sin(m.t * 0.4) * 10;
+        } else if (!K.still) m.vx = Math.sin(m.t * 0.5) * K.spd * 0.3;
+      } else if (m.state === 'flee') {
+        /* shy things scatter. They still cost you a swing if you corner one. */
+        if (dist > 130) { m.state = 'idle'; m.vx = 0; }
+        m.face = dx > 0 ? -1 : 1;
+        m.vx = -Math.sign(dx || 1) * K.spd;
+        m.vy = -Math.sign(dy || 1) * K.spd * 0.5;
       } else if (m.state === 'chase') {
         if (dist > 160) m.state = 'idle';
-        if (dist < (K.w + 12) && m.atkCd <= 0) { m.state = 'wind'; m.stateT = 0.32; m.vx = 0; }
+        /* a dasher winds up out of reach and crosses the gap in one go */
+        if (K.dash && dist < 120 && dist > K.w + 14 && m.atkCd <= 0) {
+          m.state = 'wind'; m.stateT = 0.46; m.vx = 0; m.dashing = true;
+        } else if (dist < (K.w + 12) && m.atkCd <= 0) { m.state = 'wind'; m.stateT = 0.32; m.vx = 0; }
         else if (!K.still) {
           if (K.swim) {
             m.vx = (dx / (dist || 1)) * K.spd;
@@ -118,15 +163,26 @@ KD.Mobs = (function () {
       } else if (m.state === 'wind') {
         m.vx *= 0.4;
         if (m.stateT <= 0) {
-          m.state = 'strike'; m.stateT = 0.18;
-          if (K.spit) shot(m, dx, dy);
+          m.state = 'strike'; m.stateT = m.dashing ? 0.42 : 0.18;
+          if (m.dashing) {
+            /* the whole attack IS the movement: commit to a heading and go */
+            const d = dist || 1;
+            m.vx = (dx / d) * K.spd * 3.4;
+            m.vy = (dy / d) * K.spd * 1.9;
+            KD.Sfx.play('swing');
+          } else if (K.spit) shot(m, dx, dy);
           else if (dist < K.w + 16) {
             KD.Player.hurt(Math.max(1, K.dmg - Math.floor(S.armourTotal() / 14)), S, K.spr);
             if (K.steal && S.count('beer_lager')) { S.take('beer_lager', 1); S.say('A bandit took your beer.', 'BLOOD.2'); }
           }
         }
       } else if (m.state === 'strike') {
-        if (m.stateT <= 0) { m.state = 'recover'; m.stateT = 0.4; }
+        /* a dash hits whatever it runs into on the way past */
+        if (m.dashing && dist < K.w / 2 + 8 && m.atkCd <= 0) {
+          m.atkCd = 1.1;
+          KD.Player.hurt(Math.max(1, K.dmg - Math.floor(S.armourTotal() / 14)), S, K.spr);
+        }
+        if (m.stateT <= 0) { m.state = 'recover'; m.stateT = m.dashing ? 0.7 : 0.4; m.dashing = false; }
       } else if (m.state === 'recover') {
         if (m.stateT <= 0) { m.state = 'chase'; m.atkCd = 0.8 + Math.random() * 0.7; }
       }

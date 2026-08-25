@@ -804,6 +804,290 @@ KD.art.reef = (function () {
       '...+Ffoffo........off..+Ffo.+o.+'
     ]);
     /* --- END GENERATED ---------------------------------------- */
+
+    /* ==========================================================
+       B. THE ANIMALS. Eight of them, and every one is nameable
+       from its black shape alone before any colour arrives: the
+       clownfish's three bars, the parrotfish's blunt beak and
+       high forehead, the mantis shrimp's stalked eyes and folded
+       clubs, the moray's open jaw on a ribbon, the cuttlefish's
+       fin skirt, the barracuda's needle, the lionfish's crown of
+       banded spines, the manta's two great wings.
+       Two frames each. All face LEFT; the sim flips them.
+       ========================================================== */
+    D('an_clown0', [
+      '......oooooo....',
+      '...oo&&WW&&&oo..',
+      '..o&&%WW%&&&&&o.',
+      '.o&Wp%WW%&&&&&&o',
+      'o&%WW%WW%&&&&&&o',
+      'o&%WW%WW%&&&&&&o',
+      '.o&Wp%WW%&&&&&&o',
+      '..o&&%WW%&&&&&o.',
+      '...oo&&WW&&&oo..',
+      '......oooooo....'
+    ]);
+    D('an_clown1', [
+      '......oooooo....',
+      '...oo&&WW&&&oo..',
+      '..o&&%WW%&&&&&oo',
+      '.o&Wp%WW%&&&&&&o',
+      'o&%WW%WW%&&&&&%o',
+      'o&%WW%WW%&&&&&&o',
+      '.o&Wp%WW%&&&&&%o',
+      '..o&&%WW%&&&&&oo',
+      '...oo&&WW&&&oo..',
+      '......oooooo....'
+    ]);
+    D('an_parrot0', [
+      '.......oooooo.......',
+      '.....ooFFFffFoo.....',
+      '...ooFF++FFffFFoo...',
+      '..oF++FFFFFffFFFFo..',
+      '.oFWpFF++FFFffFFFFoo',
+      'ocCFFFF++FFFffFFFFFo',
+      'oCcoFFF++FFFffFFFFFo',
+      'ocCFFFF++FFFffFFFFFo',
+      '.oFFFFF++FFFffFFFFoo',
+      '..oFFF++FFFffFFFFo..',
+      '...ooFF++FFffFFoo...',
+      '.....oo+FFffoo......',
+      '.......oFffo........',
+      '........oooo........'
+    ]);
+    D('an_parrot1', [
+      '.......oooooo.......',
+      '.....ooFFFffFoo.....',
+      '...ooFF++FFffFFoo...',
+      '..oF++FFFFFffFFFFoo.',
+      '.oFWpFF++FFFffFFFFFo',
+      'ocCFFFF++FFFffFFFFFo',
+      'oCcoFFF++FFFffFFFFoo',
+      'ocCFFFF++FFFffFFFFo.',
+      '.oFFFFF++FFFffFFFFo.',
+      '..oFFF++FFFffFFFFoo.',
+      '...ooFF++FFffFFoo...',
+      '.....oo+FFffoo......',
+      '......oFffo.........',
+      '......oooo..........'
+    ]);
+    D('an_mantis0', [
+      'oWo.oWo...............',
+      'o#o.o#o...............',
+      '.oFo.oFo..............',
+      '..oFFFFooooo..........',
+      '.oF++FFFFFFFoo........',
+      'oF++FFFFFFFFFFoo......',
+      'oF+FFoFFoFFoFFFFoo..oo',
+      'oFFFFoFFoFFoFFFFFFooFF',
+      'oF&&FoFFoFFoFFFFFFooFF',
+      'o&%%&ooooooooFFFFoo.oo',
+      'o&%%&o...ooFFFFoo.....',
+      '.o&&o......oooo.......',
+      '..oo..................',
+      '......................'
+    ]);
+    D('an_mantis1', [
+      '.oWo.oWo..............',
+      '.o#o.o#o..............',
+      '..oFo.oFo.............',
+      '...oFFFFooooo.........',
+      '..oF++FFFFFFFoo.......',
+      '.oF++FFFFFFFFFFoo...oo',
+      '.oF+FFoFFoFFoFFFFooFFo',
+      'oF&FFFoFFoFFoFFFFFFoFF',
+      'o&%&FoFFoFFoFFFFFFooFF',
+      'o&%%&ooooooooFFFFoo.oo',
+      '.o&%&o...ooFFFFoo.....',
+      '..o&&o.....oooo.......',
+      '...oo.................',
+      '......................'
+    ]);
+    D('an_moray0', [
+      '..oooo........................',
+      '.oWWWo........ooooooo.........',
+      'oWWWWo....offFFFffFFffoo......',
+      'oWpWWoooffFFFFFFFFFFFFffoo....',
+      'oWWWoWWWWWWo+FFFFFFFFFFFFffo..',
+      'oWWo.oooooo.oFFFFFFFFFFFFFFfo.',
+      'oWWo........oFFFFFFFFFFFFFFFfo',
+      'oWWWoWWWWWWo+FFFFFFFFFFFFFFfo.',
+      'oWpWWoooffFFFFFFFFFFFFFFFFffo.',
+      'oWWWWo....offFFFffFFffFFffoo..',
+      '.oWWWo........ooooooooooo.....',
+      '..oooo........................',
+      '..............................',
+      '..............................'
+    ]);
+    D('an_moray1', [
+      '..oooo........................',
+      '.oWWWo........................',
+      'oWWWWo.......ooooooooo........',
+      'oWpWWo....offFFFffFFffoo......',
+      'oWWWWWWWo+FFFFFFFFFFFFFffo....',
+      'oWWWWWWWo+FFFFFFFFFFFFFFFffo..',
+      'oWWWWWWWo+FFFFFFFFFFFFFFFFFfo.',
+      'oWpWWoooffFFFFFFFFFFFFFFFFFFfo',
+      'oWWWWo....offFFFFFFFFFFFFFffo.',
+      '.oWWWo........offFFFffFFffoo..',
+      '..oooo............ooooooo.....',
+      '..............................',
+      '..............................',
+      '..............................'
+    ]);
+    D('an_cuttle0', [
+      '.....oooooo.....',
+      '...ooZZAAaZzoo..',
+      '..oZZAAaaaaZZzo.',
+      '.oZAAaaaaaaaZZzo',
+      'oZAWWoaaaaaaaZzo',
+      'oZAWpWoaaaaaaZzo',
+      'oZAWWoaaaaaaaZzo',
+      '.oZAAaaaaaaaZZzo',
+      '..oZZAAaaaaZZzo.',
+      '..oxZoZaaZoZzo..',
+      '.oxaxaoZZoazxzo.',
+      'oxaxaxo..oxaxzo.',
+      'oaxaxo....oaxzo.',
+      'oxaxo......oxzo.',
+      '.oao........oo..',
+      '..o.............'
+    ]);
+    D('an_cuttle1', [
+      '.....oooooo.....',
+      '...ooZZAAaZzoo..',
+      '..oZZAAaaaaZZzo.',
+      '.oZAAaaaaaaaZZzo',
+      'oZAWWoaaaaaaaZzo',
+      'oZAWpWoaaaaaaZzo',
+      'oZAWWoaaaaaaaZzo',
+      '.oZAAaaaaaaaZZzo',
+      '..oZZAAaaaaZZzo.',
+      '...oxoZaaZoxo...',
+      '..oxaoZZZZoazo..',
+      '.oxaxo....oaxzo.',
+      '.oxaxo....oaxzo.',
+      '..oxo......ozo..',
+      '..oo........oo..',
+      '................'
+    ]);
+    D('an_cuda0', [
+      '..o...........oooooo............',
+      '.oWo.......oobbBBBBBbboo........',
+      'oWpWoooobbBBBwwwwwwwBBBbboo.....',
+      'oWWWWbbBBBwwwWWWWWWWwwwBBBbbo..o',
+      'oWWWBBBwwwWWWWWWWWWWWWWwwwBBbboo',
+      'oWWWBBBwwwWWWWWWWWWWWWWwwwBBbboo',
+      'oWWWWbbBBBwwwWWWWWWWwwwBBBbbo..o',
+      'oWpWoooobbBBBwwwwwwwBBBbboo.....',
+      '.oWo.......oobbBBBBBbboo........',
+      '..o...........oooooo............'
+    ]);
+    D('an_cuda1', [
+      '..o...........oooooo........o...',
+      '.oWo.......oobbBBBBBbboo...ooo..',
+      'oWpWoooobbBBBwwwwwwwBBBbboobbo..',
+      'oWWWWbbBBBwwwWWWWWWWwwwBBBbbBbo.',
+      'oWWWBBBwwwWWWWWWWWWWWWWwwwBBbbo.',
+      'oWWWBBBwwwWWWWWWWWWWWWWwwwBBbbo.',
+      'oWWWWbbBBBwwwWWWWWWWwwwBBBbbBbo.',
+      'oWpWoooobbBBBwwwwwwwBBBbboobbo..',
+      '.oWo.......oobbBBBBBbboo...ooo..',
+      '..o...........oooooo........o...'
+    ]);
+    D('an_lion0', [
+      '..o...o...o...o.....',
+      '.oWo.oWo.oWo.oWo....',
+      '.o#o.o#o.o#o.o#o....',
+      '.oWo.oWo.oWo.oWo....',
+      '.o#o.o#o.o#o.o#o....',
+      '..oo..oo..oo..oo....',
+      '...ooooooooooooo....',
+      '..o#WW##WW##WW#oo...',
+      '.oWW####WW##WW##Wo..',
+      'o#WWpW##WW##WW###Woo',
+      'o#WW##W#WW##WW####Wo',
+      'o#WWpW##WW##WW###Woo',
+      '.oWW####WW##WW##Wo..',
+      '..o#WW##WW##WW#oo...',
+      '...ooooooooooooo....',
+      '..oo..oo..oo..oo....',
+      '.o#o.o#o.o#o.o#o....',
+      '.ooo.ooo.ooo.ooo....'
+    ]);
+    D('an_lion1', [
+      '..o...o...o...o.....',
+      '.oWo.oWo.oWo.oWo....',
+      '.o#o.o#o.o#o.o#o....',
+      '.oWo.oWo.oWo.oWo....',
+      '.o#o.o#o.o#o.o#o....',
+      '..oo..oo..oo..oo....',
+      '...ooooooooooooo....',
+      '..o#WW##WW##WW#oo...',
+      '.oWW####WW##WW##Woo.',
+      'o#WWpW##WW##WW###WWo',
+      'o#WW##W#WW##WW####Wo',
+      'o#WWpW##WW##WW###WWo',
+      '.oWW####WW##WW##Woo.',
+      '..o#WW##WW##WW#oo...',
+      '...ooooooooooooo....',
+      '...oo..oo..oo..oo...',
+      '...o#o.o#o.o#o.o#o..',
+      '...ooo.ooo.ooo.ooo..'
+    ]);
+    D('an_manta0', [
+      '.........oo.....oo..........................',
+      '........oddo...oddo.........................',
+      '.......oiddDDDDDddio........................',
+      '.....ooiddDDDeeeDDddioo.....................',
+      '..oooiddDDDeeeEEeeeDDddiooo.................',
+      'ooiddDDDDeeeEEEEEEeeeDDDDddioo..............',
+      'oiddDDDeeeEEEEEEEEEEEEeeeDDDddio............',
+      'oidDDeeeEEEEEEEEEEEEEEEEEeeeDDdio...........',
+      'oidDeeeEEEEEEEEEEEEEEEEEEEEEeeDdio..oo......',
+      'oidDeeeEEEEEEEEEEEEEEEEEEEEEeeDdio.oddo.....',
+      '.oidDeeeEEEEEEEEEEEEEEEEEEEeeDdio.oddo......',
+      '..oidDDeeeEEEEEEEEEEEEEEEeeDDdio.oddo.......',
+      '...ooidDDeeeEEEEEEEEEEEeeDDdiooodddo........',
+      '.....ooidDDeeeEEEEEEEeeDDdioodddoo..........',
+      '.......ooidDDeeeEEEeeDDdioodddo.............',
+      '.........ooidDDeeeeeDDdiodddo...............',
+      '...........ooidDDDDDDdiddo..................',
+      '.............ooidddddiddo...................',
+      '...............oooooooo.....................',
+      '............................................'
+    ]);
+    D('an_manta1', [
+      '.........oo.....oo..........................',
+      '........oddo...oddo.........................',
+      '.......oiddDDDDDddio........................',
+      '......oiddDDDeeeDDddio......................',
+      '....ooiddDDDeeeEEeeeDDddioo.................',
+      '..ooiddDDDDeeeEEEEEEeeeDDDDddioo............',
+      'ooiddDDDeeeEEEEEEEEEEEEeeeDDDddioo..........',
+      'oidDDeeeEEEEEEEEEEEEEEEEEeeeDDdio...........',
+      'oidDeeeEEEEEEEEEEEEEEEEEEEEEeeDdio..........',
+      'oidDeeeEEEEEEEEEEEEEEEEEEEEEeeDdio....oo....',
+      'oidDeeeEEEEEEEEEEEEEEEEEEEEEeeDdio...oddo...',
+      '.oidDDeeeEEEEEEEEEEEEEEEEEeeDDdio...oddo....',
+      '..ooidDDeeeEEEEEEEEEEEEEeeDDdio....oddo.....',
+      '....ooidDDeeeEEEEEEEEEeeDDdio....oddo.......',
+      '......ooidDDeeeEEEEEeeDDdio....oddo.........',
+      '........ooidDDeeeEEeeDDdio...oddo...........',
+      '..........ooidDDeeeDDdio...oddo.............',
+      '............ooidDDDDdio..oddo...............',
+      '..............oooooooo...oo.................',
+      '............................................'
+    ]);
+
+    P.anim('an_clown', ['an_clown0', 'an_clown1'], 7);
+    P.anim('an_parrot', ['an_parrot0', 'an_parrot1'], 5);
+    P.anim('an_mantis', ['an_mantis0', 'an_mantis1'], 6);
+    P.anim('an_moray', ['an_moray0', 'an_moray1'], 4);
+    P.anim('an_cuttle', ['an_cuttle0', 'an_cuttle1'], 5);
+    P.anim('an_cuda', ['an_cuda0', 'an_cuda1'], 8);
+    P.anim('an_lion', ['an_lion0', 'an_lion1'], 3);
+    P.anim('an_manta', ['an_manta0', 'an_manta1'], 3);
   }
 
   return { build };
