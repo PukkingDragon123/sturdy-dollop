@@ -2,13 +2,23 @@
 
 A hand-drawn pixel-art sandbox RPG in a drowned Atlantis. Train, dig, build,
 craft and fight your way east through eight zones of ocean to take your crown
-back off the man who is sitting in your chair.
+back off the man who is sitting in your chair. It opens with a castle prologue
+you walk through, and it ends with him.
 
 Think **Terraria**, underwater, with a fat king and a weight problem.
 
 > You were KING OF THE ATLANTIC. Then you met her: a beer keg in a little dress
 > with a crooked tiara. You got fat, you lost the fight, and The Deep took your
 > crown, your throne and your ocean, and put an army of octopuses in it.
+
+**Act One is playable, not narrated.** The game opens inside your castle, four
+rooms end to end, back when you still had it: take the queen to dinner, eat it,
+fight the sharks that come in off the sea balcony, throw the leftovers at the
+cook. Then a keg texts you. You put the trident down, you drink, you cheat, and
+you lose all of it in one night - the queen, the keg, the throne and the room
+you are standing in. Whatever weight you put on in there is the weight you are
+carrying when a manta pulls you out of the sand, so the prologue is not a
+cutscene you skip: it sets your starting number.
 
 **The goal is the scales.** You start at 100kg and the world is gated on what
 you weigh and how much you have trained. The Sea Gate will not open for you at

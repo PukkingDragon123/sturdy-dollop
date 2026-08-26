@@ -656,15 +656,12 @@ KD.Scenes.castle = (function () {
     } } });
   }
 
-  /* Act One is where the weight comes from, so it has to land in the save
-     the village game reads, not just in Act One's own bookkeeping. */
+  /* The weight Act One put on him is applied by scenes/gen once the world
+     exists - gen's enter() calls State.fresh(), which would reset anything
+     written here. All this has to do is make sure the act is saved before we
+     leave it. */
   function handOff() {
-    const S = KD.State && KD.State.S;
-    if (S) {
-      S.weight = (S.weight || 100) + A1.A.fat;
-      S.fat = S.weight;
-      if (KD.State.save) KD.State.save();
-    }
+    A1.save();
     KD.Game.go('gen', {});
   }
 

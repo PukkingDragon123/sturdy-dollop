@@ -38,8 +38,13 @@ KD.Scenes.title = (function () {
     let by = Math.round(KD.H * 0.40);
     if (KD.State.hasSave()) {
       if (KD.UI.button(bx, by, bw, 18, 'CONTINUE', { key: 'Enter' })) {
-        if (KD.State.load()) KD.Game.go('play', {});
-        else KD.State.say('That save is broken.', 'BLOOD.2');
+        if (KD.State.load()) {
+          /* Somebody who quit halfway through Act One has a save but no
+             generated world, so sending them to `play` dropped them into an
+             empty one. The prologue is where they left off. */
+          const a = KD.State.S.act1;
+          KD.Game.go(a && !a.done ? 'castle' : 'play', {});
+        } else KD.State.say('That save is broken.', 'BLOOD.2');
       }
       by += 22;
       if (KD.UI.button(bx, by, bw, 15, 'NEW WORLD')) { KD.State.wipe(); if (!KD.Cine.play('intro')) KD.Game.go('gen', {}); }
@@ -78,6 +83,14 @@ KD.Scenes.gen = (function () {
     const sp = KD.Gen.meta.spawn;
     KD.Player.spawn(sp.x, sp.y);
     KD.State.S.seed = seed;
+    /* Act One is where the weight comes from, and it has to land HERE -
+       enter() above calls State.fresh(), which resets weight to the starting
+       figure, so adding it in the castle before switching scenes wrote a
+       number that was thrown away one frame later. */
+    if (KD.Act1 && KD.Act1.A.fat > 0) {
+      KD.State.S.weight += KD.Act1.A.fat;
+      KD.State.S.fat = KD.State.S.weight;
+    }
     KD.State.recalc();
     KD.State.save();
     KD.Game.go('play', {});
