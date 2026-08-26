@@ -158,18 +158,53 @@ KD.Village = (function () {
     /* the doorway: a 2x3 notch out of the belly, standing on the street.
        Two tiles wide so a 6px-wide king strolls through without hunting
        for pixels, and open downward so there is never a way to be shut in. */
-    /* Sized to the door the fruit itself draws, now that the fruit is at
-       2x: about three tiles across and five tall. */
-    const dw = 2, dh = 4;   // 32px clears a 28px king with room to spare
-    const dx = b.x + ((b.w - dw) >> 1);
+    /* THE DOORWAY.
+       This was a sealed pocket: a notch cut up into the belly of the fruit,
+       with rind on both sides, rind overhead and the street's own floor
+       underneath. Nothing could walk into it and nothing could walk out -
+       which is exactly what being stuck in a house feels like.
+       It is now a notch PLUS a passage: pick the flank nearer to open
+       ground, then clear a corridor at door height from the notch out to
+       the first column that is already open, so the door genuinely connects
+       to the street. */
+    const dw = 2, dh = 4;             // 32px clears a 28px king with room
+    const rowsOf = (j) => floorRow - j;
+    const openAt = (tx) => {
+      for (let j = 1; j <= dh; j++) {
+        const t = T.get(Wd.at(tx, rowsOf(j)));
+        if (t && t.solid) return false;
+      }
+      return true;
+    };
+    /* which way is the street closer? */
+    let left = 0, right = 0;
+    for (let i = 1; i <= b.w; i++) { if (openAt(b.x - i)) { left = i; break; } }
+    for (let i = 0; i <= b.w; i++) { if (openAt(b.x + b.w + i)) { right = i + 1; break; } }
+    const goLeft = left && (!right || left <= right);
+    const dx = goLeft ? b.x + 1 : b.x + b.w - 1 - dw;
+    /* the notch */
     for (let i = 0; i < dw; i++) {
       for (let j = 1; j <= dh; j++) {
-        const ty = floorRow - j, tx = dx + i;
-        if (Wd.inside(tx, ty)) { Wd.fg[ty * w + tx] = T.AIR; Wd.setWater && Wd.setWater(tx, ty, 0); }
+        const ty = rowsOf(j), tx = dx + i;
+        if (Wd.inside(tx, ty)) { Wd.fg[ty * w + tx] = T.AIR; if (Wd.setWater) Wd.setWater(tx, ty, 0); }
       }
+    }
+    /* and the passage out to the street, however far that is */
+    const step = goLeft ? -1 : 1;
+    let tx = goLeft ? dx - 1 : dx + dw;
+    for (let guard = 0; guard < b.w + 6; guard++) {
+      if (!Wd.inside(tx, floorRow - 1)) break;
+      const wasOpen = openAt(tx);
+      for (let j = 1; j <= dh; j++) {
+        const ty = rowsOf(j);
+        if (Wd.inside(tx, ty)) Wd.fg[ty * w + tx] = T.AIR;
+      }
+      if (wasOpen) break;             // we have reached the street
+      tx += step;
     }
     b.door = { x: dx, y: floorRow - 1, w: dw, h: dh };
     b.doorH = dh;
+    b.doorSide = goLeft ? -1 : 1;
     b.doorCx = dx + dw / 2;
     /* A lantern on the street outside, not bored into the shell: every
        fruit already draws its own lit windows, and a tile lantern sunk
@@ -181,9 +216,10 @@ KD.Village = (function () {
     /* where the sign hangs, and which way the fruit faces */
     /* The sign hangs off a bracket on one flank, at eye level, where it
        cannot cover the windows the fruit already has drawn into it. */
-    const right = Wd.chance(0.5);
-    b.signSide = right ? 1 : -1;
-    b.signAt = { x: right ? b.px + (s ? s.w * SC : 80) - 6 : b.px - 24, y: floorRow * TS - 62 };
+    /* hang the sign on the flank OPPOSITE the door, so it never covers it */
+    const signRight = b.doorSide < 0;
+    b.signSide = signRight ? 1 : -1;
+    b.signAt = { x: signRight ? b.px + (s ? s.w * SC : 80) - 6 : b.px - 24, y: floorRow * TS - 62 };
     return b;
   }
 

@@ -44,6 +44,18 @@ KD.Tiles = (function () {
   def({ id: 'urchin_d', name: 'Urchin',  solid: false, deco: 'dc_urchin',     hp: 2, drop: 'urchin_spine' });
   def({ id: 'bones',    name: 'Bones',   solid: false, deco: 'dc_bones1',     hp: 1, drop: 'bone' });
   def({ id: 'moss',     name: 'Moss',    solid: false, deco: 'dc_moss',       hp: 1 });
+  /* Foliage. `big: [1, n]` means a one-tile footprint whose sprite may be
+     any height - the big-deco pass draws to the screen rather than into a
+     chunk, so a thirty-pixel frond is not clipped at the chunk seam. */
+  def({ id: 'frond',    name: 'Kelp Frond',  solid: false, deco: 'fl_frond1', big: [1, 1], hp: 1, drop: 'kelp_fibre' });
+  def({ id: 'frond2',   name: 'Kelp Frond',  solid: false, deco: 'fl_frond2', big: [1, 1], hp: 1, drop: 'kelp_fibre' });
+  def({ id: 'fan',      name: 'Coral Fan',   solid: false, deco: 'fl_fan',    big: [2, 1], hp: 2, drop: 'coral', light: 1 });
+  def({ id: 'tube',     name: 'Tube Sponge', solid: false, deco: 'fl_tube',   big: [2, 1], hp: 2, drop: 'coral' });
+  def({ id: 'bulb',     name: 'Bulbweed',    solid: false, deco: 'fl_bulb',   big: [1, 1], hp: 1, drop: 'kelp_fibre', light: 2 });
+  def({ id: 'starfish', name: 'Starfish',    solid: false, deco: 'fl_star',   big: [2, 1], hp: 1, drop: 'shell' });
+  def({ id: 'clamshell',name: 'Clam',        solid: false, deco: 'fl_clam',   big: [2, 1], hp: 2, drop: 'pearl' });
+  def({ id: 'tuft',     name: 'Seagrass',    solid: false, deco: 'fl_grass2', big: [1, 1], hp: 1, drop: 'kelp_fibre' });
+  def({ id: 'podstalk', name: 'Glowpods',    solid: false, deco: 'fl_pod',    big: [1, 1], hp: 1, drop: 'glowpod', light: 5 });
   /* placeables the player crafts */
   def({ id: 'workbench',name: 'Workbench', solid: false, deco: 'st_workbench', big: [2, 2], hp: 6, station: 'workbench', drop: 'workbench', build: true });
   def({ id: 'furnace',  name: 'Furnace',   solid: false, deco: 'st_furnace',   big: [2, 2], hp: 8, station: 'furnace',drop: 'furnace', light: 6, build: true });

@@ -184,10 +184,18 @@ KD.Parallax = (function () {
 
   /* ---- drifting life at several depths ---- */
   const fauna = [];
-  const SMALL = ['an_clownfish', 'an_tang', 'an_wrasse', 'an_angelfish', 'an_pufferfish',
-                 'an_nudibranch', 'an_shrimp', 'an_pipefish'];
-  const MEDIUM = ['an_turtle', 'an_ray', 'an_cuttlefish', 'an_grouper', 'an_lionfish', 'an_octopus_wild'];
-  const BIG = ['an_whaleshark', 'an_manta', 'an_sunfish', 'an_hammerhead', 'an_dolphinpod'];
+  /* These pools named sprites that never existed - an_clownfish, an_tang,
+     an_wrasse and the rest - so the pool came out empty and there was no
+     ambient life in the entire ocean. The real names are the eight animals
+     in art/reef.js. */
+  const SMALL = ['an_clown', 'an_parrot'];
+  const MEDIUM = ['an_cuttle', 'an_lion', 'an_moray', 'an_mantis'];
+  const BIG = ['an_manta', 'an_cuda'];
+
+  /* Fish move in SHOALS. One leader per group and the rest hold a fixed
+     offset from it with a little sway of their own, which is what makes a
+     school read as a school rather than as ten fish that happen to be near
+     each other. */
   function seed(n) {
     seedSky();
     fauna.length = 0;
@@ -196,37 +204,60 @@ KD.Parallax = (function () {
     for (const s of MEDIUM) if (KD.PX.hasAny(s)) pool.push({ n: s, band: 1 });
     for (const s of BIG) if (KD.PX.hasAny(s)) pool.push({ n: s, band: 2 });
     if (!pool.length) return;
-    for (let i = 0; i < (n || 26); i++) {
+    const groups = n || 26;
+    for (let g = 0; g < groups; g++) {
       const p = pool[(Math.random() * pool.length) | 0];
-      fauna.push({
-        name: p.n, band: p.band,
-        x: Math.random() * KD.World.W * TS,
-        y: (36 + Math.random() * 130) * TS,
-        dir: Math.random() < 0.5 ? -1 : 1,
-        sp: (p.band === 2 ? 9 : p.band === 1 ? 16 : 24) * (0.7 + Math.random() * 0.6),
-        ph: Math.random() * 9,
-        f: p.band === 2 ? 0.72 : p.band === 1 ? 0.86 : 1.0
-      });
+      /* the little ones travel in numbers; the big ones travel alone */
+      const size = p.band === 0 ? 4 + ((Math.random() * 6) | 0)
+                 : p.band === 1 ? 1 + ((Math.random() * 2) | 0) : 1;
+      const lx = Math.random() * KD.World.W * TS;
+      const ly = (36 + Math.random() * 190) * TS;
+      const dir = Math.random() < 0.5 ? -1 : 1;
+      const sp = (p.band === 2 ? 11 : p.band === 1 ? 18 : 30) * (0.7 + Math.random() * 0.6);
+      const f = p.band === 2 ? 0.72 : p.band === 1 ? 0.86 : 1.0;
+      for (let i = 0; i < size; i++) {
+        fauna.push({
+          name: p.n, band: p.band, x: lx, y: ly, dir, sp, f,
+          ph: Math.random() * 9,
+          /* offsets fan out BEHIND the leader, so the shoal has a shape */
+          ox: i === 0 ? 0 : -dir * (6 + i * 9) - (i % 2 ? 4 : 0),
+          oy: i === 0 ? 0 : ((i % 3) - 1) * 7 + (i % 2 ? 2 : -2),
+          sway: 3 + (i % 4)
+        });
+      }
     }
   }
   function tick(dt) {
     const wpx = KD.World.W * TS;
+    /* Recycle round the CAMERA, not round the world. Spread over 2600 tiles
+       a hundred fish is one every seventeen tiles - three on screen. Wrapping
+       them just past the edge of view keeps a steady stream going past. */
+    const cx = KD.Cam ? KD.Cam.x : 0;
+    const span = KD.W + 260;
     for (const f of fauna) {
       f.x += f.sp * f.dir * dt;
       f.y += Math.sin(f.ph + KD.Game.t * 0.5) * 4 * dt;
-      if (f.x < -200) f.x = wpx + 200;
-      if (f.x > wpx + 200) f.x = -200;
+      const rel = f.x - cx;
+      if (rel < -260) { f.x += span; f.y = (34 + Math.random() * 200) * TS; }
+      else if (rel > span) { f.x -= span; f.y = (34 + Math.random() * 200) * TS; }
+      if (f.x < 0) f.x += wpx; else if (f.x > wpx) f.x -= wpx;
     }
   }
   function life(ctx, cam, near) {
     for (const f of fauna) {
       if ((f.band === 2) === !!near) continue;
-      const px = Math.round(f.x - cam.x * f.f);
-      const py = Math.round(f.y - cam.y * f.f);
+      const px = Math.round(f.x + (f.ox || 0) - cam.x * f.f);
+      const py = Math.round(f.y + (f.oy || 0)
+        + Math.sin(KD.Game.t * 1.6 + f.ph) * (f.sway || 3) - cam.y * f.f);
       if (px < -90 || px > KD.W + 90 || py < -60 || py > KD.H + 60) continue;
       const name = KD.PX.frameOf(f.name, KD.Game.t + f.ph);
       if (!KD.PX.has(name)) continue;
-      const lit = KD.World.lightAt((f.x / TS) | 0, (f.y / TS) | 0);
+      /* Do not draw a fish inside the seabed. The shoals wander on their own
+         y, and nothing was checking whether that y had rock in it - so there
+         were clownfish swimming around in the middle of the mud. */
+      const ftx = ((f.x + (f.ox || 0)) / TS) | 0, fty = ((f.y + (f.oy || 0)) / TS) | 0;
+      if (KD.World.solid(ftx, fty) || KD.World.water(ftx, fty) < 3) continue;
+      const lit = KD.World.lightAt(ftx, fty);
       const shade = Math.max(f.band === 2 ? 1 : 0, KD.PX.bandFor(lit, KD.Light.MAX));
       KD.PX.blit(ctx, name, px, py, { anchor: false, flipX: f.dir < 0, shade });
     }

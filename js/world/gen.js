@@ -373,22 +373,48 @@ KD.Gen = (function () {
         const B = T.get(below);
         const L = layerAt(y);
         const zn = KD.Zones.at(x);
-        const r = Wd.rnd() / Math.max(0.4, (zn.reef || 0) + (zn.kelp || 0) + 1);
+        /* Density and VARIETY are two separate rolls. Dividing one roll by
+           the zone's lushness compressed it into the low end - in the reef,
+           with a 2.2 multiplier, r never exceeded 0.31, so only the first
+           three entries in each table could ever come up and the whole
+           seabed was one kind of frond. */
+        const lush = 1 + (zn.reef || 0) * 0.5 + (zn.kelp || 0) * 0.5;
+        if (Wd.rnd() > Math.min(0.95, 0.5 * lush)) continue;
+        const r = Wd.rnd();
+        /* Planted THICK. The old table topped out around a fifth of the
+           available row, which on a flat seabed is one sparse line of
+           stubble; the sea floor should be crowded. */
         if (L.id === 'shallows' || L.id === 'reef') {
           if (B.id === 'sand' || B.id === 'mud') {
-            if (r < 0.10) Wd.fg[i] = T.id('kelp');
-            else if (r < 0.20) Wd.fg[i] = T.id('grass');
-            else if (r < 0.235) Wd.fg[i] = T.id('urchin_d');
-          } else if (B.id === 'coral' && r < 0.22) Wd.fg[i] = T.id('anemone');
+            if (r < 0.12) Wd.fg[i] = T.id(Wd.chance(0.5) ? 'frond' : 'frond2');
+            else if (r < 0.24) Wd.fg[i] = T.id('tuft');
+            else if (r < 0.31) Wd.fg[i] = T.id('grass');
+            else if (r < 0.37) Wd.fg[i] = T.id('kelp');
+            else if (r < 0.42) Wd.fg[i] = T.id('bulb');
+            else if (r < 0.46) Wd.fg[i] = T.id('starfish');
+            else if (r < 0.49) Wd.fg[i] = T.id('clamshell');
+            else if (r < 0.53) Wd.fg[i] = T.id('urchin_d');
+          } else if (B.id === 'coral' || B.id === 'stone') {
+            if (r < 0.14) Wd.fg[i] = T.id('fan');
+            else if (r < 0.26) Wd.fg[i] = T.id('tube');
+            else if (r < 0.38) Wd.fg[i] = T.id('anemone');
+            else if (r < 0.44) Wd.fg[i] = T.id('tuft');
+          }
         } else if (L.id === 'ruins') {
-          if (r < 0.05) Wd.fg[i] = T.id('bones');
-          else if (r < 0.09) Wd.fg[i] = T.id('urchin_d');
-          else if (zn.ruins && r < 0.13) Wd.fg[i] = T.id('bones');
+          if (r < 0.08) Wd.fg[i] = T.id('bones');
+          else if (r < 0.16) Wd.fg[i] = T.id('tube');
+          else if (r < 0.24) Wd.fg[i] = T.id('anemone');
+          else if (r < 0.29) Wd.fg[i] = T.id('urchin_d');
+          else if (r < 0.34) Wd.fg[i] = T.id('tuft');
         } else if (L.id === 'trench') {
-          if (r < 0.045) Wd.fg[i] = T.id('glowpod');
-          else if (r < 0.075) Wd.fg[i] = T.id('bones');
+          if (r < 0.09) Wd.fg[i] = T.id('podstalk');
+          else if (r < 0.15) Wd.fg[i] = T.id('bones');
+          else if (r < 0.20) Wd.fg[i] = T.id('tube');
+          else if (r < 0.24) Wd.fg[i] = T.id('urchin_d');
         } else if (L.id === 'abyss') {
-          if (r < 0.055) Wd.fg[i] = T.id('glowpod');
+          if (r < 0.10) Wd.fg[i] = T.id('podstalk');
+          else if (r < 0.15) Wd.fg[i] = T.id('glowpod');
+          else if (r < 0.19) Wd.fg[i] = T.id('bones');
         }
       }
     }
