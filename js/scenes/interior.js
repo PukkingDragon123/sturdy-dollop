@@ -93,9 +93,9 @@ KD.Scenes.interior = (function () {
             'Bring me ore. I will bring you an edge.'],
     tackler: ['Line, hook, patience. Two of those I can sell you.',
               'Everything past the Gate bites back. Take a spear.'],
-    princess: ['You came back. You always come back.',
-               'I am a keg, love. I was always a keg.',
-               'One more will not hurt. That is what you said last year.'],
+    princess: ['Her stool is still here. Nobody sits on it.',
+               'She left the tiara. Said it was cheap. It was.',
+               'Four seasons of tab, majesty, and not one of them hers.'],
     stabler: ['They eat better than you do, majesty.',
               'A mount will carry you. It will not carry all of you.'],
     trainer: ['Under the bar or out the door.', 'Reps. Not opinions. Reps.',
@@ -111,8 +111,9 @@ KD.Scenes.interior = (function () {
     bathhouse: ['Steam, salt, silence. Ten clams.', 'Sweat is just weight in a hurry.'],
     guard: ['The Gate opens for the fit. Not the fat.',
             'Kilos and levels, majesty. Come back lighter.'],
-    home: ['Home. Old beer and wet dolphin.',
-           'The plush king on the shelf still fits his crown.']
+    home: ['HO! Sit down, majesty, you look terrible. Wonderful, but terrible.',
+           'I kept the place tidy. Somebody had to.',
+           'She is not coming back. I have said it kindly nine times now.']
   };
 
   /* deterministic little PRNG, so a room is always dressed the same way */
@@ -451,7 +452,7 @@ KD.Scenes.interior = (function () {
   const WHO = {
     smith:     { spr: 'fk_crab',     port: 'po_crab',     name: 'Nipper' },
     tackler:   { spr: 'fk_puffer',   port: 'po_puffer',   name: 'Bloat' },
-    princess:  { spr: 'fk_keg',      port: 'po_keg',      name: 'The Keg' },
+    princess:  { spr: 'fk_shrimp',   port: 'po_shrimp',   name: 'Snip' },
     stabler:   { spr: 'fk_seahorse', port: 'po_seahorse', name: 'Tack' },
     trainer:   { spr: 'fk_crab',     port: 'po_crab',     name: 'Brine' },
     bookie:    { spr: 'fk_angler',   port: 'po_angler',   name: 'Lantern' },
@@ -460,7 +461,7 @@ KD.Scenes.interior = (function () {
     barber:    { spr: 'fk_shrimp',   port: 'po_shrimp',   name: 'Snip' },
     bathhouse: { spr: 'fk_turtle',   port: 'po_turtle',   name: 'Bulwark' },
     guard:     { spr: 'fk_turtle',   port: 'po_turtle',   name: 'Bulwark' },
-    home:      { spr: 'fk_keg',      port: 'po_keg',      name: 'The Keg' }
+    home:      { spr: 'mt_santa',    port: 'po_santa',    name: 'Santa the Manta' }
   };
   const who = () => WHO[room.job] || WHO.market;
 

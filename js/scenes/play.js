@@ -11,6 +11,7 @@ KD.Scenes.play = (function () {
     KD.Cam = KD.Cam || { x: 0, y: 0 };
     snapCam();
     KD.Parallax.seed(30);
+    KD.Santa.place();
     KD.Folk.seed();
     KD.UI.guard(0.2);
   }
@@ -67,6 +68,7 @@ KD.Scenes.play = (function () {
     BTNS.push({ name: 'make', x: tx, y: 70, r: 11, label: 'BODY', icon: 'ic_heart_full', tab: true });
     BTNS.push({ name: 'tree', x: tx, y: 94, r: 11, label: 'SKL',  icon: 'ic_tree', tab: true });
     BTNS.push({ name: 'quest', x: tx, y: 118, r: 11, label: 'TASK', icon: 'ic_star', tab: true });
+    if (KD.Santa.near()) BTNS.push({ name: 'ride', x: tx, y: 142, r: 11, label: 'RIDE', icon: 'ic_map', tab: true });
     KD.In.buttons(BTNS);
   }
 
@@ -110,6 +112,7 @@ KD.Scenes.play = (function () {
     KD.Parallax.tick(dt);
     KD.Folk.update(dt, S);
     KD.Belly.update(dt, S);
+    KD.Santa.update(dt, S);
     gateWatch();
 
     /* camera: lead the player, snap to whole pixels so nothing shimmers */
@@ -214,6 +217,7 @@ KD.Scenes.play = (function () {
     const lightR = 26 + (st.lightRadius || 0) * 10;
     KD.Render.torch(ctx, cam, KD.Player.P.x, KD.Player.P.y - 8, lightR);
     KD.Folk.draw(ctx, cam);
+    KD.Santa.draw(ctx, cam);
     KD.Mobs.draw(ctx, cam);
     KD.Boss.draw(ctx, cam);
     drawKing(ctx, cam);

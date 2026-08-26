@@ -1906,8 +1906,149 @@ KD.art.actors = (function () {
     ]);
   }
 
+  const MT = (name, rows) => P.def(name, A(rows, 23, rows.length));
+
+  /* ============================================================
+     SANTA THE MANTA. A manta ray in a red hat with a white beard
+     and a grin that will not quit, and the only one in the whole
+     Atlantic who stayed when everybody else went with the winner.
+     Drawn from the side and WIDE, because his back is where you
+     sit when he ferries you somewhere. Three frames: wings up,
+     wings down, and mid-laugh.
+     ============================================================ */
+  function santa() {
+    MT('mt_santa0', [
+      '..........o###o...............................',
+      '.........o#$$$#o..............................',
+      '........o#$%%%$#o.............................',
+      '.......o#$%%%%%$#o..oooo......................',
+      '.......o$%%WWW%%$o.oidDdio....................',
+      '......o#$WWWWWWW$#oidDDDdio...................',
+      '.....o#$WWWWWWWWW$idDDDDDdio..................',
+      '....oWWWWWWWWWWWWWdDDDDDDDdio.................',
+      '...oWWbbWWWWWWbbWWDDDDDDDDDdio................',
+      '..oWWbWWbWWWWbWWbWDDDDDDDDDDdio...............',
+      '..oWWWWWWWWWWWWWWWDDDDDDDDDDDdio..............',
+      '.oidDWWWWWWWWWWWWWDDDDDDDDDDDDdio.............',
+      'oidDDDoWWoDDoWWoDDDDDDDDDDDDDDDDdio...........',
+      'oidDDDoWpoDDoWpoDDDDDDDDDDDDDDDDDdio..........',
+      'oidDDDDWWDDDDWWDDDDDDDDDDDDDDDDDDDdio.........',
+      'oidDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDdio........',
+      'oidDDDDoWWWWWWWWoDDDDDDDDDDDDDDDDDDDdio.......',
+      '.oidDDDDoWWWWWWoDDDDDDDDDDDDDDDDDDDDDdio......',
+      '..oidDDDDoooooooDDDDDDDDDDDDDDDDDDDDDDdio.....',
+      '...oidDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDdio....',
+      '....ooidDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDdio...',
+      '......ooidDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDdio..',
+      '........ooidDDDDDDDDDDDDDDDDDDDDDDDDDDdio.....',
+      '..........ooidDDDDDDDDDDDDDDDDDDDDdiooo.......',
+      '.............oooidDDDDDDDDDDDdiooo............',
+      '..................ooooooooooo.................'
+    ]);
+    MT('mt_santa1', [
+      '..........o###o...............................',
+      '.........o#$$$#o..............................',
+      '........o#$%%%$#o.............................',
+      '.......o#$%%%%%$#o..oooo......................',
+      '.......o$%%WWW%%$o.oidDdio....................',
+      '......o#$WWWWWWW$#oidDDDdio...................',
+      '.....o#$WWWWWWWWW$idDDDDDdio..................',
+      '....oWWWWWWWWWWWWWdDDDDDDDdio.................',
+      '...oWWbbWWWWWWbbWWDDDDDDDDDdio................',
+      '..oWWbWWbWWWWbWWbWDDDDDDDDDDdio...............',
+      '..oWWWWWWWWWWWWWWWDDDDDDDDDDDdio..............',
+      '.oidDWWWWWWWWWWWWWDDDDDDDDDDDDdio.............',
+      'oidDDDoWWoDDoWWoDDDDDDDDDDDDDDDDdio...........',
+      'oidDDDoWpoDDoWpoDDDDDDDDDDDDDDDDDdio..........',
+      'oidDDDDWWDDDDWWDDDDDDDDDDDDDDDDDDDdio.........',
+      'oidDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDdio........',
+      'oidDDDDoWWWWWWWWoDDDDDDDDDDDDDDDDDDDdio.......',
+      '.oidDDDDoWWWWWWoDDDDDDDDDDDDDDDDDDDDDdio......',
+      '..oidDDDDoooooooDDDDDDDDDDDDDDDDDDDDDDdio.....',
+      '...oidDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDdio.....',
+      '...oidDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDdio...',
+      '....oidDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDdio..',
+      '.....ooidDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDdio...',
+      '.......ooidDDDDDDDDDDDDDDDDDDDDDDDDDdioo......',
+      '..........oooidDDDDDDDDDDDDDDDdiooo...........',
+      '.................ooooooooooooo................'
+    ]);
+    MT('mt_santa2', [
+      '..........o###o...............................',
+      '.........o#$$$#o..............................',
+      '........o#$%%%$#o.............................',
+      '.......o#$%%%%%$#o..oooo......................',
+      '.......o$%%WWW%%$o.oidDdio....................',
+      '......o#$WWWWWWW$#oidDDDdio...................',
+      '.....o#$WWWWWWWWW$idDDDDDdio..................',
+      '....oWWWWWWWWWWWWWdDDDDDDDdio.................',
+      '...oWWbbWWWWWWbbWWDDDDDDDDDdio................',
+      '..oWWbWWbWWWWbWWbWDDDDDDDDDDdio...............',
+      '..oWWWWWWWWWWWWWWWDDDDDDDDDDDdio..............',
+      '.oidDWWWWWWWWWWWWWDDDDDDDDDDDDdio.............',
+      'oidDDDoWWoDDoWWoDDDDDDDDDDDDDDDDdio...........',
+      'oidDDDoWpoDDoWpoDDDDDDDDDDDDDDDDDdio..........',
+      'oidDDDDWWDDDDWWDDDDDDDDDDDDDDDDDDDdio.........',
+      'oidDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDdio........',
+      'oidDDDDoWWWWWWWWoDDDDDDDDDDDDDDDDDDDdio.......',
+      '.oidDDDoWbbbbbbWoDDDDDDDDDDDDDDDDDDDDdio......',
+      '..oidDDDoWWWWWWoDDDDDDDDDDDDDDDDDDDDDDdio.....',
+      '...oidDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDdio....',
+      '....ooidDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDdio...',
+      '......ooidDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDdio..',
+      '........ooidDDDDDDDDDDDDDDDDDDDDDDDDDDdio.....',
+      '..........ooidDDDDDDDDDDDDDDDDDDDDdiooo.......',
+      '.............oooidDDDDDDDDDDDdiooo............',
+      '..................ooooooooooo.................'
+    ]);
+    PO('po_santa', [
+      '.........o####o.....................',
+      '.......o##$$$$##o...................',
+      '......o#$$%%%%$$#o..................',
+      '.....o#$%%%%%%%%$#o.................',
+      '....o#$%%%%%%%%%%$#o................',
+      '....o$%%%%%%%%%%%%$o................',
+      '...o$%%%%%%%%%%%%%%$o...............',
+      '...oWWWWWWWWWWWWWWWWo...............',
+      '..oWWbbWWWWWWWWWWbbWWo..............',
+      '..oWWbWWbWWWWWWbWWbWWo..............',
+      '..oWWWWWWWWWWWWWWWWWWo..............',
+      '.oidDWWWWWWWWWWWWWWWWDdio...........',
+      'oidDDDDDDDDDDDDDDDDDDDDDdio.........',
+      'oidDDDoooooooDDDoooooooDDdio........',
+      'oidDDoWWWWWWWoDoWWWWWWWoDDdio.......',
+      'oidDoWWbbbbbWWoWWbbbbbWWoDDdio......',
+      'oidDoWbbooobbWoWbbooobbWoDDdio......',
+      'oidDoWboWWoobWoWboWWoobWoDDdio......',
+      'oidDoWbooooobWoWbooooobWoDDdio......',
+      'oidDoWWbooobWWoWWbooobWWoDDdio......',
+      'oidDDoWWbbbWWoDoWWbbbWWoDDDdio......',
+      'oidDDDoWWWWWoDDDoWWWWWoDDDDdio......',
+      'oidDDDDoooooDDDDDoooooDDDDDdio......',
+      'oidDDDDDDDDDDDDDDDDDDDDDDDDdio......',
+      'oidDDDDDDDoooooooooDDDDDDDDdio......',
+      'oidDDDDDDoWWWWWWWWWoDDDDDDDdio......',
+      'oidDDDDDoWWbbbbbbbWWoDDDDDDdio......',
+      'oidDDDDDoWWWWWWWWWWWoDDDDDDdio......',
+      'oidDDDDDDoWWWWWWWWWoDDDDDDDdio......',
+      'oidDDDDDDDoooooooooDDDDDDDDdio......',
+      'oidDDDDDDDDDDDDDDDDDDDDDDDDdio......',
+      '.oidDDDDDDDDDDDDDDDDDDDDDDdio.......',
+      '..oWWWWWWWWWWWWWWWWWWWWWWWWo........',
+      '..oWWbbWWbbWWbbWWbbWWbbWWbbWo.......',
+      '..oWWWWWWWWWWWWWWWWWWWWWWWWo........',
+      '...oidDDDDDDDDDDDDDDDDDDDdio........',
+      '...oidDDDDDDDDDDDDDDDDDDDdio........',
+      '...oidDDDDDDDDDDDDDDDDDDDdio........',
+      '....oidDDDDDDDDDDDDDDDDDdio.........',
+      '.....ooidDDDDDDDDDDDDDdioo..........'
+    ]);
+
+    P.anim('mt_santa', ['mt_santa0', 'mt_santa1'], 3);
+  }
+
   function build() {
-    hero(); folk(); portraits();
+    hero(); folk(); portraits(); santa();
     /* ==========================================================
        A. THE KING  12x18, anchored between his boots.
        Weathered bald pate, a PALE band across the forehead where

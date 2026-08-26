@@ -310,8 +310,9 @@ KD.Player = (function () {
      place whatever is in your hand. */
   function place(S) {
     if (!(KD.In.actHit('use', 'KeyE') || (KD.In.mouse.rclick && KD.touch))) return;
-    /* a doorway beats everything else standing in it */
-    if (tryEnter(S)) return;
+    /* A doorway beats everything else you are standing in - unless Santa is
+       right there, in which case he is what you meant. */
+    if (!(KD.Santa && KD.Santa.near()) && tryEnter(S)) return;
     if (interact(S)) return;
     const slot = S.hotbarItem();
     if (!slot) return;

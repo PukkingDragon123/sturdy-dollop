@@ -285,11 +285,34 @@ KD.Gen = (function () {
     }
     KD.Village.connect(Wd, T, plan.terraces);
     meta.village = { x: (z.x0 + z.x1) >> 1, buildings: plan.buildings, terraces: plan.terraces };
-    /* spawn in front of your own shack */
+    /* Spawn ON THE STREET outside your own shack - never inside it. This
+       used to be the horizontal CENTRE of the home's footprint, which with a
+       ten-tile-wide fruit is solid rind: the game started you buried in your
+       own wall. Walk out from the door until a column has real standing room
+       over solid ground, and stand there. */
     const home = plan.buildings.find((b) => b.kind.home) || plan.buildings[0];
-    if (home) {
-      meta.spawn.x = home.x + (home.w >> 1);
-      meta.spawn.y = home.y + home.h - 2;
+    if (home && home.door) {
+      const floorRow = home.floorY;
+      const clearAt = (tx) => {
+        if (!Wd.inside(tx, floorRow)) return false;
+        if (!T.isSolid(Wd.at(tx, floorRow))) return false;      // must be ground
+        for (let j = 1; j <= 4; j++) {
+          if (T.isSolid(Wd.at(tx, floorRow - j))) return false;  // must be open
+        }
+        return true;
+      };
+      const dir = home.doorSide || -1;
+      let sx = home.door.x + (dir < 0 ? -1 : home.door.w);
+      for (let k = 0; k < home.w + 12; k++) {
+        if (clearAt(sx)) break;
+        sx += dir;
+      }
+      if (!clearAt(sx)) {                       // nothing that way: try the other
+        sx = home.door.x + (dir < 0 ? home.door.w : -1);
+        for (let k = 0; k < home.w + 12; k++) { if (clearAt(sx)) break; sx -= dir; }
+      }
+      meta.spawn.x = clearAt(sx) ? sx : home.x - 3;
+      meta.spawn.y = floorRow - 1;
     }
     /* THE SEA GATE: a masonry wall across the gate zone with a doorway a
        guard keeps shut until you have earned your way out */
