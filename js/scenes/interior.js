@@ -305,6 +305,7 @@ KD.Scenes.interior = (function () {
       if (In.isHit('KeyC')) KD.Panels.toggle('body');
       if (In.isHit('KeyI', 'Tab')) KD.Panels.toggle('bag');
       if (In.isHit('KeyV')) KD.Panels.toggle('tree');
+    if (In.isHit('KeyQ')) KD.Panels.toggle('quest');
       if (In.actHit('bag')) KD.Panels.toggle('bag');
       return;
     }
@@ -327,6 +328,7 @@ KD.Scenes.interior = (function () {
     if (In.isHit('KeyC')) KD.Panels.toggle('body');
     if (In.isHit('KeyI', 'Tab') || In.actHit('bag')) KD.Panels.toggle('bag');
     if (In.isHit('KeyV')) KD.Panels.toggle('tree');
+    if (In.isHit('KeyQ')) KD.Panels.toggle('quest');
   }
 
   /* ---- draw ------------------------------------------------------- */

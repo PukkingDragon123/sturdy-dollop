@@ -60,6 +60,8 @@ KD.Sfx = (function () {
     kill:    () => { tone({ f0: 200, f1: 500, len: 0.12, type: 'square', vol: 0.3 }); noise(0.16, 0.3, 600); },
     beer:    () => { tone({ f0: 180, f1: 300, len: 0.22, type: 'triangle', vol: 0.3 }); noise(0.3, 0.16, 1200); },
     burp:    () => tone({ f0: 120, f1: 60, len: 0.3, type: 'sawtooth', vol: 0.3 }),
+    /* a landing: a soft body thud with a little grit under it */
+    land:    () => { tone({ f0: 150, f1: 62, len: 0.10, type: 'triangle', vol: 0.26 }); noise(0.07, 0.16, 420); },
     victory: () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone({ f0: f, len: 0.3, type: 'square', vol: 0.3 }), i * 150))
   };
   const play = (n) => { const c = CUES[n]; if (c) c(); };

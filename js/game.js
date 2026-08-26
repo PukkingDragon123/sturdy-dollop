@@ -36,8 +36,13 @@ KD.Game = (function () {
        scene meant the title screen armed it and never counted it down, so the
        mouse and every touch were dead on the first screen of the game. */
     KD.UI.tickGuard(dt);
+    KD.Juice.tick(dt);
+    /* Hit stop. A solid landing or a solid hit holds the world for a few
+       frames - the UI timers above already ran on real time, so menus and
+       pops stay responsive while the game itself hesitates. */
+    const sdt = KD.Juice.scale(dt);
     try {
-      if (cur && cur.update) cur.update(dt);
+      if (cur && cur.update) cur.update(sdt);
       const ctx = KD.Screen.ctx();
       if (cur && cur.draw) cur.draw(ctx);
     } catch (e) {

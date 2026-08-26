@@ -22,7 +22,7 @@ KD.Player = (function () {
     mineT: 0, mineTx: -1, mineTy: -1, mineAcc: 0,
     swingT: 0, swingCd: 0, hurtT: 0, iframe: 0,
     fallFrom: null, anim: 0, aimX: 0, aimY: 0,
-    jumpBuf: 0, coyote: 0
+    jumpBuf: 0, coyote: 0, squash: 0, stretch: 0
   };
   /* tuning, all in px/sec. Terraria-ish: heavy but responsive. */
   const RUN = 78, RUN_AIR = 62, ACC = 420, FRIC = 560;
@@ -147,6 +147,13 @@ KD.Player = (function () {
       if (boxHits(P.x, ny)) ny = P.y;          // still stuck: do not move at all
       if (wasFalling) {
         P.onGround = true;
+        /* squash proportional to how hard he arrived, and a hitch in time
+           if it was a real drop */
+        if (P.vy > 150) {
+          P.squash = Math.min(1, P.vy / 520);
+          if (P.vy > 330) { KD.Juice.hit(0.05); KD.Fx.shake(Math.min(5, P.vy / 130)); }
+          KD.Sfx.play('land');
+        }
         if (P.fallFrom !== null) {
           const drop = (ny - P.fallFrom) / TS;
           const safe = 11 + st.fallSafe;
@@ -188,6 +195,10 @@ KD.Player = (function () {
     place(S);
 
     /* ---- state for the renderer ---- */
+    /* squash decays fast; a rise stretches him instead */
+    P.squash = (P.squash || 0) - dt * 5.5;
+    if (P.squash < 0) P.squash = 0;
+    P.stretch = (!P.onGround && !wet && P.vy < -80) ? Math.min(0.5, -P.vy / 620) : 0;
     P.mode = wet ? 'swim' : (!P.onGround ? 'jump' : (Math.abs(P.vx) > 6 ? 'walk' : 'stand'));
     P.anim += dt * (P.mode === 'walk' ? Math.abs(P.vx) / 12 : 3);
     if (P.hurtT > 0) P.hurtT -= dt;

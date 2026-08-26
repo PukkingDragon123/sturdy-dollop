@@ -66,6 +66,7 @@ KD.Scenes.play = (function () {
     BTNS.push({ name: 'bag',  x: tx, y: 46, r: 11, label: 'BAG',  icon: 'ic_bag',  tab: true });
     BTNS.push({ name: 'make', x: tx, y: 70, r: 11, label: 'BODY', icon: 'ic_heart_full', tab: true });
     BTNS.push({ name: 'tree', x: tx, y: 94, r: 11, label: 'SKL',  icon: 'ic_tree', tab: true });
+    BTNS.push({ name: 'quest', x: tx, y: 118, r: 11, label: 'TASK', icon: 'ic_star', tab: true });
     KD.In.buttons(BTNS);
   }
 
@@ -86,6 +87,7 @@ KD.Scenes.play = (function () {
     if (KD.In.isHit('KeyI', 'Tab')) KD.Panels.toggle('bag');
     if (KD.In.isHit('KeyC') || KD.In.actHit('make')) KD.Panels.toggle('body');
     if (KD.In.isHit('KeyV')) KD.Panels.toggle('tree');
+    if (KD.In.isHit('KeyQ') || KD.In.actHit('quest')) KD.Panels.toggle('quest');
     if (KD.In.actHit('bag')) KD.Panels.toggle('bag');
     if (KD.In.actHit('tree')) KD.Panels.toggle('tree');
     if (KD.In.isHit('Escape')) {
@@ -164,7 +166,17 @@ KD.Scenes.play = (function () {
     const name = KD.PX.hasAny(base) ? KD.PX.frameOf(base, P.anim * 0.12) : base;
     const px = Math.round(P.x - cam.x), py = Math.round(P.y - cam.y);
     if (KD.PX.has(name)) {
-      KD.PX.blit(ctx, name, px, py, { flipX: P.face < 0 });
+      /* squash on landing, stretch on the way up. Anchored at the feet, so
+         he compresses into the floor rather than sinking through it. */
+      const amt = (P.squash || 0) - (P.stretch || 0);
+      if (Math.abs(amt) > 0.01) {
+        const s0 = KD.PX.get(name);
+        const q = KD.Juice.squash(amt, s0.w, s0.h);
+        KD.PX.blit(ctx, name, px - (q.dw >> 1), py - q.dh,
+          { anchor: false, flipX: P.face < 0, dw: q.dw, dh: q.dh });
+      } else {
+        KD.PX.blit(ctx, name, px, py, { flipX: P.face < 0 });
+      }
       /* the belly goes on AFTER the body, on its own spring */
       if (NEW && P.mode !== 'swim') KD.Belly.draw(ctx, px, py, P.face, S);
       if (P.hurtT > 0) {
@@ -214,7 +226,7 @@ KD.Scenes.play = (function () {
     KD.UI.tooltips();
     if (!KD.Panels.isOpen() && S.S.playtime < 14) {
       KD.Text.draw(KD.touch ? 'pad to move  -  DIG  -  BODY  -  BAG'
-                            : 'WASD move  -  click to dig  -  F swing  -  E use  -  C body  -  V skills  -  I bag',
+                            : 'WASD move  -  click to dig  -  F swing  -  E use  -  C body  -  Q tasks  -  V skills  -  I bag',
         KD.W / 2, KD.H - 34, 'BONE.0', { tiny: true, align: 'center', shadow: 'INK.0' });
     }
   }

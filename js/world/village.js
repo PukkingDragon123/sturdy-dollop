@@ -272,7 +272,13 @@ KD.Village = (function () {
       const lit = Wd.lit[(b.y + 1) * Wd.W + b.x + (b.w >> 1)] || 0;
       const shade = KD.PX.bandFor(lit, L.MAX);
       const fs = KD.PX.get(b.kind.fruit);
-      KD.PX.blit(ctx, b.kind.fruit, sx, sy,
+      /* Everything alive breathes. A fruit the size of a house sways a
+         couple of pixels, seeded off its own x so the row does not move in
+         unison. The door and sign do not sway - they are fixed to the
+         ground - which is what sells the shell as the thing that is moving. */
+      const sw = Math.round(KD.Juice.sway(KD.Game.t, b.x, 1.6, 0.5));
+      const sw2 = Math.round(KD.Juice.sway(KD.Game.t, b.x + 7, 0.9, 0.37));
+      KD.PX.blit(ctx, b.kind.fruit, sx + sw, sy + sw2,
         { shade, anchor: false, dw: fs.w * SC, dh: fs.h * SC });
       /* The doorway, drawn after the fruit. The notch carved out of the
          tile layer has to be filled with SOMETHING or the background water

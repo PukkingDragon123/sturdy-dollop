@@ -4,7 +4,7 @@
    share layout maths and only one is ever open.
    ============================================================ */
 KD.Panels = (function () {
-  let open = null;                    // null | 'bag' | 'body' | 'tree'
+  let open = null;                    // null | 'bag' | 'body' | 'tree' | 'quest'
   let carry = null;                   // the stack on the cursor
   let station = 'bench';              // nearest crafting station
   let scroll = 0, treePan = { x: 0, y: 0 }, pick = null;
@@ -23,6 +23,7 @@ KD.Panels = (function () {
   function toggle(which) {
     if (open === which) { close(); return; }
     open = which; scroll = 0; pick = null;
+    KD.Juice.pop('panel', 0.24);
     KD.UI.guard(0.18);
     KD.Sfx.play('open');
   }
@@ -92,6 +93,63 @@ KD.Panels = (function () {
   }
 
   /* ---------------- crafting ---------------- */
+  /* ---- QUESTS: the whole chain, so you can see where you are -------- *
+   * One line of HUD text told you the current objective and nothing else -
+   * not what you had done, not what was coming, not who wanted it. This is
+   * the ladder, with the rung you are on lit.
+   * ------------------------------------------------------------------ */
+  function quests(S) {
+    const Q = KD.Quests.Q;
+    const w = Math.min(KD.W - 20, 300);
+    const rowH = 20;
+    const h = Math.min(KD.H - 12, 34 + Q.length * rowH + 14);
+    const x = Math.round((KD.W - w) / 2);
+    const y = Math.max(4, Math.round((KD.H - h) / 2));
+    const p = KD.UI.titled(x, y, w, h, 'WHAT SHE WANTS');
+    const dn = KD.Quests.doneCount();
+    KD.Text.draw(dn + '/' + Q.length, x + w - 8, y + 3, 'GOLD.2',
+      { tiny: true, align: 'right', shadow: 'INK.0' });
+    /* her portrait in the corner, because every one of these is hers */
+    if (KD.PX.has('po_keg')) {
+      KD.PX.blit(KD.Screen.ctx(), 'po_keg', x + w - 26, y + h - 30,
+        { anchor: false, dw: 18, dh: 20, shade: 1 });
+    }
+    Q.forEach((q, i) => {
+      const ry = p.iy + 2 + i * rowH;
+      if (ry + rowH > y + h - 10) return;
+      const st = KD.Quests.state(q.id);
+      const open = st === 'open';
+      const ready = open && q.done(S.S);
+      const locked = st === 'none' && q.need && !KD.Quests.isDone(q.need);
+      if (open) KD.Screen.rect(x + 4, ry - 2, w - 8, rowH - 2, 'DEEP.1');
+      /* a tick, a bullet or a lock, so status reads before the words do */
+      const bx = x + 8, by = ry + 1;
+      if (st === 'done') {
+        KD.Screen.rect(bx, by + 3, 2, 2, 'KELP.2');
+        KD.Screen.rect(bx + 2, by + 5, 2, 2, 'KELP.2');
+        KD.Screen.rect(bx + 4, by + 1, 2, 4, 'KELP.3');
+      } else if (ready) {
+        KD.Screen.rect(bx + 1, by, 4, 6, 'GOLD.3');
+        KD.Screen.rect(bx, by + 1, 6, 4, 'GOLD.3');
+      } else if (open) {
+        KD.Screen.rect(bx + 1, by + 1, 4, 4, 'BONE.2');
+        KD.Screen.frame(bx + 1, by + 1, 4, 4, 'INK.0');
+      } else {
+        KD.Screen.rect(bx + 1, by + 2, 4, 4, locked ? 'INK.2' : 'INK.3');
+        KD.Screen.rect(bx + 2, by, 2, 2, locked ? 'INK.2' : 'INK.3');
+      }
+      const col = st === 'done' ? 'KELP.2' : ready ? 'GOLD.3'
+                : open ? 'WHITE' : locked ? 'INK.2' : 'BONE.0';
+      KD.Text.draw(locked && st === 'none' ? '- - - - -' : q.name, x + 18, ry, col, { max: w - 60 });
+      /* the objective, but only for the one you are actually on */
+      if (open) KD.Text.draw(q.hint, x + 18, ry + 9, ready ? 'KELP.2' : 'INK.3', { tiny: true, max: w - 30 });
+      else if (st === 'done') KD.Text.draw('done', x + w - 12, ry + 1, 'KELP.0', { tiny: true, align: 'right' });
+    });
+    const cur = KD.Quests.current();
+    KD.Text.draw(cur || 'Nothing left to prove.', x + w / 2, y + h - 11,
+      'BONE.1', { tiny: true, align: 'center', max: w - 40 });
+  }
+
   /* ---- BODY: what you spend clams on now that crafting is gone ------ *
    * Six traits, a rising price each, and the blurb says what the rank
    * actually does rather than quoting a number nobody can feel.
@@ -216,8 +274,28 @@ KD.Panels = (function () {
   function draw(S) {
     if (!open) return;
     scrim();
+    /* Panels come in on an overshoot rather than appearing. The scale is
+       applied by squeezing the LAYOUT toward the centre, so every panel gets
+       it for free without any of them knowing about it. */
+    const k = KD.Juice.back(KD.Juice.at('panel'));
+    if (k < 0.999) {
+      const cx = KD.W / 2, cy = KD.H / 2;
+      const ctx0 = KD.Screen.ctx();
+      ctx0.save();
+      ctx0.translate(cx, cy);
+      ctx0.scale(k, k);
+      ctx0.translate(-cx, -cy);
+      drawOpen(S);
+      ctx0.restore();
+      return;
+    }
+    drawOpen(S);
+  }
+
+  function drawOpen(S) {
     if (open === 'bag') bag(S);
     else if (open === 'body') body(S);
+    else if (open === 'quest') quests(S);
     else if (open === 'tree') tree(S);
     /* the carried stack rides the cursor */
     if (carry) {

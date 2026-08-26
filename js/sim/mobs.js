@@ -277,6 +277,8 @@ KD.Mobs = (function () {
     if (hitAny) { KD.Sfx.play('hit'); KD.Fx.shake(2); }
   }
   function hurtMob(m, dmg, S, face, wpn) {
+    /* the hitch is what makes a hit feel like a hit */
+    KD.Juice.hit(dmg >= 20 ? 0.075 : 0.045);
     const armour = m.K.armour || 0;
     const crit = Math.random() < ((S.stats.critChance || 0) + ((wpn && wpn.crit) || 0)) / 100;
     let d = Math.max(1, Math.round(dmg * (crit ? (S.stats.critDmg || 2) : 1)) - armour);
