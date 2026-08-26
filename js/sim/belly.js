@@ -82,10 +82,13 @@ KD.Belly = (function () {
     const sq = squash;
     const w = Math.round(s.w * (1 + sq * 0.22));
     const h = Math.round(s.h * (1 - sq * 0.26));
-    /* where the hollow is in the 24x36 body: centred, rows 23-34 */
+    /* The hollow is rows 23-27 of a 36-tall sprite whose bottom sits on his
+       feet. The belly has to be CENTRED on that, not hung from its top edge
+       - anchoring it at row 23 pushed the whole thing down onto his legs and
+       out through the floor. */
     const ox = Math.round(x) * (face < 0 ? -1 : 1);
     const oy = Math.round(y) + (s.h - h);
-    KD.PX.blit(ctx, n, px - (w >> 1) + ox, py - 36 + 23 + oy, {
+    KD.PX.blit(ctx, n, px - (w >> 1) + ox, py - 36 + 18 + oy, {
       anchor: false, w: w, h: h, flipX: face < 0
     });
   }

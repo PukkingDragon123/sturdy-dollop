@@ -77,7 +77,7 @@ KD.Village = (function () {
         kind: k, x, y: t.y - f.h, w: f.w, h: f.h,
         terrace: ti, floorY: t.y, fp: f
       });
-      x += f.w + Wd.rint(7, 13);
+      x += f.w + Wd.rint(12, 20);
     }
     return { buildings: out, terraces };
   }

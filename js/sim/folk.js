@@ -14,27 +14,27 @@ KD.Folk = (function () {
   /* Who is out. Each picks a sprite from the NPC set already drawn, so
      nobody in the street is a stranger to the art. */
   const WHO = [
-    { spr: 'npc_market',   name: 'a fishwife',   lines: [
-      'Twelve fruit and not one of them ripe.',
-      'You used to be taller. Or thinner. One of them.'] },
-    { spr: 'npc_tackler',  name: 'a netmender',  lines: [
-      'Something out past the Gate keeps taking my nets.',
-      'Mend, cast, lose. Mend, cast, lose.'] },
-    { spr: 'npc_stabler',  name: 'a stablehand', lines: [
+    { spr: 'fk_seahorse', port: 'po_seahorse', name: 'Tack the stablehand', lines: [
       'The seahorses will not go near the mine mouth today.',
-      'They eat better than we do.'] },
-    { spr: 'npc_scholar',  name: 'a scribe',     lines: [
+      'They eat better than we do, and they know it.'] },
+    { spr: 'fk_crab',     port: 'po_crab',     name: 'Nipper', lines: [
+      'He makes me pump the bellows all day. All day.',
+      'Bring us ore and he stops shouting. Bring a lot.'] },
+    { spr: 'fk_puffer',   port: 'po_puffer',   name: 'Bloat the netmender', lines: [
+      'Something out past the Gate keeps taking my nets.',
+      'Mend, cast, lose. Mend, cast, lose. That is the job.'] },
+    { spr: 'fk_octo',     port: 'po_octo',     name: 'Inkwell', lines: [
       'I am writing down what happened. It is not flattering.',
-      'The Deep keeps courtiers with eight arms each. I counted.'] },
-    { spr: 'npc_guard',    name: 'a gate guard', lines: [
+      'The Deep keeps eight-armed courtiers. I have counted them twice.'] },
+    { spr: 'fk_turtle',   port: 'po_turtle',   name: 'Bulwark', lines: [
       'Move along. Slowly, in your case.',
-      'Nobody through the Gate who cannot swim back.'] },
-    { spr: 'npc_smith',    name: 'a smith\'s boy', lines: [
-      'He makes me pump the bellows all day.',
-      'Bring us ore and he will stop shouting.'] },
-    { spr: 'npc_bookie',   name: 'a tout',       lines: [
+      'Nobody goes through the Gate who cannot swim back.'] },
+    { spr: 'fk_angler',   port: 'po_angler',   name: 'Lantern', lines: [
       'Odds on the old king? Nobody will take that bet.',
-      'Put a clam on yourself. Somebody should.'] }
+      'Put a clam on yourself. Somebody ought to.'] },
+    { spr: 'fk_shrimp',   port: 'po_shrimp',   name: 'Snip', lines: [
+      'Sit down. I will not ask what happened to you.',
+      'A trim will not fix it. It will not hurt either.'] }
   ];
 
   function clear() { list.length = 0; }
@@ -85,11 +85,14 @@ KD.Folk = (function () {
       /* stand still and face the king when he is right there */
       const near = Math.abs(f.x - P.x) < 22 && Math.abs(f.y - P.y) < 24;
       if (near) { f.state = 'stand'; f.stateT = 0.6; f.face = P.x > f.x ? 1 : -1; }
-      /* and say something, once, when he walks into them */
+      /* and say something, once, when he walks into them. The line goes in
+         a bubble over their own head, not into the HUD - you should be able
+         to see WHO is talking. */
       if (near && f.sayT <= 0 && Math.abs(P.vx) > 8) {
-        f.sayT = 6;
-        S.say('"' + f.who.lines[f.line % f.who.lines.length] + '"  - ' + f.who.name, 'BONE.2');
+        f.sayT = 5.5;
+        f.said = f.who.lines[f.line % f.who.lines.length];
         f.line++;
+        KD.Sfx.play('click');
       }
     }
   }
@@ -108,11 +111,10 @@ KD.Folk = (function () {
       KD.PX.blit(ctx, name, px, py, {
         anchor: false, flipX: f.face < 0, shade: KD.PX.bandFor(lit, KD.Light.MAX)
       });
-      /* a speech tick so you can see who just spoke */
-      if (f.sayT > 4.6) {
-        KD.Screen.rect(px + (s.w >> 1) - 1, py - 6, 3, 4, 'BONE.2');
-        KD.Screen.rect(px + (s.w >> 1) - 1, py - 2, 1, 2, 'BONE.0');
-      }
+      /* their line, in a bubble of bubbles, trailing up from the mouth */
+      if (f.sayT > 0 && f.said) {
+        KD.Talk.say(f.said, f.x, f.y - s.h + 8, cam, KD.Game.t, { max: 150, maxLines: 2 });
+      } else if (f.sayT <= 0 && f.said) f.said = null;
     }
   }
   return { list, seed, clear, update, draw };

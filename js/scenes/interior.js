@@ -35,7 +35,7 @@ KD.Scenes.interior = (function () {
     /* Grow with the screen, within reason: a fixed 268 looked marooned in
        the middle of a 624-wide phone in landscape. */
     const w = Math.max(220, Math.min(Math.round(KD.W * 0.62), 344));
-    const wall = 56, floorH = 22;
+    const wall = 66, floorH = 22;   // a 36px king needs the headroom
     const h = wall + floorH;
     const x = Math.round((KD.W - w) / 2);
     const y = Math.round((KD.H - h) / 2) + 6;
@@ -290,6 +290,7 @@ KD.Scenes.interior = (function () {
     S.tick(dt);
     KD.UI.tickGuard(dt);
     KD.Fx.update(dt);
+    KD.Belly.update(dt, S);
     const In = KD.In, g = geom();
     if (shopOpen) {
       const st = STOCK[room.job] || [];
@@ -443,18 +444,42 @@ KD.Scenes.interior = (function () {
     KD.UI.tooltips();
   }
 
+  /* Who runs which shop, as a creature. The talk frame (index 2) is used
+     while a line is on screen, so the mouth is open when they are speaking. */
+  const WHO = {
+    smith:     { spr: 'fk_crab',     port: 'po_crab',     name: 'Nipper' },
+    tackler:   { spr: 'fk_puffer',   port: 'po_puffer',   name: 'Bloat' },
+    princess:  { spr: 'fk_keg',      port: 'po_keg',      name: 'The Keg' },
+    stabler:   { spr: 'fk_seahorse', port: 'po_seahorse', name: 'Tack' },
+    trainer:   { spr: 'fk_crab',     port: 'po_crab',     name: 'Brine' },
+    bookie:    { spr: 'fk_angler',   port: 'po_angler',   name: 'Lantern' },
+    scholar:   { spr: 'fk_octo',     port: 'po_octo',     name: 'Inkwell' },
+    market:    { spr: 'fk_shrimp',   port: 'po_shrimp',   name: 'Snip' },
+    barber:    { spr: 'fk_shrimp',   port: 'po_shrimp',   name: 'Snip' },
+    bathhouse: { spr: 'fk_turtle',   port: 'po_turtle',   name: 'Bulwark' },
+    guard:     { spr: 'fk_turtle',   port: 'po_turtle',   name: 'Bulwark' },
+    home:      { spr: 'fk_keg',      port: 'po_keg',      name: 'The Keg' }
+  };
+  const who = () => WHO[room.job] || WHO.market;
+
   function npcSprite() {
-    const base = 'npc_' + room.job;
-    if (KD.PX.hasAny(base)) return KD.PX.frameOf(base, t * 0.7);
-    if (KD.PX.has(base + '0')) return base + ((Math.floor(t * 1.4) % 2) ? '1' : '0');
-    return KD.PX.has('npc_smith0') ? 'npc_smith0' : null;
+    const w = who();
+    /* mouth open while a line is up */
+    if (talkT > 0 && KD.PX.has(w.spr + '2')) return w.spr + '2';
+    if (KD.PX.hasAny(w.spr)) return KD.PX.frameOf(w.spr, t * 0.7);
+    return KD.PX.has(w.spr + '0') ? w.spr + '0' : null;
   }
 
   function drawYou(ctx, g) {
-    let base = Math.abs(vx) > 8 ? 'king_walk' : 'king_idle';
-    if (!KD.PX.hasAny(base)) base = 'king_idle';
+    const NEW = KD.PX.hasAny('pk_idle');
+    const pre = NEW ? 'pk_' : 'king_';
+    let base = Math.abs(vx) > 8 ? pre + 'walk' : pre + 'idle';
+    if (!KD.PX.hasAny(base)) base = pre + 'idle';
     const name = KD.PX.frameOf(base, anim * 0.12);
-    if (KD.PX.has(name)) KD.PX.blit(ctx, name, Math.round(px), g.floor, { flipX: face < 0 });
+    if (!KD.PX.has(name)) return;
+    KD.PX.blit(ctx, name, Math.round(px), g.floor, { flipX: face < 0 });
+    /* and his belly, on the same spring it uses outside */
+    if (NEW) KD.Belly.draw(ctx, Math.round(px), g.floor, face, S);
   }
 
   function hud(ctx, g) {
@@ -473,10 +498,8 @@ KD.Scenes.interior = (function () {
       KD.Text.draw(hint, KD.W / 2, g.y + g.h + 14, 'BONE.1', { align: 'center', tiny: true, shadow: 'INK.0' });
     }
     if (talkT > 0 && line) {
-      const bw = Math.min(KD.W - 44, 296);
-      const bx = Math.round((KD.W - bw) / 2), by = g.y + g.h + (KD.touch ? 12 : 26);
-      KD.UI.panel(bx, by, bw, 26);
-      KD.Text.block(line, bx + 6, by + 5, 'BONE.2', { tiny: true, max: bw - 12, maxLines: 2 });
+      const w = who();
+      KD.Talk.panel({ portrait: w.port, name: w.name }, line, { bottom: KD.touch ? 6 : 10 });
     }
   }
 
