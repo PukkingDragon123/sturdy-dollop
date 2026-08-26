@@ -100,7 +100,12 @@ KD.Render = (function () {
              painted dark - otherwise a flooded cave fifty tiles down showed
              the surface-bright band straight through the rock, which made
              the village look like it was built over a swimming pool. */
-          if (b >= 2) {
+          /* The threshold matters: at 2 the village street painted itself a
+             whole shade darker than the open water beside it, and because
+             the cleared shelf is a box the seam was a hard rectangle across
+             the middle of the frame. Only genuinely dark water gets painted;
+             everything the sun still reaches stays transparent. */
+          if (b >= 3) {
             x2.fillStyle = KD.PAL.hex(ramp[b]);
             x2.fillRect(px, py + (TS - h), TS, h);
           }

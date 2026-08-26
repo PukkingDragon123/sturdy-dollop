@@ -52,13 +52,24 @@ KD.Village = (function () {
   function plan(Wd, z, surfaceAt) {
     const out = [];
     const cx = ((z.x0 + z.x1) / 2) | 0;
-    const base = surfaceAt(cx);
-    /* three shelves, each one step higher than the last, so the town
-       climbs away from the mine mouth instead of lying flat */
+    /* Three shelves, each a step higher than the last, so the town climbs
+       away from the mine mouth instead of lying flat. The step has to clear
+       a whole house (twelve tiles at 2x) or the upper row is drawn through
+       the lower one - and the TOP shelf has to stay deep enough that a house
+       standing on it is still underwater. Before this clamp the tallest fruit
+       poked eight tiles out into the sky. */
+    /* The steps are small on purpose. Terraces sit side by side rather than
+       stacked, so the rise only has to read as a step - and a big one pushed
+       the whole town down into the dark bands. Fruitfall is a SHALLOW town;
+       it should be in the bright water. */
+    const sea = (KD.Gen.meta.sea || 34);
+    const HOUSE = 12, STEP = 5;
+    const top = sea + HOUSE + 2;                 // shallowest a shelf may be
+    const b0 = Math.max(surfaceAt(cx), top + STEP * 2);
     const terraces = [
-      { y: base,      x0: z.x0 + 14,  x1: z.x0 + 116 },
-      { y: base - 9,  x0: z.x0 + 118, x1: z.x0 + 224 },
-      { y: base - 18, x0: z.x0 + 226, x1: z.x1 - 14 }
+      { y: b0,             x0: z.x0 + 14,  x1: z.x0 + 116 },
+      { y: b0 - STEP,      x0: z.x0 + 118, x1: z.x0 + 224 },
+      { y: b0 - STEP * 2,  x0: z.x0 + 226, x1: z.x1 - 14 }
     ];
     const order = KINDS.slice();
     /* home stays first and the gate house stays last; the trades shuffle,
@@ -91,7 +102,7 @@ KD.Village = (function () {
       for (let tx = tr.x0 - 4; tx <= tr.x1 + 4; tx++) {
         if (!Wd.inside(tx, 0)) continue;
         /* clear the head-room above the shelf */
-        for (let j = Math.max(1, tr.y - 22); j < tr.y; j++) if (Wd.inside(tx, j)) Wd.fg[j * w + tx] = T.AIR;
+        for (let j = Math.max(1, tr.y - 30); j < tr.y; j++) if (Wd.inside(tx, j)) Wd.fg[j * w + tx] = T.AIR;
         /* and lay a floor: two rows of sand on packed stone, so digging
            through the street is possible but not accidental */
         for (let j = tr.y; j < tr.y + 2; j++) if (Wd.inside(tx, j)) Wd.fg[j * w + tx] = sand;
@@ -149,7 +160,7 @@ KD.Village = (function () {
        for pixels, and open downward so there is never a way to be shut in. */
     /* Sized to the door the fruit itself draws, now that the fruit is at
        2x: about three tiles across and five tall. */
-    const dw = 3, dh = 5;
+    const dw = 2, dh = 4;   // 32px clears a 28px king with room to spare
     const dx = b.x + ((b.w - dw) >> 1);
     for (let i = 0; i < dw; i++) {
       for (let j = 1; j <= dh; j++) {
@@ -237,18 +248,21 @@ KD.Village = (function () {
       const dx = Math.round(b.door.x * TS - cam.x);
       const dh = b.door.h * TS, dwp = b.door.w * TS;
       const dy = Math.round((b.door.y + 1) * TS - cam.y) - dh;
-      KD.Screen.rect(dx, dy, dwp, dh, 'WOOD.3');                     // frame
-      KD.Screen.rect(dx + 2, dy + 2, dwp - 4, dh - 2, 'INK.0');      // reveal
+      KD.Screen.rect(dx, dy + 3, dwp, dh - 3, 'WOOD.3');              // jambs
+      KD.Screen.rect(dx + 2, dy + 1, dwp - 4, 3, 'WOOD.3');           // stepped
+      KD.Screen.rect(dx + 5, dy, dwp - 10, 2, 'WOOD.3');              //  arch
+      KD.Screen.rect(dx + 2, dy + 5, dwp - 4, dh - 5, 'INK.0');       // reveal
+      KD.Screen.rect(dx + 4, dy + 3, dwp - 8, 3, 'INK.0');
       /* the room behind: a warm wedge, brightest at the floor */
       KD.Screen.rect(dx + 3, dy + dh - 14, dwp - 6, 13, 'GOLD.0');
       KD.Screen.rect(dx + 4, dy + dh - 10, dwp - 8, 9, 'GOLD.1');
       KD.Screen.rect(dx + 5, dy + dh - 6, dwp - 10, 5, 'GOLD.2');
       KD.Dither.fill(ctx, dx + 3, dy + dh - 18, dwp - 6, 5, 'GOLD.0', 0.5);
       /* lintel highlight and a worn stone step */
-      KD.Screen.rect(dx + 1, dy + 1, dwp - 2, 1, 'WOOD.1');
+      KD.Screen.rect(dx + 6, dy, dwp - 12, 1, 'WOOD.1');
       KD.Screen.rect(dx - 1, dy + dh - 1, dwp + 2, 2, 'STONE.1');
       KD.Screen.rect(dx - 1, dy + dh + 1, dwp + 2, 1, 'STONE.0');
-      KD.Screen.frame(dx, dy, dwp, dh, 'INK.0');
+      KD.Screen.frame(dx, dy + 3, dwp, dh - 3, 'INK.0');
       /* the trade sign, hung off the front of the fruit */
       if (b.kind.sign && KD.PX.has(b.kind.sign)) {
         KD.PX.blit(ctx, b.kind.sign, Math.round(b.signAt.x - cam.x),

@@ -8,7 +8,12 @@ KD.Screen = (function () {
   /* Internal resolution. Raising H makes the pixels smaller on screen and
      shows more world at once - that is what "higher resolution" buys here.
      Tiles stay 8px, so 288 tall shows 36 tile rows instead of 27. */
-  const H = 288;
+  /* 360 rather than 288: at any window whose height gives the same integer
+     scale, this is nine more tile rows of world for free - the pixels stay
+     exactly as big, there is just more frame. A 1280x720 window renders
+     640x360 at 2x either way; the old 288 just letterboxed the difference
+     away. */
+  const H = 360;
   /* WMIN is what the UI still lays out in; going below it is worse than
      letterboxing. WMAX caps how much world one screen may show. */
   const WMIN = 384, WMAX = 832;
