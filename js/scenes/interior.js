@@ -302,7 +302,7 @@ KD.Scenes.interior = (function () {
     }
     if (KD.Panels.isOpen()) {
       if (In.isHit('Escape')) KD.Panels.close();
-      if (In.isHit('KeyC')) KD.Panels.toggle('craft');
+      if (In.isHit('KeyC')) KD.Panels.toggle('body');
       if (In.isHit('KeyI', 'Tab')) KD.Panels.toggle('bag');
       if (In.isHit('KeyV')) KD.Panels.toggle('tree');
       if (In.actHit('bag')) KD.Panels.toggle('bag');
@@ -318,13 +318,13 @@ KD.Scenes.interior = (function () {
     if (In.isHit('KeyE', 'Space', 'Enter') || In.actHit('act')) {
       if (nearNpc()) talk();
       else if (nearDoor()) leave();
-      else if (b.kind.station) KD.Panels.toggle('craft');
+      else if (b.kind.station) KD.Panels.toggle('body');
       else talkT = 0;
     }
     if (In.isHit('KeyF') || In.actHit('trade')) { if (nearNpc()) service(); }
     if (In.actHit('out')) leave();
     if (In.isHit('Escape')) leave();
-    if (In.isHit('KeyC')) KD.Panels.toggle('craft');
+    if (In.isHit('KeyC')) KD.Panels.toggle('body');
     if (In.isHit('KeyI', 'Tab') || In.actHit('bag')) KD.Panels.toggle('bag');
     if (In.isHit('KeyV')) KD.Panels.toggle('tree');
   }
@@ -494,7 +494,7 @@ KD.Scenes.interior = (function () {
       let hint = 'A / D walk   -   ESC leave';
       if (nearNpc()) hint = 'E talk   -   F ' + serviceWord().toLowerCase();
       else if (nearDoor()) hint = 'E to step outside';
-      else if (b.kind.station) hint = 'E to use the ' + b.kind.station;
+      else if (b.kind.station) hint = 'E to train here';
       KD.Text.draw(hint, KD.W / 2, g.y + g.h + 14, 'BONE.1', { align: 'center', tiny: true, shadow: 'INK.0' });
     }
     if (talkT > 0 && line) {

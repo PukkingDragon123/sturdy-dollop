@@ -4,7 +4,7 @@
    share layout maths and only one is ever open.
    ============================================================ */
 KD.Panels = (function () {
-  let open = null;                    // null | 'bag' | 'craft' | 'tree'
+  let open = null;                    // null | 'bag' | 'body' | 'tree'
   let carry = null;                   // the stack on the cursor
   let station = 'bench';              // nearest crafting station
   let scroll = 0, treePan = { x: 0, y: 0 }, pick = null;
@@ -92,70 +92,51 @@ KD.Panels = (function () {
   }
 
   /* ---------------- crafting ---------------- */
-  function craft(S) {
-    const w = Math.min(KD.W - 16, 240), h = KD.H - 40;
-    const x = ((KD.W - w) >> 1), y = 20;
-    station = nearestStation() || 'hand';
-    const p = KD.UI.titled(x, y, w, h, station === 'hand' ? 'CRAFTING  -  BARE HANDS'
-                                                          : 'CRAFTING  -  ' + station.toUpperCase());
-    const R = KD.Recipes;
-    if (!R) { KD.Text.draw('no recipes loaded', x + w / 2, y + 30, 'BLOOD.2', { align: 'center' }); return; }
-    const inv = KD.State.inventoryView();
-    const shapes = R.all.filter((s) => (s.station || 'bench') === station);
-    const rowH = 20, listW = w - 8;
-    const view = Math.floor((h - 22) / rowH);
-    scroll = Math.max(0, Math.min(Math.max(0, shapes.length - view), scroll + KD.In.mouse.wheel));
-    for (let k = 0; k < view; k++) {
-      const s = shapes[k + scroll];
-      if (!s) break;
-      const ry = p.iy + k * rowH;
-      const can = R.canCraft(s.id, inv);
-      const hot = KD.UI.inside(x + 4, ry, listW, rowH - 2);
-      KD.Screen.rect(x + 4, ry, listW, rowH - 2, hot ? 'INK.2' : (k & 1 ? 'INK.1' : 'DEEP.0'));
-      const spr = KD.State.art(s.sprite, s.kind);
-      if (spr) KD.PX.blit(KD.Screen.ctx(), spr, x + 6, ry + 3, { anchor: false });
-      KD.Text.draw(s.noun || s.id, x + 22, ry + 2, can ? 'BONE.2' : 'INK.3', { max: listW - 60 });
-      const need = (s.needs || []).map((n) => n.n + 'x ' + n.role).join('  ');
-      KD.Text.draw(need, x + 22, ry + 11, can ? 'BONE.0' : 'INK.3', { tiny: true, max: listW - 60 });
-      if (can) {
-        if (KD.UI.button(x + w - 38, ry + 2, 32, 14, 'MAKE', { key: null })) { S.craft(s.id); }
-      } else {
-        KD.Text.draw('need', x + w - 8, ry + 6, 'INK.3', { tiny: true, align: 'right' });
+  /* ---- BODY: what you spend clams on now that crafting is gone ------ *
+   * Six traits, a rising price each, and the blurb says what the rank
+   * actually does rather than quoting a number nobody can feel.
+   * ------------------------------------------------------------------ */
+  function body(S) {
+    const T = KD.Body.TRAITS;
+    const w = Math.min(KD.W - 24, 300);
+    const rowH = 26;
+    const h = 34 + T.length * rowH + 16;
+    const x = Math.round((KD.W - w) / 2);
+    const y = Math.max(4, Math.round((KD.H - h) / 2));
+    const p = KD.UI.titled(x, y, w, h, 'TRAIN THE BODY');
+    KD.Text.draw(S.S.clams + ' CLAMS', x + w - 8, y + 3, 'GOLD.2',
+      { tiny: true, align: 'right', shadow: 'INK.0' });
+    T.forEach((t, i) => {
+      const ry = p.iy + 4 + i * rowH;
+      const n = KD.Body.rank(S.S, t.id);
+      const cap = KD.Body.maxed(S.S, t.id);
+      const c = KD.Body.cost(S.S, t.id);
+      const afford = !cap && S.S.clams >= c;
+      const hot = KD.UI.inside(x + 4, ry - 3, w - 8, rowH - 3);
+      if (hot && !cap) KD.Screen.rect(x + 4, ry - 3, w - 8, rowH - 3, 'DEEP.1');
+      /* the icon */
+      if (KD.PX.has(t.icon)) {
+        KD.PX.blit(KD.Screen.ctx(), t.icon, x + 8, ry, { anchor: false, shade: cap ? 2 : 0 });
       }
-    }
-    if (shapes.length > view) {
-      KD.Text.draw((scroll + 1) + '-' + Math.min(shapes.length, scroll + view) + ' of ' + shapes.length,
-        x + w / 2, y + h - 9, 'INK.3', { tiny: true, align: 'center' });
-    }
-    if (!shapes.length) {
-      KD.Text.draw('Nothing to make here.', x + w / 2, y + 40, 'BONE.0', { align: 'center' });
-      KD.Text.draw('stand next to a station for its recipes', x + w / 2, y + 52, 'INK.3', { tiny: true, align: 'center' });
-    }
-    /* say which station you are at, and hint at what unlocks next */
-    if (station === 'hand') {
-      KD.Text.draw('build a WORKBENCH to unlock the rest', x + w / 2, y + h - 9,
-        'GOLD.1', { tiny: true, align: 'center' });
-    }
+      KD.Text.draw(t.name, x + 22, ry, cap ? 'GOLD.3' : 'BONE.2', { shadow: 'INK.0' });
+      /* rank pips, so progress is visible without reading a number */
+      for (let k = 0; k < t.max; k++) {
+        KD.Screen.rect(x + 22 + k * 6, ry + 10, 5, 4, k < n ? 'GOLD.2' : 'INK.2');
+        KD.Screen.frame(x + 22 + k * 6, ry + 10, 5, 4, 'INK.0');
+      }
+      KD.Text.draw(t.blurb, x + 22 + t.max * 6 + 6, ry + 10, 'INK.3',
+        { tiny: true, max: w - 40 - t.max * 6 });
+      /* the price, or MAX */
+      KD.Text.draw(cap ? 'MAX' : c + 'c', x + w - 8, ry + 1,
+        cap ? 'GOLD.3' : (afford ? 'GOLD.2' : 'ROT.3'), { align: 'right', shadow: 'INK.0' });
+      if (hot && !cap && KD.In.mouse.click && !KD.UI.blocked()) {
+        KD.In.consumedClick();
+        KD.Body.buy(S.S, t.id);
+      }
+    });
+    KD.Text.draw(Math.round(S.S.weight) + ' KG   -   ' + KD.Goal.trainedTotal(S.S) + ' LEVELS TRAINED',
+      x + w / 2, y + h - 12, 'BONE.0', { tiny: true, align: 'center' });
   }
-
-  /* ---------------- the skill tree ---------------- */
-  /* Node col/row are coordinates on ONE shared 11-column grid, not per-trunk
-     offsets - the trunks just occupy different column bands. Laying them out
-     per-trunk is what loses a whole trunk off the side of the panel. */
-  /* One existing 8x8 icon per skill, chosen for what the skill DOES, so a
-     glance at the tree reads as "dig, light, luck, lungs" rather than as
-     twenty-seven identical discs. No new art needed. */
-  const NODE_ICON = {
-    delve_root: 'ic_pick',     delve_speed1: 'ic_pick',    delve_light1: 'ic_star',
-    delve_luck1: 'ic_coin',    delve_breath: 'ic_bubble',   delve_tough: 'ic_shield',
-    delve_speed2: 'ic_anvil',  delve_pressure: 'ic_arrow_down', delve_cap: 'ic_crown',
-    brawl_root: 'ic_sword',    brawl_dmg1: 'ic_sword',      brawl_crit1: 'ic_cross',
-    brawl_swing: 'ic_arrow_r', brawl_reach: 'ic_arrow_r',   brawl_rage: 'ic_heart_full',
-    brawl_bulwark: 'ic_shield', brawl_leech: 'ic_heart_half', brawl_cap: 'ic_skull',
-    tide_root: 'ic_bubble',    tide_swim1: 'ic_arrow_up',   tide_hook1: 'ic_pick',
-    tide_grapple: 'ic_map',    tide_current: 'ic_arrow_r',  tide_mount: 'ic_star',
-    tide_flow: 'ic_clock_day', tide_gills: 'ic_bubble',     tide_cap: 'ic_crown'
-  };
 
   function tree(S) {
     const Sk = KD.Skills;
@@ -236,7 +217,7 @@ KD.Panels = (function () {
     if (!open) return;
     scrim();
     if (open === 'bag') bag(S);
-    else if (open === 'craft') craft(S);
+    else if (open === 'body') body(S);
     else if (open === 'tree') tree(S);
     /* the carried stack rides the cursor */
     if (carry) {

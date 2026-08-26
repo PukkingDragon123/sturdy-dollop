@@ -63,8 +63,9 @@ KD.Player = (function () {
        also what a man trying to get back in shape would notice. */
     P.swim = KD.Water.submersion(P.x, P.y, P.h);
     const wet = P.swim > 0.45;
-    P.stam = Math.min(1, (P.stam === undefined ? 1 : P.stam) + dt * 0.16 * (st.stamRegen || 1));
-    P.breath = P.stam;                    // the HUD reads one field
+    const smax = st.stamMax || 1;
+    P.stam = Math.min(smax, (P.stam === undefined ? smax : P.stam) + dt * 0.16 * (st.stamRegen || 1));
+    P.breath = P.stam / (st.stamMax || 1);   // the HUD reads one 0..1 field
     /* pressure: the abyss crushes you unless you are geared for it */
     const depth = (P.y / TS) | 0;
     if (depth > 300 + st.pressureDepth) {
@@ -334,7 +335,7 @@ KD.Player = (function () {
       KD.Sfx.play('open');
       return true;
     }
-    if (T.station) { KD.Panels.toggle('craft'); return true; }
+    if (T.station) { KD.Panels.toggle('body'); return true; }
     return false;
   }
   /* Standing in a fruit doorway? Then ACT walks you in. The room is its

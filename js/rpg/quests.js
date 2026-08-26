@@ -15,72 +15,79 @@ KD.Quests = (function () {
 
   /* give: which NPC job hands it over. need: what unlocks OFFERING it.
      done(st): have you finished it. Rewards are clams + xp + maybe an item. */
+  /* Every one of these comes from HER. She is a beer keg in a crooked tiara,
+     she is the reason he is like this, and she is the only one in Fruitfall
+     who will say so to his face. The others sell things; she sets the task.
+     `at` is who you hand it back to when it is done - usually her. */
   const Q = [
-    { id: 'firstdig', give: 'smith', name: 'Something With An Edge',
-      text: 'Bring me twenty stone and I will show you what a pick is for.',
-      hint: 'Mine 20 stone and bring it to the smith.',
-      done: (st) => KD.State.count('stone') >= 20,
-      take: [['stone', 20]], clams: 60, xp: 20, item: 'ore_copper', n: 4 },
-
-    { id: 'firstrep', give: 'trainer', name: 'One Honest Set',
-      text: 'You have never finished a set in your life. Do one. Just one.',
-      hint: 'Finish a set at the gym.',
+    { id: 'firstrep', give: 'princess', name: 'One Honest Set',
+      text: 'You have never finished a set in your life, love. Do one. I will wait. I always wait.',
+      hint: 'Finish one set at the gym.',
       done: (st) => KD.Goal.trainedTotal(st) >= 1,
-      clams: 40, xp: 25 },
+      clams: 60, xp: 25 },
 
-    { id: 'lighter', give: 'trainer', name: 'Eighteen Kilos',
-      text: 'The Gate does not open for you at a hundred. Get to eighty-two.',
-      hint: 'Get down to 82kg and train to 3 levels.',
+    { id: 'firstdig', give: 'princess', name: 'Something With An Edge',
+      text: 'The crab wants twenty stone and you want something sharper than your wit. Go and dig.',
+      hint: 'Mine 20 stone.',
+      need: 'firstrep',
+      done: () => KD.State.count('stone') >= 20,
+      take: [['stone', 20]], clams: 90, xp: 30 },
+
+    { id: 'lighter', give: 'princess', name: 'Eighteen Kilos',
+      text: 'The Gate does not open for you at a hundred. Neither do I, frankly. Get to eighty-two.',
+      hint: 'Get to 82kg and train to 3 levels.',
+      need: 'firstdig',
       done: (st) => !KD.Goal.why(st, 'gate'),
-      clams: 120, xp: 60 },
+      clams: 160, xp: 70 },
 
-    { id: 'gatepass', give: 'guard', name: 'Past The Gate',
-      text: 'Show me you can move and I will let you through.',
+    { id: 'gatepass', give: 'princess', name: 'Past The Gate',
+      text: 'Show the turtle you can move. Then keep going, because I am not carrying you.',
       hint: 'Get through the Sea Gate.',
-      done: (st) => (KD.Player.P.x / 8) > KD.Zones.byId.gate.x1,
-      clams: 90, xp: 40 },
+      need: 'lighter',
+      done: () => (KD.Player.P.x / 8) > KD.Zones.byId.gate.x1,
+      clams: 120, xp: 50 },
 
-    { id: 'reeffish', give: 'tackler', name: 'Something For The Pot',
-      text: 'Six fish off the reef. Any six. I am not fussy and neither are you.',
-      hint: 'Bring the tackler 6 fish.',
+    { id: 'reeffish', give: 'princess', name: 'Something For The Pot',
+      text: 'Six fish off the reef. You used to bring me six fish. You used to bring me things.',
+      hint: 'Bring back 6 fish.',
       need: 'gatepass',
       done: () => KD.State.count('fish1') + KD.State.count('fish2') >= 6,
-      take: [['fish1', 6]], clams: 100, xp: 45 },
+      take: [['fish1', 6]], clams: 140, xp: 55 },
 
-    { id: 'champ1', give: 'guard', name: 'Old Scar',
-      text: 'A shark out past the Gate has been taking our nets. And our netmen.',
+    { id: 'champ1', give: 'princess', name: 'Old Scar',
+      text: 'A shark past the Gate has been taking our nets. And our netmen. Go and be useful.',
       hint: 'Kill Old Scar in the Shallow Reef.',
-      need: 'gatepass',
+      need: 'reeffish',
       done: (st) => !!st.champs.reef,
-      clams: 220, xp: 120 },
+      clams: 260, xp: 130 },
 
-    { id: 'champ2', give: 'scholar', name: 'The Tangle',
-      text: 'Something in the kelp is not a plant. I would like to stop hearing it.',
+    { id: 'champ2', give: 'princess', name: 'The Tangle',
+      text: 'Something in the kelp is not a plant. I would very much like to stop hearing it at night.',
       hint: 'Kill The Tangle in the Kelp Forest.',
       need: 'champ1',
       done: (st) => !!st.champs.kelp,
-      clams: 300, xp: 180 },
+      clams: 340, xp: 190 },
 
-    { id: 'champ3', give: 'scholar', name: 'The Last Warden',
-      text: 'The city down there still has a guard on the door. It has been a while.',
+    { id: 'champ3', give: 'princess', name: 'The Last Warden',
+      text: 'The sunken city still has a guard on the door. It has been a very long shift.',
       hint: 'Kill The Last Warden in the Sunken City.',
       need: 'champ2',
       done: (st) => !!st.champs.ruins,
-      clams: 420, xp: 260 },
+      clams: 460, xp: 280 },
 
-    { id: 'champ4', give: 'bookie', name: 'The Long Shadow',
-      text: 'Nobody who has seen it will describe it. Odds are excellent.',
+    { id: 'champ4', give: 'princess', name: 'The Long Shadow',
+      text: 'Nobody who has seen it will describe it. The odds on you are magnificent.',
       hint: 'Kill The Long Shadow in the Open Blue.',
       need: 'champ3',
       done: (st) => !!st.champs.blue,
-      clams: 600, xp: 380 },
+      clams: 640, xp: 400 },
 
     { id: 'crown', give: 'princess', name: 'The Crown',
-      text: 'Go and get it back. I will still be here. I am a keg.',
+      text: 'Now go down and take it back off him. I will still be here. I am a keg, love. I do not go anywhere.',
       hint: 'Beat the King at the bottom of The Drop.',
       need: 'champ4',
       done: (st) => !!st.flags.kingDead,
-      clams: 1000, xp: 800 }
+      clams: 1200, xp: 900 }
   ];
 
   const byId = {};
@@ -125,7 +132,7 @@ KD.Quests = (function () {
     const open = Q.find((q) => isOpen(q.id));
     if (open) return (open.done(S()) ? 'READY: ' : '') + open.hint;
     const next = Q.find((q) => offerable(q));
-    if (next) return 'Ask the ' + next.give + ' about work.';
+    if (next) return 'The Keg has something to say to you.';
     return null;
   }
   const doneCount = () => Q.filter((q) => isDone(q.id)).length;

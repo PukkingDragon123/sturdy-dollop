@@ -64,7 +64,7 @@ KD.Scenes.play = (function () {
     /* three small tabs, top right, out of the way of the action */
     const tx = KD.W - 16;
     BTNS.push({ name: 'bag',  x: tx, y: 46, r: 11, label: 'BAG',  icon: 'ic_bag',  tab: true });
-    BTNS.push({ name: 'make', x: tx, y: 70, r: 11, label: 'MAKE', icon: 'ic_anvil', tab: true });
+    BTNS.push({ name: 'make', x: tx, y: 70, r: 11, label: 'BODY', icon: 'ic_heart_full', tab: true });
     BTNS.push({ name: 'tree', x: tx, y: 94, r: 11, label: 'SKL',  icon: 'ic_tree', tab: true });
     KD.In.buttons(BTNS);
   }
@@ -76,7 +76,7 @@ KD.Scenes.play = (function () {
 
     /* panels: open one and the world pauses around you */
     if (KD.In.isHit('KeyI', 'Tab')) KD.Panels.toggle('bag');
-    if (KD.In.isHit('KeyC') || KD.In.actHit('make')) KD.Panels.toggle('craft');
+    if (KD.In.isHit('KeyC') || KD.In.actHit('make')) KD.Panels.toggle('body');
     if (KD.In.isHit('KeyV')) KD.Panels.toggle('tree');
     if (KD.In.actHit('bag')) KD.Panels.toggle('bag');
     if (KD.In.actHit('tree')) KD.Panels.toggle('tree');
@@ -202,8 +202,8 @@ KD.Scenes.play = (function () {
     KD.Panels.draw(S);
     KD.UI.tooltips();
     if (!KD.Panels.isOpen() && S.S.playtime < 14) {
-      KD.Text.draw(KD.touch ? 'pad to move  -  DIG  -  MAKE  -  BAG'
-                            : 'WASD move  -  click to dig  -  F swing  -  E place  -  C craft  -  V skills  -  I bag',
+      KD.Text.draw(KD.touch ? 'pad to move  -  DIG  -  BODY  -  BAG'
+                            : 'WASD move  -  click to dig  -  F swing  -  E use  -  C body  -  V skills  -  I bag',
         KD.W / 2, KD.H - 34, 'BONE.0', { tiny: true, align: 'center', shadow: 'INK.0' });
     }
   }

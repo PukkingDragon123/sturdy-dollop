@@ -14,7 +14,7 @@ KD.State = (function () {
     clams: 0, xp: 0, level: 1, points: 0,
     alloc: {}, stats: {}, fat: 24, beer: null,
     weight: 100, train: { strength: 0, wind: 0, grit: 0 },
-    trainXp: { strength: 0, wind: 0, grit: 0 }, champs: {},
+    trainXp: { strength: 0, wind: 0, grit: 0 }, champs: {}, body: {},
     frags: [], flags: {}, quests: {},
     kills: 0, mined: 0, crafted: 0, deaths: 0, playtime: 0,
     seed: 0, msg: null, msgT: 0, msgCol: 'BONE.2',
@@ -297,7 +297,8 @@ KD.State = (function () {
       mineSpeed: 1, minePower: 0, oreLuck: 0, lightRadius: 0, breath: 0,
       meleeDmg: 1, critChance: 0, critDmg: 1, armour: 0, knockback: 1, lifesteal: 0,
       swimSpeed: 1, swingSpeed: 1, grappleLen: 0, mounts: 0, waterControl: 0,
-      reach: 0, luck: 0, pressureDepth: 0, fallSafe: 0, xpGain: 1, effects: []
+      reach: 0, luck: 0, pressureDepth: 0, fallSafe: 0, xpGain: 1, effects: [],
+      stamMax: 1, stamRegen: 1, hpBonus: 0, jumpMul: 1, moveMul: 1
     };
     for (const k in floors) if (st[k] === undefined) st[k] = floors[k];
     /* The tree reports ADDITIVE bonuses at 0 and MULTIPLIERS at 1. Reach is
@@ -307,10 +308,17 @@ KD.State = (function () {
     const fx = st.effects || [];
     /* the disciplines and the weight fold in on top of the skill tree */
     if (KD.Goal) KD.Goal.apply(S, st);
+    /* and what you have bought for your own body */
+    if (KD.Body) KD.Body.apply(S, st);
     st.noFall = fx.indexOf('no_fall') >= 0;
     st.gills = fx.indexOf('gills') >= 0;
     st.xray = fx.indexOf('ore_xray') >= 0;
     S.stats = st;
+    /* hearts bought with Grit take effect immediately */
+    if (KD.Player) {
+      KD.Player.P.hpMax = 6 + (st.hpBonus || 0);
+      KD.Player.P.hp = Math.min(KD.Player.P.hp, KD.Player.P.hpMax);
+    }
   }
   function takeSkill(id) {
     if (!KD.Skills) return false;
@@ -411,7 +419,7 @@ KD.State = (function () {
         points: S.points, alloc: S.alloc, fat: S.fat, frags: S.frags, flags: S.flags,
         quests: S.quests, kills: S.kills, mined: S.mined, crafted: S.crafted, equip: S.equip,
         deaths: S.deaths, playtime: S.playtime, npcs: S.npcs, chests: S.chests,
-        weight: S.weight, train: S.train, trainXp: S.trainXp, champs: S.champs,
+        weight: S.weight, train: S.train, trainXp: S.trainXp, champs: S.champs, body: S.body,
         world: KD.World.save(), px: KD.Player.P.x, py: KD.Player.P.y
       }));
       return true;
@@ -433,7 +441,7 @@ KD.State = (function () {
         weight: d.weight === undefined ? 100 : d.weight,
         train: d.train || { strength: 0, wind: 0, grit: 0 },
         trainXp: d.trainXp || { strength: 0, wind: 0, grit: 0 },
-        champs: d.champs || {}
+        champs: d.champs || {}, body: d.body || {}
       });
       while (S.inv.length < SLOTS) S.inv.push(null);
       KD.World.loadFrom(d.world);
