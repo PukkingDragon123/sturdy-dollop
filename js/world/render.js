@@ -47,22 +47,6 @@ KD.Render = (function () {
   const WATER_BANDS = ['WATER.2', 'WATER.1', 'WATER.0', 'DEEP.1', 'DEEP.0', 'INK.0'];
   const DEEP_BANDS  = ['DEEP.2', 'DEEP.1', 'DEEP.0', 'INK.1', 'INK.0', 'INK.0'];
   const band = (level) => KD.PX.bandFor(level, KD.Light.MAX);
-  /* How much of the water column is opaque at this depth. Clear in the
-     shallows so the reef behind shows through, thickening down the water
-     column, and solid once light stops arriving at all - in the dark the
-     veil IS the darkness, so it must close up. */
-  function veilAt(ty, b) {
-    const sea = (KD.Gen.meta.sea || 34);
-    const d = Math.max(0, ty - sea);
-    /* Keep the shallows light: a heavy veil over a busy reef backdrop reads
-       as a screen door stretched across the whole frame. Distance is the
-       parallax haze's job; this only has to tint. */
-    let v = 0.2 + Math.min(0.62, d / 260);
-    if (b >= 4) v = Math.max(v, 0.86);
-    if (b >= KD.PX.SHADES - 1) v = 1;
-    return Math.min(1, v);
-  }
-  /* the last unlit band is solid: a cave with no torch is genuinely black */
   function blackout(ctx, px, py, b) {
     if (b < KD.PX.SHADES - 1) return;
     ctx.fillStyle = KD.PAL.hex('INK.0');
@@ -95,25 +79,37 @@ KD.Render = (function () {
             walled = true;
           }
         }
-        /* The water body, coloured by depth and brightness - and DITHERED,
-           not solid. A solid fill here painted over the whole parallax, so
-           the ocean was one flat slab of colour with the layered backdrop
-           invisible behind it. Veiling instead lets the far reef, the kelp
-           and the god rays read through the column, and thickens with depth
-           until the abyss really is opaque. */
+        /* The water body is NOT drawn here any more. Painting it per tile
+           forced a choice between an opaque slab that hid the whole
+           parallax and a dithered veil that screen-doored the entire
+           frame - every distant thing seen "through" water came out
+           stippled, which read as objects fading when you were inside
+           them. The column is a solid background pass in parallax.js
+           now, and the backdrops draw ON TOP of it in their own depth
+           slot, so the ocean is clean AND still layered.
+
+           All this has to do is leave water tiles transparent so that
+           background shows through, and put a lit skin on the surface of
+           a partly-filled tile so a shoreline still reads. */
         const wv = Wd.water(tx, ty);
         if (wv > 0 && (!TT || !TT.solid)) {
           const h = Math.round(TS * (wv / 8));
           const ramp = ty < 150 ? WATER_BANDS : DEEP_BANDS;
-          const veil = veilAt(ty, b);
-          if (veil >= 1) {
+          /* Brightly lit water is left TRANSPARENT so the background column
+             and the reef behind it show through. Dim water is painted, and
+             painted dark - otherwise a flooded cave fifty tiles down showed
+             the surface-bright band straight through the rock, which made
+             the village look like it was built over a swimming pool. */
+          if (b >= 2) {
             x2.fillStyle = KD.PAL.hex(ramp[b]);
             x2.fillRect(px, py + (TS - h), TS, h);
-          } else {
-            KD.Dither.fill(x2, px, py + (TS - h), TS, h, ramp[b], veil);
           }
-          /* a brighter skin on the surface of a partial tile */
-          if (wv < 8 && b < 4) { x2.fillStyle = KD.PAL.hex(ramp[Math.max(0, b - 1)]); x2.fillRect(px, py + (TS - h), TS, 1); }
+          /* a lit skin on the surface of a partly-filled tile, so a
+             shoreline or a drained pocket still reads as one */
+          if (wv < 8 && b < 4) {
+            x2.fillStyle = KD.PAL.hex(ramp[Math.max(0, b - 1)]);
+            x2.fillRect(px, py + (TS - h), TS, 1);
+          }
         }
         if (TT && TT.art && TT.solid) {
           const n = nameFor(t, tx, ty);

@@ -10,16 +10,20 @@ KD.Parallax = (function () {
      and how much it dims. Factor < 1 scrolls slower than the world (further
      away); > 1 scrolls faster (in front of it). */
   const FAR = [
-    { spr: ['bg_far_reef', 'bg_far_spires', 'bg_far_arch', 'bg_far_wreck'], f: 0.12, shade: 2, haze: 0.50 },
-    { spr: ['bg_mid_rocks', 'bg_mid_coral'], f: 0.26, shade: 1, haze: 0.34 }
+    { spr: ['bg_far_reef', 'bg_far_spires', 'bg_far_arch', 'bg_far_wreck'], f: 0.12, shade: 2 },
+    { spr: ['bg_mid_rocks', 'bg_mid_coral'], f: 0.26, shade: 1 }
   ];
   const MID = [
-    { spr: ['bg_mid_kelp'], f: 0.44, shade: 1, haze: 0.22 },
-    { spr: ['bg_mid_coral', 'bg_mid_rocks'], f: 0.58, shade: 0, haze: 0.06 }
+    { spr: ['bg_mid_coral', 'bg_mid_rocks'], f: 0.46, shade: 1 },
+    { spr: ['bg_mid_coral'], f: 0.60, shade: 0 }
   ];
+  /* No kelp band, near or mid. Tall stalks on a parallax layer hang in open
+     water with their roots nowhere - they read as floating rubbish rather
+     than as plants, and at 1.7x they swept across the frame faster than
+     anything they were supposedly in front of. Foreground is reef only, and
+     reef stands on the floor. */
   const NEAR = [
-    { spr: ['fg_near_coral'], f: 1.35, shade: 0 },
-    { spr: ['fg_near_kelp'], f: 1.7, shade: 0 }
+    { spr: ['fg_near_coral'], f: 1.22, shade: 0 }
   ];
 
   /* deterministic per-slot choice, so a band never flickers as you walk */
@@ -39,7 +43,11 @@ KD.Parallax = (function () {
     const tx = Math.max(0, Math.min(KD.World.W - 1, (worldX / TS) | 0));
     return KD.Gen.surfaceAt(tx) * TS;
   }
-  function band(ctx, cfg, cam, lift) {
+  /* `sink` is how far BELOW the local seabed a band's base sits, so what
+     shows above the ground line is a distant ridge and not a wall. Lifting
+     bands off the floor instead put a solid hedge of coral at roof height
+     right behind the houses. */
+  function band(ctx, cfg, cam, sink) {
     const first = pickFor(cfg.spr, 0);
     if (!first) return false;
     const w = KD.PX.get(first).w;
@@ -55,7 +63,7 @@ KD.Parallax = (function () {
       if (px > KD.W || px + s.w < 0) continue;
       /* the world x this slot sits over, so the ground sample is honest */
       const wx = cam.x + px + s.w / 2;
-      const g = groundAt(wx) - cam.y - (lift || 0);
+      const g = groundAt(wx) - cam.y + (sink || 0) + ((slot * 2654435761) >>> 0) % 9;
       const py = Math.round(g - s.h);
       if (py > KD.H || py + s.h < -20) continue;
       KD.PX.blit(ctx, name, px, py, { anchor: false, shade: cfg.shade });
@@ -63,27 +71,82 @@ KD.Parallax = (function () {
     return true;
   }
 
-  /* ---- the water column: banded colour with dithered seams ---- */
+  /* ---- the water column ------------------------------------------- *
+   * Solid bands, one colour per depth, blended into each other over a
+   * few rows. The whole column is drawn HERE, behind everything, and the
+   * terrain chunks leave their water tiles transparent - so the reef and
+   * the rock ridges sit IN the water at their own depth instead of being
+   * seen through a stippled veil. Clean, and still layered.
+   * ------------------------------------------------------------------ */
   const BANDS = [
-    [34, 'WATER.2'], [56, 'WATER.1'], [90, 'WATER.0'], [122, 'DEEP.2'],
-    [160, 'DEEP.1'], [230, 'DEEP.0'], [330, 'ROT.0'], [400, 'INK.1']
+    [34, 'WATER.2'], [52, 'WATER.1'], [82, 'WATER.0'], [116, 'DEEP.2'],
+    [152, 'DEEP.1'], [214, 'DEEP.0'], [300, 'ROT.0'], [380, 'INK.1']
   ];
-  function water(ctx, cam) {
+
+  /* ---- the sky above the waterline -------------------------------- */
+  /* Hand-stepped clouds on two layers. Above water is the one place in
+     this game that is allowed to be bright, so it has to earn it. */
+  const CLOUDS = [];
+  function seedSky() {
+    CLOUDS.length = 0;
+    for (let i = 0; i < 14; i++) {
+      CLOUDS.push({
+        x: i * 190 + ((i * 977) % 130), y: 4 + ((i * 53) % 22),
+        w: 34 + ((i * 37) % 46), h: 7 + ((i * 17) % 6),
+        f: i & 1 ? 0.05 : 0.09, top: (i % 3) === 0
+      });
+    }
+  }
+  function sky(ctx, cam, horizon, t) {
+    if (horizon <= 0) return;
+    const h = Math.min(KD.H, horizon);
+    /* a vertical wash from deep sky down to haze at the waterline */
+    KD.Screen.rect(0, 0, KD.W, h, 'DEEP.4');
+    const steps = [['WATER.3', 0.30], ['WATER.2', 0.18]];
+    steps.forEach((st, k) => {
+      const y = Math.max(0, h - 26 + k * 11);
+      KD.Dither.wash(ctx, 0, y, KD.W, Math.max(0, h - y), st[0], st[1]);
+    });
+    /* the sun, stepped square by square, never a circle */
+    const sx = Math.round(KD.W * 0.74 - cam.x * 0.02) % (KD.W + 120);
+    const sy = Math.max(6, h - 66);
+    for (let r = 0; r < 5; r++) {
+      const w = [6, 12, 16, 12, 6][r];
+      KD.Screen.rect(sx - (w >> 1), sy + r * 4, w, 4, r === 2 ? 'WHITE' : 'GOLD.3');
+    }
+    /* clouds: stacked slabs, lit on top, shadowed underneath */
+    for (const c of CLOUDS) {
+      const px = Math.round(c.x - cam.x * c.f) % (KD.World.W * TS * c.f + KD.W + 400);
+      const x = px - 200;
+      if (x > KD.W + 90 || x + c.w < -90) continue;
+      const y = Math.round(c.y + Math.sin(t * 0.2 + c.x) * 2);
+      if (y > h) continue;
+      KD.Screen.rect(x + 4, y, c.w - 8, 2, 'WHITE');
+      KD.Screen.rect(x + 2, y + 2, c.w - 4, c.h - 3, 'BONE.2');
+      KD.Screen.rect(x, y + c.h - 1, c.w, 2, 'BONE.1');
+      if (c.top) KD.Screen.rect(x + 10, y - 3, c.w - 22, 3, 'WHITE');
+    }
+  }
+
+  function water(ctx, cam, t) {
     const sea = (KD.Gen.meta.sea || 34) * TS;
     const horizon = Math.round(sea - cam.y);
-    if (horizon > 0) {
-      /* above the surface: sky, and a sun the game can actually see */
-      KD.Screen.rect(0, 0, KD.W, Math.min(KD.H, horizon), 'DEEP.4');
-      KD.Dither.wash(ctx, 0, Math.max(0, horizon - 14), KD.W, 14, 'WATER.3', 0.55);
-    }
+    sky(ctx, cam, horizon, t);
     for (let i = 0; i < BANDS.length; i++) {
       const y0 = BANDS[i][0] * TS - cam.y;
       const y1 = (i + 1 < BANDS.length ? BANDS[i + 1][0] * TS : KD.World.H * TS) - cam.y;
       if (y1 < 0 || y0 > KD.H) continue;
       const a = Math.max(0, y0), b = Math.min(KD.H, y1);
       KD.Screen.rect(0, a, KD.W, b - a, BANDS[i][1]);
-      /* dither the seam between two bands so depth reads as a gradient */
-      if (y0 > -8 && y0 < KD.H) KD.Dither.wash(ctx, 0, y0 - 7, KD.W, 14, BANDS[i][1], 0.5);
+      /* blend into the band above over six rows, so depth is a gradient
+         and not a stack of stripes - three narrow washes, not a screen
+         door across the whole frame */
+      if (i > 0 && y0 > -8 && y0 < KD.H) {
+        const up = BANDS[i - 1][1];
+        KD.Dither.wash(ctx, 0, y0, KD.W, 2, up, 0.72);
+        KD.Dither.wash(ctx, 0, y0 + 2, KD.W, 2, up, 0.44);
+        KD.Dither.wash(ctx, 0, y0 + 4, KD.W, 2, up, 0.20);
+      }
     }
     return horizon;
   }
@@ -92,8 +155,8 @@ KD.Parallax = (function () {
   function shafts(ctx, cam, t) {
     const sea = (KD.Gen.meta.sea || 34) * TS;
     if (cam.y > sea + 150 * TS) return;             // no sun this deep
-    const have = KD.PX.hasAny('bg_shaft');
-    const n = 5;
+    const have = false;   // the sprite column read as a hard grey bar
+    const n = 4;
     for (let i = 0; i < n; i++) {
       const wx = (i * 220 + Math.sin(t * 0.09 + i * 1.7) * 26);
       const px = Math.round(wx - cam.x * 0.4);
@@ -111,7 +174,7 @@ KD.Parallax = (function () {
         const H2 = Math.min(KD.H - top, 190);
         for (let y = 0; y < H2; y += 2) {
           const wide = 16 + (y >> 2);
-          const cov = Math.max(0, 0.42 - y / 300);
+          const cov = Math.max(0, 0.26 - y / 420);
           if (cov <= 0.02) break;
           KD.Dither.fill(ctx, sx - (wide >> 1) + (y >> 3), top + y, wide, 2, 'BONE.2', cov);
         }
@@ -126,6 +189,7 @@ KD.Parallax = (function () {
   const MEDIUM = ['an_turtle', 'an_ray', 'an_cuttlefish', 'an_grouper', 'an_lionfish', 'an_octopus_wild'];
   const BIG = ['an_whaleshark', 'an_manta', 'an_sunfish', 'an_hammerhead', 'an_dolphinpod'];
   function seed(n) {
+    seedSky();
     fauna.length = 0;
     const pool = [];
     for (const s of SMALL) if (KD.PX.hasAny(s)) pool.push({ n: s, band: 0 });
@@ -168,69 +232,52 @@ KD.Parallax = (function () {
     }
   }
 
-  /* Which water colour is in front of the camera at this depth. A haze
-     pass dithers THAT over a band, which is what actually makes a
-     backdrop read as distant underwater: things do not go black with
-     distance down here, they wash out toward the colour of the water in
-     front of them. Darkening alone turned every far ridge into a black
-     scribble against bright shallows. */
-  function waterColAt(y) {
-    let col = BANDS[0][1];
-    for (const bnd of BANDS) { if (y >= bnd[0] * TS) col = bnd[1]; else break; }
-    return col;
-  }
-  function haze(ctx, cam, amount) {
-    if (!amount) return;
-    /* wash in the two or three colours the visible column actually is, so
-       the veil matches the water at every depth on screen at once */
-    let y = 0;
-    while (y < KD.H) {
-      const col = waterColAt(cam.y + y);
-      let end = KD.H;
-      for (const bnd of BANDS) {
-        const sy = bnd[0] * TS - cam.y;
-        if (sy > y) { end = Math.min(end, sy); break; }
-      }
-      KD.Dither.wash(ctx, 0, y, KD.W, Math.max(1, end - y), col, amount);
-      y = end;
-    }
-  }
-
   /* ---- the whole back half of the frame ---- */
   function back(ctx, cam, t) {
-    const horizon = water(ctx, cam);
+    const horizon = water(ctx, cam, t);
     shafts(ctx, cam, t);
-    /* Far bands stand on an implied distant floor, lifted well clear of the
-       real seabed; mid bands sit closer to it. Each one is veiled by the
-       water in front of it before the next is drawn, so the layers really
-       do sit at different distances instead of stacking flat. */
-    for (let i = 0; i < FAR.length; i++) {
-      if (band(ctx, FAR[i], cam, 26 - i * 10)) haze(ctx, cam, FAR[i].haze);
-    }
-    for (let i = 0; i < MID.length; i++) {
-      if (band(ctx, MID[i], cam, 10 - i * 6)) haze(ctx, cam, MID[i].haze);
-    }
+    /* Far bands stand on an implied distant floor, lifted clear of the real
+       seabed; mid bands sit closer to it. They are drawn straight onto the
+       water column, so each one really is AT its depth. */
+    for (let i = 0; i < FAR.length; i++) band(ctx, FAR[i], cam, 22 + i * 12);
+    for (let i = 0; i < MID.length; i++) band(ctx, MID[i], cam, 44 + i * 14);
     life(ctx, cam, false);
     return horizon;
   }
-  /* the surface chop, drawn over the water but under the world */
+  /* ---- the surface -------------------------------------------------- *
+   * Two travelling waves of different wavelength summed, drawn as a
+   * stepped crest: a white cap on top, a lit face under it, then the
+   * body of the water. Sunlight breaks along it. This is the one place
+   * the ocean gets to move, so it moves properly rather than jittering
+   * two pixels up and down.
+   * ------------------------------------------------------------------ */
+  function waveAt(wx, t) {
+    return Math.sin(wx * 0.035 + t * 1.5) * 3.2
+         + Math.sin(wx * 0.011 - t * 0.9) * 2.4
+         + Math.sin(wx * 0.083 + t * 2.6) * 1.1;
+  }
   function surface(ctx, cam, t) {
     const sea = (KD.Gen.meta.sea || 34) * TS;
     const h = Math.round(sea - cam.y);
-    if (h < -6 || h > KD.H) return;
-    if (KD.PX.hasAny('bg_surface')) {
-      const s = KD.PX.get('bg_surface');
-      const ox = Math.floor(cam.x * 0.85) % s.w;
-      for (let x = -ox - s.w; x < KD.W + s.w; x += s.w) {
-        KD.PX.blit(ctx, 'bg_surface', x, h - s.h + 2, { anchor: false });
-      }
-      return;
-    }
+    if (h < -24 || h > KD.H + 8) return;
+    let prev = null;
     for (let x = 0; x < KD.W; x += 2) {
-      const bob = Math.round(Math.sin((x + cam.x) * 0.08 + t * 1.7) * 2);
-      KD.Screen.rect(x, h + bob, 2, 1, 'WATER.3');
-      KD.Screen.rect(x, h + bob + 1, 2, 1, 'WATER.2');
-      if (((x >> 1) + ((t * 3) | 0)) % 7 === 0) KD.Screen.rect(x, h + bob - 2, 1, 1, 'BONE.2');
+      const wx = x + cam.x;
+      const y = h + Math.round(waveAt(wx, t));
+      /* the face of the wave: three steps of water, brightest at the top */
+      KD.Screen.rect(x, y + 1, 2, 3, 'WATER.3');
+      KD.Screen.rect(x, y + 4, 2, 4, 'WATER.2');
+      /* the crest */
+      KD.Screen.rect(x, y - 1, 2, 2, 'WHITE');
+      KD.Screen.rect(x, y - 3, 2, 2, 'BONE.2');
+      /* foam where the wave is steepest, which is where it would break */
+      if (prev !== null && Math.abs(y - prev) >= 2) {
+        KD.Screen.rect(x, y - 5, 2, 2, 'WHITE');
+        KD.Screen.rect(x - 2, y - 4, 2, 1, 'BONE.2');
+      }
+      /* glitter running along the crest */
+      if (((x >> 1) + ((t * 7) | 0)) % 11 === 0) KD.Screen.rect(x, y - 6, 1, 1, 'WHITE');
+      prev = y;
     }
   }
   /* everything in front of the world */

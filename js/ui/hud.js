@@ -85,9 +85,11 @@ KD.Hud = (function () {
     if (task) {
       /* On a touch layout the right edge belongs to the tab column, so the
          task line goes under the fragments instead of behind the buttons. */
+      /* Bottom left, above the hotbar. It used to sit at y=38 on the right,
+         which is exactly where a say() message box lands, so the two
+         overlapped every time the game told you anything. */
       const col = task.startsWith('READY') ? 'KELP.2' : 'BONE.1';
-      if (KD.touch) KD.Text.draw(task, 3, 38, col, { tiny: true, shadow: 'INK.0', max: KD.W - 90 });
-      else KD.Text.draw(task, KD.W - 6, 38, col, { tiny: true, align: 'right', shadow: 'INK.0', max: Math.min(230, KD.W - 130) });
+      KD.Text.draw(task, 4, KD.H - 40, col, { tiny: true, shadow: 'INK.0', max: KD.W - 120 });
     }
     /* depth read-out, so the layers are legible as progress */
     const d = (KD.Player.P.y / 8) | 0;
