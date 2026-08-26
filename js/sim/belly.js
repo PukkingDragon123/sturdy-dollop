@@ -89,7 +89,7 @@ KD.Belly = (function () {
     const ox = Math.round(x) * (face < 0 ? -1 : 1);
     const oy = Math.round(y) + (s.h - h);
     KD.PX.blit(ctx, n, px - (w >> 1) + ox, py - 36 + 18 + oy, {
-      anchor: false, w: w, h: h, flipX: face < 0
+      anchor: false, dw: w, dh: h, flipX: face < 0
     });
   }
   return { update, draw, reset, size, fat, get x() { return x; }, get y() { return y; } };

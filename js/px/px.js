@@ -189,7 +189,16 @@ KD.PX = (function () {
 
   /* ---- drawing -------------------------------------------- */
   /* blit(ctx, name, x, y, o)
-     o.flipX, o.anchor (use the sprite's ax/ay), o.clip {w,h} */
+       o.flipX    mirror horizontally
+       o.anchor   false to treat x,y as the top-left instead of the anchor
+       o.shade    which darkness band to draw from
+       o.w / o.h  CLIP: draw only this much of the sprite, 1:1. These set the
+                  source AND destination rect together, so they crop - they
+                  do NOT scale. Passing a bigger w here reads NEIGHBOURING
+                  SPRITES out of the atlas, which is exactly the bug that put
+                  stray wooden slabs on the sides of every fruit house.
+       o.dw / o.dh  SCALE: draw the whole sprite into this destination size.
+                  Integer multiples only, if you want the pixels square. */
   function blit(ctx, name, x, y, o) {
     if (!built) build();
     const s = SPR[typeof name === 'string' ? name : name.name];
@@ -197,12 +206,13 @@ KD.PX = (function () {
     o = o || {};
     let dx = Math.round(x) - (o.anchor === false ? 0 : s.ax);
     const dy = Math.round(y) - (o.anchor === false ? 0 : s.ay);
-    const w = o.w || s.w, h = o.h || s.h;
+    const w = o.w || s.w, h = o.h || s.h;              // source (and clip)
+    const dw = o.dw || w, dh = o.dh || h;             // destination
     const band = o.shade ? Math.min(SHADES - 1, o.shade | 0) : 0;
     if (o.flipX) {
-      ctx.drawImage(shadeFlip[band], s.u + (s.w - w), s.v, w, h, dx, dy, w, h);
+      ctx.drawImage(shadeFlip[band], s.u + (s.w - w), s.v, w, h, dx, dy, dw, dh);
     } else {
-      ctx.drawImage(shades[band], s.u, s.v, w, h, dx, dy, w, h);
+      ctx.drawImage(shades[band], s.u, s.v, w, h, dx, dy, dw, dh);
     }
   }
 

@@ -42,10 +42,10 @@ KD.Scenes.title = (function () {
         else KD.State.say('That save is broken.', 'BLOOD.2');
       }
       by += 22;
-      if (KD.UI.button(bx, by, bw, 15, 'NEW WORLD')) { KD.State.wipe(); KD.Game.go('gen', {}); }
+      if (KD.UI.button(bx, by, bw, 15, 'NEW WORLD')) { KD.State.wipe(); if (!KD.Cine.play('intro')) KD.Game.go('gen', {}); }
       by += 19;
     } else {
-      if (KD.UI.button(bx, by, bw, 18, 'DIG IN', { key: 'Enter' })) KD.Game.go('gen', {});
+      if (KD.UI.button(bx, by, bw, 18, 'DIG IN', { key: 'Enter' })) { if (!KD.Cine.play('intro')) KD.Game.go('gen', {}); }
       by += 22;
     }
     if (KD.UI.button(bx, by, bw, 15, KD.Sfx.isMuted() ? 'SOUND OFF' : 'SOUND ON')) KD.Sfx.mute();

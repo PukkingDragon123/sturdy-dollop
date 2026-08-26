@@ -69,6 +69,14 @@ KD.Scenes.play = (function () {
     KD.In.buttons(BTNS);
   }
 
+  /* First time east of the Sea Gate, the turtle has something to say. */
+  function gateWatch() {
+    if (KD.Cine.seen('gate')) return;
+    const tx = (KD.Player.P.x / 8) | 0;
+    if (tx <= KD.Zones.byId.gate.x1) return;
+    KD.Cine.play('gate');
+  }
+
   function update(dt) {
     layout(S);
     S.tick(dt);
@@ -100,6 +108,7 @@ KD.Scenes.play = (function () {
     KD.Parallax.tick(dt);
     KD.Folk.update(dt, S);
     KD.Belly.update(dt, S);
+    gateWatch();
 
     /* camera: lead the player, snap to whole pixels so nothing shimmers */
     const P = KD.Player.P;
@@ -135,7 +144,9 @@ KD.Scenes.play = (function () {
     }
     S.S.flags.kingUp = 1;
     KD.Boss.start(th.x, th.y);
-    S.say('"Oh. You actually did it."', 'ROT.3');
+    /* the cutscene plays over the arena, then hands straight back to play
+       with the fight already running */
+    if (!KD.Cine.play('throne')) S.say('"Oh. You actually did it."', 'ROT.3');
   }
 
   function drawKing(ctx, cam) {

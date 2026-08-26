@@ -19,7 +19,8 @@ KD.Game = (function () {
     KD.UI.guard(0.18);
     if (cur.enter) cur.enter(nextArgs);
   }
-  const win = () => go('victory', {});
+  /* the crown coming back gets a cutscene; its `after` lands on victory */
+  const win = () => { if (!KD.Cine || !KD.Cine.play('win')) go('victory', {}); };
 
   function frame(now) {
     requestAnimationFrame(frame);

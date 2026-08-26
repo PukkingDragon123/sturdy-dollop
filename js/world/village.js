@@ -273,7 +273,7 @@ KD.Village = (function () {
       const shade = KD.PX.bandFor(lit, L.MAX);
       const fs = KD.PX.get(b.kind.fruit);
       KD.PX.blit(ctx, b.kind.fruit, sx, sy,
-        { shade, anchor: false, w: fs.w * SC, h: fs.h * SC });
+        { shade, anchor: false, dw: fs.w * SC, dh: fs.h * SC });
       /* The doorway, drawn after the fruit. The notch carved out of the
          tile layer has to be filled with SOMETHING or the background water
          shows through the base of the house as a blue box - and the door
