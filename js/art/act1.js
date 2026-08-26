@@ -968,8 +968,336 @@ KD.art.act1 = (function () {
     P.anim('dp_talk', ['dp_talk0', 'dp_talk1'], 5);
   }
 
+  /* portraits are 36x40 to match the panel that draws them, anchored at
+     the top-left because the panel places them itself */
+  const PO = (name, rows) => P.def(name, A(rows, 0, 0));
+  /* sharks swim; anchored at the middle so they can be centred on a point */
+  const SK = (name, rows) => P.def(name, A(rows, 20, 10));
+  const KG = (name, rows) => P.def(name, A(rows, 15, 40));
+
+  /* ---- THE DIALOGUE PORTRAITS ---- */
+  function portraits() {
+    const _po_king = [
+      '.......o..o..o..o..o..o..o..o.......',
+      '......oYooYooYooYooYooYooYo.........',
+      '.....oGYYoYYoYYoYYoYYoYYoYYGo.......',
+      '.....oGYY#YYYY#YYYY#YYYY#YYGo.......',
+      '.....ogGGGGGGGGGGGGGGGGGGGgo........',
+      '......omNNNNNNNNNNNNNNNNNNNNno......',
+      '.....omNNNNNNNNNNNNNNNNNNNNNNno.....',
+      '.....oNnKKKKKKKKKKKKKKKKKKKKnNo.....',
+      '.....oNnKKKKKKKKKKKKKKKKKKKKnNo.....',
+      '.....oNnKKoooKKKKKKKKKKoooKKnNo.....',
+      '.....oNnKKoWwwboKKKKKoWwwboKnNo.....',
+      '.....oNnKKoWooboKKKKKoWooboKnNo.....',
+      '.....oNnKKKKKKKKKKKKKKKKKKKKnNo.....',
+      '.....oNnKKKnnnKKkkKKKKnnnKKKnNo.....',
+      '.....oNnKKKnnnKoSkoKKKnnnKKKnNo.....',
+      '.....oNnKKKKKoqqqqqqqqoKKKKKnNo.....',
+      '.....oNnKKKKKKSSSSSSKKKKKKKKnNo.....',
+      '.....onnnnnnnnnnnnnnnnnnnnnnnnnno...',
+      '....omNNNNNNNNNNNNNNNNNNNNNNNNno....',
+      '.....omNNNNNNNNNNNNNNNNNNNNNNno.....',
+      '......omNNNNNNNNNNNNNNNNNNNNno......',
+      '.......omNNNNNNNNNNNNNNNNNNno.......',
+      '........omNNNNNNNNNNNNNNNNno........',
+      '....................................',
+      '....................................',
+      '....................................',
+      '..........o%$$$$$$$$$$$$#o..........',
+      '......o%$$$$$$$$$$$$$$$$$$$$#o......',
+      '..o%$$$$$$$$$$$$$$$$$$$$$$$$$$$$#o..',
+      'o%$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$#o',
+      'o%$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$#o',
+      '.....oJjjjjjjjjjjjjjjjjjjjjjjho.....',
+      '...oJjjjoyyyyyyyyyyyyyyyyyyyojjho...',
+      '..oJjjjjoYYYYYYYYYYYYYYYYYYYojjjho..',
+      '.oJjjjjjogggggggggggggggggggojjjjho.',
+      '.oJjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjho.',
+      '.oJjjjjjjjjjjjYjjYjjYjjjjjjjjjjjjho.',
+      '.oJjjjjjjjjjjjYjjYjjYjjjjjjjjjjjjho.',
+      '.oJjjjjjjjjjjjYYYYYYYjjjjjjjjjjjjho.',
+      '.oJjjjjjjjjjjjjjjYjjjjjjjjjjjjjjjho.'
+    ];
+    PO('po_king', _po_king);
+    const _po_queen = [
+      '...........oxRRRRRRRRRRro...........',
+      '........oxRRRRRRRRRRRRRRRRro........',
+      '.....oxRRRRRoRRRRRoRRRRRoRRRRro.....',
+      '...oxRRRRRoYWYoRRRRRRoYWYoRRRRRro...',
+      '..oxRRRoyYYYWYYYWYYYyoRRRRRRRRRRro..',
+      '.......ogGGGGGGGGGGGgo..............',
+      '....oRRoxRRRRRRRRRRRRRRRRRRroxxxo...',
+      '....oRRRoxRRRRRRRRRRRRRRRRroxxxxo...',
+      '....oRRRoKKKKKKKKKKKKKKKKKKoxxxxo...',
+      '....oRRRoKKooKKKKKKKKKKooKKoxxxxo...',
+      '....oRRRoKKoWwboKKKKKoWwboKoxxxxo...',
+      '....oRRRR..oWobo.....oWobo..xxxxo...',
+      '....oRRRoKxKKKKKKKKKKKKKKxKoxxxxo...',
+      '....oRRRoKKKKKKKKkkKKKKKKKKoxxxxo...',
+      '....oRRRoKKKKKKKKKKKKKKKKKKoxxxxo...',
+      '....oRRRoKKKKKKKoSkoKKKKKKKoxxxxo...',
+      '....oRRRoKKKKKKKKKKKKKKKKKKoxxxxo...',
+      '....oRRRoKKKKKKoqqqqoKKKKKKoxxxxo...',
+      '....oRRRoKKKKKKKxxxxKKKKKKKoxxxxo...',
+      '....oRRRoKKKKKKKKKKKKKKKKKKoxxxxo...',
+      '....oRRoKkkkkkkkkkkkkkkkkkkSoxxxo...',
+      '....oRRRoKkkkkkkkkkkkkkkkkSoxxxxo...',
+      '....oRRRRoKkkkkkkkkkkkkkkSo.xxxxo...',
+      '....oRRRR.oKkkkkkkkkkkkkSo..xxxxo...',
+      '....oRRRo877777777777777775oxxxxo...',
+      '....oo877777777777777777777775oxo...',
+      '..o877777777oWWWWWWWWWWWo77777775o..',
+      '.o87777777777777777777777777777775o.',
+      '.o87777777777777777777777777777775o.',
+      '.o87777777777777777777777777777775o.',
+      '.o8777777777777oXXo777777777777775o.',
+      '.o87777777777777777777777777777775o.',
+      '.o87777777777777777777777777777775o.',
+      '.o87777777777777777777777777777775o.',
+      '.o87777777777777777777777777777775o.',
+      '.o87777777777777777777777777777775o.',
+      '.o87777777777777777777777777777775o.',
+      '.o87777777777777777777777777777775o.',
+      '.o87777777777777777777777777777775o.',
+      '.o87777777777777777777777777777775o.'
+    ];
+    PO('po_queen', _po_queen);
+    const _po_deep = [
+      '..........oWwwwwwwwwwwwwbo..........',
+      '.......oWwWWWWWWwwwwwwwwwwwbo.......',
+      '....oWwwwwwwwwwwwwwwwbbbbbwwwwbo....',
+      '...oWwwwwwwWWWWWWwwwwwwwwwwwwwwbo...',
+      '...oWwwwwwwwwwwwwwwwbbbbbwwwwwwbo...',
+      '.....oWwwwwwwwwwwwwwwwwwwwwwwbo.....',
+      '......owoooooooooooooooooooobo......',
+      '.......oAaaaaaaaaaaaaaaaaaazo.......',
+      '.....oAaaaaaaaaaaaaaaaaaaaaaazo.....',
+      '...oAaaaaaaaaaaaaaaaaaaaaaaaaaazo...',
+      '..ooooooooooooooaaaaoooooooooooooo..',
+      '.oAoWwwwwwwwwboaaaaaaoWwwwwwwwwbozo.',
+      '.oAoWwwWYYYgwboaaaaaaoWwwWYYYgwbozo.',
+      '.oAoWwwgooogwboaaaaaaoWwwgooogwbozo.',
+      '...oWwwgooogwbo......oWwwgooogwbo...',
+      '...oWwwgyyygwbo......oWwwgyyygwbo...',
+      '...oWwwgyyygwbo......oWwwgyyygwbo...',
+      '...oWwwwwwwwwbo......oWwwwwwwwwbo...',
+      '.oAaaaaaaaaaaaaaaaaaaaaaaaaaaaaaazo.',
+      '..oAaaaaaaaaaaaaaaaaaaaaaaaaaaaazo..',
+      '...oAaaaaaaaaaaaaaaaaaaaaaaaaaazo...',
+      '....oAaaaaozzzzzzzzzzzzzzzoaaazo....',
+      '......oAaaaazzzzzAzzzzzaaaaazo......',
+      '........oAaaaaaaaaaaaaaaaazo........',
+      '.....oAaaaaaaaaaaaaaaaaaaaaaazo.....',
+      '...oAaaaaaaaaaaaaaaaaaaaaaaaaaazo...',
+      '..oAazoaaaaaaaaaaaaaaaaaaaaaaoAazo..',
+      '.oAaazoaaaaaaaaaaaaaaaaaaaaaaaoAazo.',
+      '.oAaaaaaaaaoWwwwwwwwwwwboaaaaaaaazo.',
+      '.oAaaaaaaoWwwwwwwwwwwwwwwboaaaaaazo.',
+      '.oAaaaaaoWwwwwwwbwbwwwwwwwboaaaaazo.',
+      '.oAaaaaoWwwwwwwwwwwwwwwwwwwboaaaazo.',
+      '.oAaaaaoWwwwwwwwwwwwwwwwwwwboaaaazo.',
+      '.oAaaaaoWwwwwwwwwwwwwwwwwwwboaaaazo.',
+      '.oAaaaaoWwwwwwwwwwwwwwwwwwwboaaaazo.',
+      '.oAaaaaoWwwwwwwwwwwwwwwwwwwboaaaazo.',
+      '....................................',
+      '....................................',
+      '....................................',
+      '....................................'
+    ];
+    PO('po_deep', _po_deep);
+  }
+
+  /* ---- SHARKS, IN OFF THE BALCONY ---- */
+  function sharks() {
+    const _sk_swim0 = [
+      '...................o....................',
+      '..................oJo...................',
+      '.................oWJo...................',
+      '................oWJJo...................',
+      'oJJJJJJo.......ojJJJJo..................',
+      '.oJJJJJo......oojjjjjjjjoo..............',
+      '..oJJJJo.....oojjjjjjjjjjjjoo...........',
+      '...oJJJo..oojjjjjjjjjjjjjjjjjoo.........',
+      '....oJJoojjjjjjjjjjjjjjjjjjjjjjoo.......',
+      'oJJoJJJojjjjjjjjjjjjjjjjjojojooojJo.....',
+      'oJJohhhohhhhhhhhhhhhhhhhhohohooWhhBo....',
+      'oBBoBBBoBBBBBBBBBBBBBBBBBBBBoWoWoWo.....',
+      '...oJJJo.ooBBBBBBBBBBBBBBBooooBBoo......',
+      '..oJJJJo...ooBBBBBBBBBBBoHHHoBoo........',
+      '.oJJJJJo.....ooBBBBBBBBoHHoBoo..........',
+      'oJJJJJJo.......ooBBBBBBooBoo............',
+      '.................ooBBBBBoo..............',
+      '..................ooooooo...............',
+      '........................................',
+      '........................................'
+    ];
+    SK('sk_swim0', _sk_swim0);
+    const _sk_swim1 = [
+      '...................o....................',
+      '..................oJo...................',
+      '.................oWJo...................',
+      '................oWJJo...................',
+      '...............ojJJJJo..................',
+      'oJJJJJJo......oojjjjjjjjoo..............',
+      '.oJJJJJo.....oojjjjjjjjjjjjoo...........',
+      '..oJJJJo..oojjjjjjjjjjjjjjjjjoo.........',
+      '...oJJJoojjjjjjjjjjjjjjjjjjjjjjoo.......',
+      'oJJoJJJojjjjjjjjjjjjjjjjjojojooojJo.....',
+      'oJJohhhohhhhhhhhhhhhhhhhhohohooWhhBo....',
+      'oBBoBBBoBBBBBBBBBBBBBBBBBBBBoWoWoWo.....',
+      '..oJJJJo.ooBBBBBBBBBBBBBBBooooBBoo......',
+      '.oJJJJJo...ooBBBBBBBBBBBoHHHoBoo........',
+      'oJJJJJJo.....ooBBBBBBBBoHHoBoo..........',
+      '...............ooBBBBBBooBoo............',
+      '.................ooBBBBBoo..............',
+      '..................ooooooo...............',
+      '........................................',
+      '........................................'
+    ];
+    SK('sk_swim1', _sk_swim1);
+    const _sk_swim2 = [
+      '...................o....................',
+      '..................oJo...................',
+      '.................oWJo...................',
+      '................oWJJo...................',
+      '...............ojJJJJo..................',
+      '..............oojjjjjjjjoo..............',
+      'oJJJJJJo.....oojjjjjjjjjjjjoo...........',
+      '.oJJJJJo..oojjjjjjjjjjjjjjjjjoo.........',
+      '..oJJJJoojjjjjjjjjjjjjjjjjjjjjjoo.......',
+      'oJJoJJJojjjjjjjjjjjjjjjjjojojooojJo.....',
+      'oJJohhhohhhhhhhhhhhhhhhhhohohooWhhBo....',
+      'oBooBBBoBBBBBBBBBBBBBBBBBBBBoWoWoWo.....',
+      '.oJJJJJo.ooBBBBBBBBBBBBBBBooooBBoo......',
+      'oJJJJJJo...ooBBBBBBBBBBBoHHHoBoo........',
+      '.............ooBBBBBBBBoHHoBoo..........',
+      '...............ooBBBBBBooBoo............',
+      '.................ooBBBBBoo..............',
+      '..................ooooooo...............',
+      '........................................',
+      '........................................'
+    ];
+    SK('sk_swim2', _sk_swim2);
+    const _sk_bite = [
+      '...................o....................',
+      '..................oJo...................',
+      '.................oWJo...................',
+      '................oWJJo...................',
+      '...............ojJJJJo..................',
+      'oJJJJJJo......oojjjjjjjjoo..............',
+      '.oJJJJJo.....oojjjjjjjjjjjjoo...........',
+      '..oJJJJo..oojjjjjjjjjjjjjjjjjoo.........',
+      '...oJJJoojjjjjjjjjjjjjjjjjjjjjjoo.......',
+      'oJJoJJJojjjjjjjjjjjjjjjjjojojooojJo.....',
+      'oJJohhhohhhhhhhhhhhhhhhhhohohoooooBo....',
+      'oBBoBBBoBBBBBBBBBBBBBBBBBBBBBoWoWoWo....',
+      '..oJJJJo.ooBBBBBBBBBBBBBBBoooooWWWWo....',
+      '.oJJJJJo...ooBBBBBBBBBBBoHHHoBoo........',
+      'oJJJJJJo.....ooBBBBBBBBoHHoBoo..........',
+      '...............ooBBBBBBooBoo............',
+      '.................ooBBBBBoo..............',
+      '..................ooooooo...............',
+      '........................................',
+      '........................................'
+    ];
+    SK('sk_bite', _sk_bite);
+    P.anim('sk_swim', ['sk_swim0', 'sk_swim1', 'sk_swim2', 'sk_swim1'], 9);
+  }
+
+  /* ---- THE KEG, WHO TEXTS ---- */
+  function theKeg() {
+    const _kg_idle0 = [
+      '..............................',
+      '..........o.o.o.o.............',
+      '.........oyYYYYYyo............',
+      '.........ogGGGGGgoo...........',
+      '.......oWWWWWWWWWWWWo.........',
+      '.......obWWWWWWWWWWbo.........',
+      '.......o43133333133331o.......',
+      '.....o431333331333331331o.....',
+      '....oVvvvvvvvvvvvvvvvvvvvuo...',
+      '...oouuuuuuuuuuuuuuuuuuuuuoo..',
+      '..o431333331333331333331331o..',
+      '..o43133o3o1o3333o3o3o313331o.',
+      '.o431333oWWWo3331oWWWo133331o.',
+      '.o431333oWpWo3331oWpWo133331o.',
+      '.o4313X33ooo333313ooo31X3331o.',
+      '.o43133333133333133333133331o.',
+      '.o4313333313oXXXXo3333133331o.',
+      '.o43133333133xxxx33333133331o.',
+      'ooooo13333313333313333313331o.',
+      'oWWWo1333331333331333331331o..',
+      'oCCCovvvvvvvvvvvvvvvvvvvvuo...',
+      'oWWWo3uuuuuuuuuuuuuuuuuuuuo...',
+      'oCCCo3.o431333331333331o..ooo.',
+      'oWWWo3...................oYYo.',
+      'oCCWo.....................oyo.',
+      'oWWWo.....................ooo.',
+      'ooooo.........................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................'
+    ];
+    KG('kg_idle0', _kg_idle0);
+    const _kg_idle1 = [
+      '..............................',
+      '..........o.o.o.o.............',
+      '.........oyYYYYYyo............',
+      '.........ogGGGGGgoo...........',
+      '.......oWWWWWWWWWWWWo.........',
+      '.......obWWWWWWWWWWbo.........',
+      '.......o43133333133331o.......',
+      '.....o431333331333331331o.....',
+      '....oVvvvvvvvvvvvvvvvvvvvuo...',
+      '...oouuuuuuuuuuuuuuuuuuuuuoo..',
+      '..o431333331333331333331331o..',
+      '..o4313333313333313333313331o.',
+      '.o43133333133333133333133331o.',
+      '.o431333ooooo3331ooooo133331o.',
+      '.o4313X3331333331333331X3331o.',
+      '.o43133333133333133333133331o.',
+      '.o4313333313oXXXXo3333133331o.',
+      'ooooo33333133xxxx33333133331o.',
+      'oWWWo13333313333313333313331o.',
+      'oCCCo1333331333331333331331o..',
+      'oWWWo3vvvvvvvvvvvvvvvvvvvuo...',
+      'oCCCo3uuuuuuuuuuuuuuuuuuuuo...',
+      'oWWWo3.o431333331333331o..ooo.',
+      'oCCWo....................oYYo.',
+      'oWWWo.....................oyo.',
+      'ooooo.....................ooo.',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................'
+    ];
+    KG('kg_idle1', _kg_idle1);
+    P.anim('kg_idle', ['kg_idle0', 'kg_idle1'], 2);
+  }
+
   function build() {
-    king(); queenSprite(); theDeep();
+    king(); queenSprite(); theDeep(); portraits(); sharks(); theKeg();
   }
   return { build };
 })();
