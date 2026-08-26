@@ -166,7 +166,12 @@ KD.Scenes.play = (function () {
     else if (P.mode === 'jump') base = pre + 'swim';
     if (P.hurtT > 0.12 && KD.PX.has(pre + 'hurt')) base = pre + 'hurt';
     if (!KD.PX.hasAny(base) && !KD.PX.has(base)) base = pre + 'idle';
-    const name = KD.PX.hasAny(base) ? KD.PX.frameOf(base, P.anim * 0.12) : base;
+    /* the swim cycle runs off how hard he is actually kicking, so a glide
+       coasts on one frame and a burst thrashes */
+    const rate = P.mode === 'swim'
+      ? 0.10 + Math.min(0.22, Math.hypot(P.vx, P.vy) / 420) + ((P.kicking || 0) > 0 ? 0.16 : 0)
+      : 0.12;
+    const name = KD.PX.hasAny(base) ? KD.PX.frameOf(base, P.anim * rate) : base;
     const px = Math.round(P.x - cam.x), py = Math.round(P.y - cam.y);
     if (KD.PX.has(name)) {
       /* squash on landing, stretch on the way up. Anchored at the feet, so

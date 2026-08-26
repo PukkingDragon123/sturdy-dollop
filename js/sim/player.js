@@ -26,7 +26,12 @@ KD.Player = (function () {
   };
   /* tuning, all in px/sec. Terraria-ish: heavy but responsive. */
   const RUN = 78, RUN_AIR = 62, ACC = 420, FRIC = 560;
-  const GRAV = 460, GRAV_WATER = 62, JUMP = 152, SWIM_UP = 86, TERM = 250, TERM_WATER = 62;
+  const GRAV = 460, JUMP = 152, TERM = 250;
+  /* Swimming, tuned for momentum rather than for a walk that happens to be
+     underwater: you accelerate hard, top out fast, glide a long way when you
+     let go, and a kick is a real burst on a short cooldown. SWIM_RISE is the
+     slow buoyant drift that keeps you off the floor when you do nothing. */
+  const SWIM_ACC = 520, SWIM_TOP = 96, SWIM_KICK = 118, SWIM_RISE = -16;
 
   function spawn(x, y) {
     P.x = x * TS + 4; P.y = y * TS;
@@ -73,31 +78,63 @@ KD.Player = (function () {
       if (P.pressT > 2.4) { P.pressT = 0; hurt(1, S, 'pressure'); }
     }
 
-    /* ---- horizontal ---- */
+    /* ---- movement ------------------------------------------------- *
+     * On land: run, friction, jump. In water: SWIM, which is a different
+     * game. You are neutrally buoyant, you accelerate in whatever
+     * direction you are pointing, you glide when you let go, and a kick
+     * gives you a burst that costs stamina. That is the Dave the Diver
+     * feel - the water has weight and momentum, and stopping is a thing
+     * you have to do rather than something that happens to you.
+     * ---------------------------------------------------------------- */
     const v = In.stick();
-    /* the lighter you get, the better you move - that is the whole point */
-    const want = v.x * (wet ? RUN * st.swimSpeed : (P.onGround ? RUN : RUN_AIR)) * (st.moveMul || 1);
-    if (Math.abs(v.x) > 0.1) {
-      P.vx += Math.sign(want) * ACC * dt;
-      if (Math.abs(P.vx) > Math.abs(want)) P.vx = want;
-      P.face = v.x > 0 ? 1 : -1;
-    } else {
-      const f = (P.onGround ? FRIC : FRIC * 0.35) * dt;
-      P.vx = Math.abs(P.vx) <= f ? 0 : P.vx - Math.sign(P.vx) * f;
-    }
-
-    /* ---- vertical ---- */
     const jumpHeld = In.act('jump', 'Space', 'KeyK') || v.y < -0.5;
     if (In.actHit('jump', 'Space', 'KeyK')) P.jumpBuf = 0.12;
     P.jumpBuf -= dt; P.coyote -= dt;
+
     if (wet) {
-      P.vy += GRAV_WATER * dt;
-      if (jumpHeld) P.vy -= SWIM_UP * dt * 3.4;
-      if (v.y > 0.4) P.vy += GRAV_WATER * dt * 2.2;
-      P.vy *= Math.pow(0.16, dt);
-      P.vy = Math.max(-TERM_WATER, Math.min(TERM_WATER, P.vy));
+      /* full eight-way thrust toward the stick, scaled by how light you are */
+      const mag = Math.min(1, Math.hypot(v.x, v.y));
+      const top = SWIM_TOP * st.swimSpeed * (st.moveMul || 1);
+      if (mag > 0.14) {
+        const nx = v.x / (mag || 1), ny = v.y / (mag || 1);
+        P.vx += nx * SWIM_ACC * dt * mag;
+        P.vy += ny * SWIM_ACC * dt * mag;
+        P.face = v.x > 0.1 ? 1 : (v.x < -0.1 ? -1 : P.face);
+        P.kicking = 0.16;
+      } else {
+        P.kicking = Math.max(0, (P.kicking || 0) - dt);
+      }
+      /* a KICK: one hard burst in the direction you are pointing */
+      P.kickCd = Math.max(0, (P.kickCd || 0) - dt);
+      if (In.actHit('jump', 'Space', 'KeyK') && P.kickCd <= 0 && P.stam > 0.18) {
+        const kx = mag > 0.14 ? v.x / mag : P.face, ky = mag > 0.14 ? v.y / mag : -0.25;
+        P.vx += kx * SWIM_KICK;
+        P.vy += ky * SWIM_KICK;
+        P.stam -= 0.16;
+        P.kickCd = 0.42;
+        P.kicking = 0.3;
+        KD.Fx.bubbles(P.x - P.face * 6, P.y - P.h * 0.5, 5);
+        KD.Sfx.play('splash');
+      }
+      /* glide: water drags you down hard but never stops you dead, and a
+         drift of buoyancy keeps you off the floor if you do nothing */
+      const drag = Math.pow(mag > 0.14 ? 0.55 : 0.10, dt);
+      P.vx *= drag; P.vy *= drag;
+      P.vy += (mag > 0.14 ? 0 : SWIM_RISE) * dt;
+      const sp = Math.hypot(P.vx, P.vy);
+      if (sp > top) { P.vx = P.vx / sp * top; P.vy = P.vy / sp * top; }
       P.fallFrom = null;
     } else {
+      /* on land, as before */
+      const want = v.x * (P.onGround ? RUN : RUN_AIR) * (st.moveMul || 1);
+      if (Math.abs(v.x) > 0.1) {
+        P.vx += Math.sign(want) * ACC * dt;
+        if (Math.abs(P.vx) > Math.abs(want)) P.vx = want;
+        P.face = v.x > 0 ? 1 : -1;
+      } else {
+        const f = (P.onGround ? FRIC : FRIC * 0.35) * dt;
+        P.vx = Math.abs(P.vx) <= f ? 0 : P.vx - Math.sign(P.vx) * f;
+      }
       P.vy += GRAV * dt;
       if (P.vy > TERM) P.vy = TERM;
       if (P.jumpBuf > 0 && (P.onGround || P.coyote > 0)) {
