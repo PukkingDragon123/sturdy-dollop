@@ -72,7 +72,17 @@ KD.Scenes.interior = (function () {
                 on: [], plush: [] },
     home:     { wall: ['fu_picture', 'fu_shelf', 'fu_lamp'], floor: ['fu_bed', 'fu_table', 'fu_stool'],
                 on: ['fu_books'],
-                plush: ['pl_kingdoll', 'pl_dolphin', 'pl_octopus', 'pl_crab', 'pl_turtle', 'pl_pile'] }
+                plush: ['pl_kingdoll', 'pl_dolphin', 'pl_octopus', 'pl_crab', 'pl_turtle', 'pl_pile'] },
+    /* The plain houses that fill out the terraces. Without this they fell
+       through to the market dressing and every one of them looked like a
+       shop, which is the opposite of what they are for: these are the rooms
+       somebody actually LIVES in, so they get a bed, a rug, a lamp, plants
+       and a pet on the floor. */
+    folk:     { wall: ['fu_picture', 'fu_window', 'fu_shelf'],
+                floor: ['fu_bed', 'fu_table', 'fu_stool', 'fu_pot'],
+                on: ['fu_books'],
+                plush: ['pl_seahorse', 'pl_turtle', 'pl_jelly', 'pl_narwhal',
+                        'pl_crab', 'pl_pufferfish'] }
   };
 
   /* what each trade sells. cost is in clams. */
@@ -113,7 +123,12 @@ KD.Scenes.interior = (function () {
             'Kilos and levels, majesty. Come back lighter.'],
     home: ['HO! Sit down, majesty, you look terrible. Wonderful, but terrible.',
            'I kept the place tidy. Somebody had to.',
-           'She is not coming back. I have said it kindly nine times now.']
+           'She is not coming back. I have said it kindly nine times now.'],
+    folk: ['Mind the shell, it bites. Not hard. But it bites.',
+           'We heard about the castle. Everyone heard about the castle.',
+           'You can sit down if you want. Nobody here is going to bow.',
+           'Third terrace has the view. First terrace has the plumbing.',
+           'You get used to the current. You do not get used to the rent.']
   };
 
   /* deterministic little PRNG, so a room is always dressed the same way */
@@ -461,7 +476,8 @@ KD.Scenes.interior = (function () {
     barber:    { spr: 'fk_shrimp',   port: 'po_shrimp',   name: 'Snip' },
     bathhouse: { spr: 'fk_turtle',   port: 'po_turtle',   name: 'Bulwark' },
     guard:     { spr: 'fk_turtle',   port: 'po_turtle',   name: 'Bulwark' },
-    home:      { spr: 'mt_santa',    port: 'po_santa',    name: 'Santa the Manta' }
+    home:      { spr: 'mt_santa',    port: 'po_santa',    name: 'Santa the Manta' },
+    folk:      { spr: 'fk_crab',     port: 'po_crab',     name: 'A Neighbour' }
   };
   const who = () => WHO[room.job] || WHO.market;
 

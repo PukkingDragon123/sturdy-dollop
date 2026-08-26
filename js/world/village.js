@@ -65,13 +65,37 @@ KD.Village = (function () {
     const sea = (KD.Gen.meta.sea || 34);
     const HOUSE = 12, STEP = 5;
     const top = sea + HOUSE + 2;                 // shallowest a shelf may be
-    const b0 = Math.max(surfaceAt(cx), top + STEP * 2);
+    const b0 = Math.max(surfaceAt(cx), top + STEP * 3);
+    /* Four shelves now, not three, and the whole town packed into the same
+       width - Fruitfall is meant to read as PLANNED and CROWDED, and three
+       terraces with twelve-tile gaps read as a row of sheds on a beach. */
+    const span = (z.x1 - z.x0 - 24);
+    const seg = (span / 4) | 0;
     const terraces = [
-      { y: b0,             x0: z.x0 + 14,  x1: z.x0 + 116 },
-      { y: b0 - STEP,      x0: z.x0 + 118, x1: z.x0 + 224 },
-      { y: b0 - STEP * 2,  x0: z.x0 + 226, x1: z.x1 - 14 }
+      { y: b0,             x0: z.x0 + 12,            x1: z.x0 + 12 + seg },
+      { y: b0 - STEP,      x0: z.x0 + 14 + seg,      x1: z.x0 + 14 + seg * 2 },
+      { y: b0 - STEP * 2,  x0: z.x0 + 16 + seg * 2,  x1: z.x0 + 16 + seg * 3 },
+      { y: b0 - STEP * 3,  x0: z.x0 + 18 + seg * 3,  x1: z.x1 - 12 }
     ];
-    const order = KINDS.slice();
+    let order = KINDS.slice();
+    /* Pad the run out with plain houses so the terraces actually fill. A
+       town of nothing but shopfronts reads as a high street, not a town. */
+    const PLAIN = KINDS.filter((k) => !k.gate && k.job !== 'home');
+    /* Named, because the room panel prints kind.title and a null there came
+       out on screen as the word "null" over the doorway. */
+    const NAMES = ['Two Shells', 'The Low Door', 'Kelpside', 'Nine Steps',
+                   'The Wet Rug', 'Cinder House', 'The Third Terrace',
+                   'Old Anchor', 'The Quiet Room', 'Barnacle Row',
+                   'The Leaning Fig'];
+    const extra = [];
+    for (let i = 0; i < 9; i++) {
+      const src = PLAIN[(i * 5 + 1) % PLAIN.length];
+      extra.push({ fruit: src.fruit, job: 'folk', sign: null,
+                   title: NAMES[i % NAMES.length], station: null, plain: true });
+    }
+    order = order.slice(0, order.length - 1)
+                 .concat(extra)
+                 .concat(order.slice(order.length - 1));
     /* home stays first and the gate house stays last; the trades shuffle,
        so two runs never lay Fruitfall out the same way */
     for (let i = order.length - 3; i > 0; i--) {
@@ -88,7 +112,8 @@ KD.Village = (function () {
         kind: k, x, y: t.y - f.h, w: f.w, h: f.h,
         terrace: ti, floorY: t.y, fp: f
       });
-      x += f.w + Wd.rint(12, 20);
+      /* shoulder to shoulder, with the occasional lane */
+      x += f.w + (Wd.rnd() < 0.22 ? Wd.rint(9, 14) : Wd.rint(2, 6));
     }
     return { buildings: out, terraces };
   }

@@ -402,7 +402,7 @@ KD.Gen = (function () {
            three entries in each table could ever come up and the whole
            seabed was one kind of frond. */
         const lush = 1 + (zn.reef || 0) * 0.5 + (zn.kelp || 0) * 0.5;
-        if (Wd.rnd() > Math.min(0.95, 0.5 * lush)) continue;
+        if (Wd.rnd() > Math.min(0.97, 0.78 * lush)) continue;
         const r = Wd.rnd();
         /* Planted THICK. The old table topped out around a fifth of the
            available row, which on a flat seabed is one sparse line of

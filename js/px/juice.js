@@ -62,7 +62,12 @@ KD.Juice = (function () {
   /* ---- a slow idle sway, deterministic in t ------------------------ */
   /* Everything alive should breathe a little. Seeded per object so a row
      of fruit houses does not sway in unison like a chorus line. */
+  /* The wind is the ocean's, not each plant's. Reading it here means the
+     houses, the kelp, the surface and the drifting silt all lean the same
+     way at the same moment, which is the difference between weather and
+     six unrelated sine waves. */
   const sway = (t, seed, amp, rate) =>
+    (KD.Parallax ? KD.Parallax.wind * amp * 0.7 : 0) +
     Math.sin(t * (rate || 0.6) + (seed % 17) * 0.9) * (amp || 1);
 
   return { back, outCubic, outQuad, wobble, hit, scale, stopped,

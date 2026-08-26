@@ -6,6 +6,21 @@
    ============================================================ */
 KD.Parallax = (function () {
   const TS = 8;
+
+  /* ---- wind ---------------------------------------------------------
+     One number the whole ocean reads: the surface waves take their phase
+     from it, the clouds and the motes drift with it, and every plant leans
+     into it. Before this, each of those had its own private sine and the
+     sea looked like six things happening near each other. */
+  const W = { t: 0, gust: 0, x: 0 };
+  function wind(dt) {
+    W.t += dt;
+    /* a slow swell with a faster gust riding on it */
+    W.gust = Math.sin(W.t * 0.21) * 0.7 + Math.sin(W.t * 0.73 + 1.3) * 0.3;
+    W.x += W.gust * dt * 14;
+    return W.gust;
+  }
+  const lean = (seed, amp) => W.gust * amp + Math.sin(W.t * 1.7 + seed) * amp * 0.35;
   /* Each band: sprite candidates, parallax factor, the world row it sits on,
      and how much it dims. Factor < 1 scrolls slower than the world (further
      away); > 1 scrolls faster (in front of it). */
@@ -78,9 +93,14 @@ KD.Parallax = (function () {
    * the rock ridges sit IN the water at their own depth instead of being
    * seen through a stippled veil. Clean, and still layered.
    * ------------------------------------------------------------------ */
+  /* The top of the column is now a SHALLOW SHELF: two bright bands before
+     the water starts going anywhere. Without them the sea was one flat
+     turquoise field from the waves to the sand, which is what "too small"
+     looked like - no depth to read. */
   const BANDS = [
-    [34, 'WATER.2'], [52, 'WATER.1'], [82, 'WATER.0'], [116, 'DEEP.2'],
-    [152, 'DEEP.1'], [214, 'DEEP.0'], [300, 'ROT.0'], [380, 'INK.1']
+    [34, 'WATER.3'], [38, 'WATER.2'], [56, 'WATER.1'], [84, 'WATER.0'],
+    [116, 'DEEP.2'], [152, 'DEEP.1'], [214, 'DEEP.0'], [300, 'ROT.0'],
+    [380, 'INK.1']
   ];
 
   /* ---- the sky above the waterline -------------------------------- */
@@ -97,26 +117,68 @@ KD.Parallax = (function () {
       });
     }
   }
+  /* Gulls, because an empty sky is an empty sky however well it is
+     graded. Two frames each, wings up and wings down. */
+  function gull(x, y, up) {
+    if (up) {
+      KD.Screen.rect(x - 4, y - 2, 3, 1, 'INK.1'); KD.Screen.rect(x - 1, y, 3, 1, 'INK.1');
+      KD.Screen.rect(x + 2, y - 2, 3, 1, 'INK.1');
+    } else {
+      KD.Screen.rect(x - 4, y + 1, 3, 1, 'INK.1'); KD.Screen.rect(x - 1, y, 3, 1, 'INK.1');
+      KD.Screen.rect(x + 2, y + 1, 3, 1, 'INK.1');
+    }
+  }
+
   function sky(ctx, cam, horizon, t) {
     if (horizon <= 0) return;
     const h = Math.min(KD.H, horizon);
-    /* a vertical wash from deep sky down to haze at the waterline */
-    KD.Screen.rect(0, 0, KD.W, h, 'DEEP.4');
-    const steps = [['WATER.3', 0.30], ['WATER.2', 0.18]];
-    steps.forEach((st, k) => {
-      const y = Math.max(0, h - 26 + k * 11);
-      KD.Dither.wash(ctx, 0, y, KD.W, Math.max(0, h - y), st[0], st[1]);
-    });
-    /* the sun, stepped square by square, never a circle */
-    const sx = Math.round(KD.W * 0.74 - cam.x * 0.02) % (KD.W + 120);
-    const sy = Math.max(6, h - 66);
-    for (let r = 0; r < 5; r++) {
-      const w = [6, 12, 16, 12, 6][r];
-      KD.Screen.rect(sx - (w >> 1), sy + r * 4, w, 4, r === 2 ? 'WHITE' : 'GOLD.3');
+    /* A stepped gradient, zenith to haze. The old version was one flat slab
+       of DEEP.4 with two dithered washes at the bottom and read as a painted
+       wall; eight solid bands cost eight fills and read as sky. */
+    /* Five bands, all of them still SKY colours. The first attempt ran the
+       gradient down into BONE and the bottom of the sky came out as a grey
+       slab with hard edges - a striped flag, not weather. The haze is a
+       thin strip at the waterline instead, where haze actually is. */
+    const SKYB = ['DEEP.3', 'DEEP.4', 'WATER.0', 'WATER.1', 'WATER.2'];
+    for (let k = 0; k < SKYB.length; k++) {
+      const y0 = Math.round(h * k / SKYB.length);
+      const y1 = Math.round(h * (k + 1) / SKYB.length);
+      if (y1 <= 0) continue;
+      KD.Screen.rect(0, Math.max(0, y0), KD.W, y1 - Math.max(0, y0), SKYB[k]);
+      /* soften each seam with two dithered rows, so it is a gradient */
+      if (k) {
+        KD.Dither.wash(ctx, 0, y0, KD.W, 3, SKYB[k - 1], 0.5);
+        KD.Dither.wash(ctx, 0, y0 + 3, KD.W, 3, SKYB[k - 1], 0.22);
+      }
     }
-    /* clouds: stacked slabs, lit on top, shadowed underneath */
+    KD.Screen.rect(0, Math.max(0, h - 4), KD.W, 3, 'WATER.3');
+    KD.Dither.wash(ctx, 0, Math.max(0, h - 9), KD.W, 5, 'WATER.3', 0.45);
+    /* the sun: a stepped disc with a stepped halo around it, never a circle
+       and never a gradient */
+    const sx = Math.round(KD.W * 0.72 - cam.x * 0.015);
+    const sy = Math.max(10, h - 82);
+    /* the halo, two solid stepped rings - dithered it read as a cloud of
+       dots hanging under the sun */
+    const HALO = [16, 24, 28, 28, 24, 16];
+    for (let r = 0; r < HALO.length; r++) {
+      const w = HALO[r];
+      KD.Screen.rect(sx - (w >> 1), sy - 3 + r * 4, w, 4, 'WATER.3');
+    }
+    const H2 = [10, 18, 22, 22, 18, 10];
+    for (let r = 0; r < H2.length; r++) {
+      const w = H2[r];
+      KD.Screen.rect(sx - (w >> 1), sy - 1 + r * 3, w, 3, 'BONE.2');
+    }
+    const DISC = [8, 14, 18, 18, 14, 8];
+    for (let r = 0; r < DISC.length; r++) {
+      const w = DISC[r];
+      KD.Screen.rect(sx - (w >> 1), sy + r * 3, w, 3,
+                     r === 0 || r === DISC.length - 1 ? 'GOLD.3' : 'WHITE');
+    }
+    /* clouds: stacked slabs, lit on top, warm underneath, drifting on the
+       same wind as everything else */
     for (const c of CLOUDS) {
-      const px = Math.round(c.x - cam.x * c.f) % (KD.World.W * TS * c.f + KD.W + 400);
+      const px = Math.round(c.x - cam.x * c.f - W.x * c.f * 8) % (KD.World.W * TS * c.f + KD.W + 400);
       const x = px - 200;
       if (x > KD.W + 90 || x + c.w < -90) continue;
       const y = Math.round(c.y + Math.sin(t * 0.2 + c.x) * 2);
@@ -124,7 +186,14 @@ KD.Parallax = (function () {
       KD.Screen.rect(x + 4, y, c.w - 8, 2, 'WHITE');
       KD.Screen.rect(x + 2, y + 2, c.w - 4, c.h - 3, 'BONE.2');
       KD.Screen.rect(x, y + c.h - 1, c.w, 2, 'BONE.1');
+      KD.Screen.rect(x + 3, y + c.h + 1, c.w - 8, 1, 'GOLD.2');   // warm underside
       if (c.top) KD.Screen.rect(x + 10, y - 3, c.w - 22, 3, 'WHITE');
+    }
+    /* three gulls, wheeling */
+    for (let k = 0; k < 3; k++) {
+      const gx = Math.round(((k * 137 + t * (9 + k * 3) - cam.x * 0.05) % (KD.W + 60)) - 30);
+      const gy = Math.round(14 + k * 13 + Math.sin(t * 0.8 + k) * 5);
+      if (gy < h - 6) gull(gx, gy, ((t * 4 + k) | 0) % 2 === 0);
     }
   }
 
@@ -143,42 +212,136 @@ KD.Parallax = (function () {
          door across the whole frame */
       if (i > 0 && y0 > -8 && y0 < KD.H) {
         const up = BANDS[i - 1][1];
-        KD.Dither.wash(ctx, 0, y0, KD.W, 2, up, 0.72);
-        KD.Dither.wash(ctx, 0, y0 + 2, KD.W, 2, up, 0.44);
-        KD.Dither.wash(ctx, 0, y0 + 4, KD.W, 2, up, 0.20);
+        /* four light rows, not one heavy one: at 0.72 the top row read as a
+           dotted rule ruled across the whole frame */
+        KD.Dither.wash(ctx, 0, y0, KD.W, 2, up, 0.46);
+        KD.Dither.wash(ctx, 0, y0 + 2, KD.W, 2, up, 0.33);
+        KD.Dither.wash(ctx, 0, y0 + 4, KD.W, 2, up, 0.21);
+        KD.Dither.wash(ctx, 0, y0 + 6, KD.W, 2, up, 0.11);
       }
     }
+    /* No sun-track on the water. Drawn as a dithered wedge it read as a
+       screen-doored box hanging in mid-ocean, which is the third time
+       dithered light has failed in this file - the shafts below are solid
+       for the same reason. */
     return horizon;
   }
 
-  /* ---- god rays: bright dithered columns that drift ---- */
+  /* ---- sunlight ------------------------------------------------------
+     Shafts from the surface. Three earlier versions of this idea (in the
+     castle, and twice here) were dithered, and dithered light always reads
+     as speckle rather than as brightness. These are SOLID bands one step
+     up the water ramp from whatever they cross, slanted by leaning each row
+     a fraction, narrowing as they sink, and cut off before they reach the
+     dark. Low contrast is what keeps them from becoming curtains.
+     -------------------------------------------------------------------- */
+  const SHAFT_UP = { 'WATER.3': 'BONE.2', 'WATER.2': 'WATER.3', 'WATER.1': 'WATER.2',
+                     'WATER.0': 'WATER.1', 'DEEP.2': 'WATER.0', 'DEEP.1': 'DEEP.2' };
+  function bandColAt(wy) {
+    let col = BANDS[0][1];
+    for (const b of BANDS) if (wy >= b[0] * TS) col = b[1]; else break;
+    return col;
+  }
   function shafts(ctx, cam, t) {
     const sea = (KD.Gen.meta.sea || 34) * TS;
-    if (cam.y > sea + 150 * TS) return;             // no sun this deep
-    const have = false;   // the sprite column read as a hard grey bar
-    const n = 4;
-    for (let i = 0; i < n; i++) {
-      const wx = (i * 220 + Math.sin(t * 0.09 + i * 1.7) * 26);
-      const px = Math.round(wx - cam.x * 0.4);
-      const sx = ((px % (KD.W + 240)) + KD.W + 240) % (KD.W + 240) - 120;
-      const top = Math.max(0, Math.round(sea - cam.y));
-      if (top > KD.H) return;
-      if (have) {
-        const s = KD.PX.get('bg_shaft');
-        for (let k = 0; k * s.h < KD.H - top + s.h; k++) {
-          KD.PX.blit(ctx, 'bg_shaft', sx, top + k * s.h, { anchor: false, shade: Math.min(5, 1 + k) });
-        }
-      } else {
-        /* no art yet: a hand-dithered wedge, still not a gradient. BONE reads
-           as light against every water band; WATER.3 vanished into WATER.2. */
-        const H2 = Math.min(KD.H - top, 190);
-        for (let y = 0; y < H2; y += 2) {
-          const wide = 16 + (y >> 2);
-          const cov = Math.max(0, 0.26 - y / 420);
-          if (cov <= 0.02) break;
-          KD.Dither.fill(ctx, sx - (wide >> 1) + (y >> 3), top + y, wide, 2, 'BONE.2', cov);
+    const top = Math.round(sea - cam.y);
+    if (top > KD.H) return;
+    const DEPTH = 260;                       // shafts die before the dark
+    for (let i = 0; i < 6; i++) {
+      const wx = i * 168 + Math.sin(t * 0.07 + i * 1.7) * 30 + W.x * 0.6;
+      const px = Math.round(wx - cam.x * 0.55);
+      const sx = ((px % (KD.W + 300)) + KD.W + 300) % (KD.W + 300) - 150;
+      const slant = 0.22 + (i % 3) * 0.06 + W.gust * 0.05;
+      for (let y = Math.max(0, -top); y < DEPTH; y += 2) {
+        const sy = top + y;
+        if (sy < -2) continue;
+        if (sy > KD.H) break;
+        const k = y / DEPTH;
+        const w = Math.round(15 * (1 - k * 0.7));
+        if (w < 3) break;
+        const col = SHAFT_UP[bandColAt(cam.y + sy)] || null;
+        if (!col) break;
+        const x = Math.round(sx + y * slant);
+        KD.Screen.rect(x, sy, w, 2, col);
+        /* a brighter core, half the width, for the first third */
+        if (k < 0.30) KD.Screen.rect(x + (w >> 2), sy, w >> 1, 2, col);
+      }
+    }
+  }
+
+  /* ---- kelp forest ---------------------------------------------------
+     Drawn rather than spritesheeted, because a kelp stalk that cannot bend
+     is a fence post. Each stalk is a stack of segments whose offset grows
+     with height, so the whole thing leans on the wind and the tips move
+     furthest - and blades hang off it in pairs.
+     -------------------------------------------------------------------- */
+  function stalk(x, groundY, h, seed, shade, wide) {
+    const segs = Math.max(4, h >> 3);
+    const amp = 3 + (seed % 3);
+    let px = x;
+    for (let s = 0; s < segs; s++) {
+      const f = s / segs;
+      const y = groundY - s * 8;
+      if (y < -16) break;
+      if (y > KD.H + 8) continue;
+      const off = lean(seed + s, amp) * f * f;
+      px = x + off * 2;
+      const w = wide ? (f > 0.8 ? 2 : 3) : 2;
+      KD.Screen.rect(Math.round(px), y - 8, w, 9, shade);
+      KD.Screen.rect(Math.round(px), y - 8, 1, 9, 'KELP.2');
+      /* a pair of blades every other segment, alternating sides */
+      if (s % 2 === 1 && f < 0.95) {
+        const bl = 5 + ((seed + s) % 5);
+        const dir = (s & 2) ? 1 : -1;
+        for (let b = 0; b < bl; b++) {
+          KD.Screen.rect(Math.round(px + (dir > 0 ? w : -1 - b)), y - 6 + (b >> 1),
+                         1, 2, b < 2 ? 'KELP.2' : shade);
         }
       }
+    }
+    /* a float at the tip, which is what real kelp has */
+    KD.Screen.rect(Math.round(px), groundY - segs * 8 - 10, 3, 3, 'KELP.3');
+  }
+
+  /* three depths of forest, so the water has something behind it */
+  const FOREST = [
+    { f: 0.34, shade: 'KELP.0', h: [70, 130], step: 34, wide: false },
+    { f: 0.58, shade: 'KELP.1', h: [58, 104], step: 46, wide: false },
+    { f: 0.86, shade: 'KELP.1', h: [44, 82],  step: 74, wide: true }
+  ];
+  function kelp(ctx, cam) {
+    for (let L = 0; L < FOREST.length; L++) {
+      const cfg = FOREST[L];
+      const ox = Math.floor(cam.x * cfg.f);
+      const s0 = Math.floor(ox / cfg.step) - 1;
+      for (let i = 0; i < Math.ceil(KD.W / cfg.step) + 3; i++) {
+        const slot = s0 + i;
+        const r = ((slot * 2654435761 + L * 40503) >>> 0);
+        if ((r % 5) === 0) continue;                     // gaps, not a wall
+        const px = slot * cfg.step - ox + (r % 17);
+        if (px > KD.W + 8 || px < -12) continue;
+        /* Stand on the REAL seabed, sunk a little further the further out
+           the layer is - same trick the coral bands use. An implied floor
+           210px under sea level put the whole forest off the bottom of the
+           screen whenever the camera was up at the surface, which is why
+           the first pass looked like it had no kelp at all. */
+        const wx = cam.x + px;
+        const g = groundAt(wx) - cam.y + (FOREST.length - 1 - L) * 10;
+        if (g < -20 || g > KD.H + 120) continue;
+        const h = cfg.h[0] + (r % (cfg.h[1] - cfg.h[0]));
+        stalk(px, Math.round(g), h, r % 251, cfg.shade, cfg.wide);
+      }
+    }
+  }
+
+  /* plankton, drifting on the wind rather than falling straight */
+  function motes(ctx, cam, t) {
+    for (let i = 0; i < 54; i++) {
+      const sp = 0.6 + (i % 5) * 0.25;
+      const x = (((i * 173 + W.x * sp * 6 - cam.x * 0.3) % (KD.W + 40)) + KD.W + 40) % (KD.W + 40) - 20;
+      const y = (((i * 97 - t * 5 * sp) % (KD.H + 40)) + KD.H + 40) % (KD.H + 40) - 20;
+      KD.Screen.rect(Math.round(x), Math.round(y), 1, 1,
+                     (i & 3) ? 'WATER.2' : 'BONE.1');
     }
   }
 
@@ -228,6 +391,7 @@ KD.Parallax = (function () {
     }
   }
   function tick(dt) {
+    wind(dt);
     const wpx = KD.World.W * TS;
     /* Recycle round the CAMERA, not round the world. Spread over 2600 tiles
        a hundred fish is one every seventeen tiles - three on screen. Wrapping
@@ -267,6 +431,8 @@ KD.Parallax = (function () {
   function back(ctx, cam, t) {
     const horizon = water(ctx, cam, t);
     shafts(ctx, cam, t);
+    kelp(ctx, cam);
+    motes(ctx, cam, t);
     /* Far bands stand on an implied distant floor, lifted clear of the real
        seabed; mid bands sit closer to it. They are drawn straight onto the
        water column, so each one really is AT its depth. */
@@ -283,9 +449,11 @@ KD.Parallax = (function () {
    * two pixels up and down.
    * ------------------------------------------------------------------ */
   function waveAt(wx, t) {
-    return Math.sin(wx * 0.035 + t * 1.5) * 3.2
-         + Math.sin(wx * 0.011 - t * 0.9) * 2.4
-         + Math.sin(wx * 0.083 + t * 2.6) * 1.1;
+    /* the wind decides how big the swell is and how fast it runs */
+    const g = 1 + W.gust * 0.45;
+    return Math.sin(wx * 0.035 + t * 1.5 + W.x * 0.02) * 3.2 * g
+         + Math.sin(wx * 0.011 - t * 0.9) * 2.4 * g
+         + Math.sin(wx * 0.083 + t * 2.6 + W.x * 0.05) * 1.1;
   }
   function surface(ctx, cam, t) {
     const sea = (KD.Gen.meta.sea || 34) * TS;
@@ -354,5 +522,7 @@ KD.Parallax = (function () {
       }
     }
   }
-  return { back, front, surface, seed, tick, get fauna() { return fauna; } };
+  return { back, front, surface, seed, tick, kelp,
+           get wind() { return W.gust; }, get windX() { return W.x; },
+           get fauna() { return fauna; } };
 })();
