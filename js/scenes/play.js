@@ -99,6 +99,7 @@ KD.Scenes.play = (function () {
     KD.Fx.update(dt);
     KD.Parallax.tick(dt);
     KD.Folk.update(dt, S);
+    KD.Belly.update(dt, S);
 
     /* camera: lead the player, snap to whole pixels so nothing shimmers */
     const P = KD.Player.P;
@@ -139,16 +140,22 @@ KD.Scenes.play = (function () {
 
   function drawKing(ctx, cam) {
     const P = KD.Player.P;
-    let base = 'king_idle';
-    if (P.swingT > 0) base = 'king_mine';
-    else if (P.mode === 'swim') base = 'king_swim';
-    else if (P.mode === 'walk') base = 'king_walk';
-    else if (P.mode === 'jump') base = 'king_swim';
-    if (!KD.PX.hasAny(base)) base = KD.PX.hasAny('king_idle') ? 'king_idle' : base;
-    const name = KD.PX.frameOf(base, P.anim * 0.12);
+    /* pk_* is the 24x36 king; king_* was the old 12x18 one */
+    const NEW = KD.PX.hasAny('pk_idle');
+    const pre = NEW ? 'pk_' : 'king_';
+    let base = pre + 'idle';
+    if (P.swingT > 0) base = pre + 'mine';
+    else if (P.mode === 'swim') base = pre + 'swim';
+    else if (P.mode === 'walk') base = pre + 'walk';
+    else if (P.mode === 'jump') base = pre + 'swim';
+    if (P.hurtT > 0.12 && KD.PX.has(pre + 'hurt')) base = pre + 'hurt';
+    if (!KD.PX.hasAny(base) && !KD.PX.has(base)) base = pre + 'idle';
+    const name = KD.PX.hasAny(base) ? KD.PX.frameOf(base, P.anim * 0.12) : base;
     const px = Math.round(P.x - cam.x), py = Math.round(P.y - cam.y);
     if (KD.PX.has(name)) {
       KD.PX.blit(ctx, name, px, py, { flipX: P.face < 0 });
+      /* the belly goes on AFTER the body, on its own spring */
+      if (NEW && P.mode !== 'swim') KD.Belly.draw(ctx, px, py, P.face, S);
       if (P.hurtT > 0) {
         const s = KD.PX.get(name);
         KD.Dither.fill(ctx, px - s.ax, py - s.ay, s.w, s.h, 'BLOOD.3', 0.8);

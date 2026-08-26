@@ -32,12 +32,18 @@ KD.Village = (function () {
   ];
 
   /* --- footprint of one fruit, in tiles, straight off the sprite ------- */
+  /* Every fruit is drawn and carved at SC times its authored size. The art
+     was authored at 40x48, which is six tiles tall - next to a 24x36 king
+     that read as a person the size of his own house. Doubling it makes a
+     house about three and a half times his height, which is what a house
+     is. Integer scale only, so the pixels stay square. */
+  const SC = 2;
   function footprint(kind) {
     const s = KD.PX.get(kind.fruit);
-    if (!s) return { w: 5, h: 6, sw: 40, sh: 48, ax: 20, ay: 48 };
+    if (!s) return { w: 10, h: 12, sw: 80, sh: 96, ax: 40, ay: 96 };
     return {
-      w: Math.ceil(s.w / TS), h: Math.ceil(s.h / TS),
-      sw: s.w, sh: s.h, ax: s.ax, ay: s.ay
+      w: Math.ceil(s.w * SC / TS), h: Math.ceil(s.h * SC / TS),
+      sw: s.w * SC, sh: s.h * SC, ax: s.ax * SC, ay: s.ay * SC
     };
   }
 
@@ -65,13 +71,13 @@ KD.Village = (function () {
     for (const k of order) {
       const f = footprint(k);
       let t = terraces[ti];
-      if (x + f.w + 3 > t.x1) { ti = Math.min(terraces.length - 1, ti + 1); t = terraces[ti]; x = t.x0; }
-      if (x + f.w + 3 > t.x1) break;
+      if (x + f.w + 5 > t.x1) { ti = Math.min(terraces.length - 1, ti + 1); t = terraces[ti]; x = t.x0; }
+      if (x + f.w + 5 > t.x1) break;
       out.push({
         kind: k, x, y: t.y - f.h, w: f.w, h: f.h,
         terrace: ti, floorY: t.y, fp: f
       });
-      x += f.w + Wd.rint(3, 7);
+      x += f.w + Wd.rint(7, 13);
     }
     return { buildings: out, terraces };
   }
@@ -112,8 +118,8 @@ KD.Village = (function () {
       for (let j = Math.max(1, b.y - 2); j < floorRow; j++) if (Wd.inside(tx, j)) Wd.fg[j * w + tx] = T.AIR;
     }
     /* where the sprite really is, in pixels */
-    const px = (b.x + b.w / 2) * TS - (s ? s.ax : 20);
-    const py = floorRow * TS - (s ? s.ay : 48);
+    const px = (b.x + b.w / 2) * TS - (s ? s.ax * SC : 40);
+    const py = floorRow * TS - (s ? s.ay * SC : 96);
     b.px = Math.round(px); b.py = Math.round(py);
     /* stamp the silhouette: a tile is shell when the fruit covers most of it */
     if (s) {
@@ -122,10 +128,10 @@ KD.Village = (function () {
           if (!Wd.inside(tx, ty)) continue;
           let hit = 0;
           for (let sy = 0; sy < TS; sy++) {
-            const iy = ty * TS + sy - b.py;
+            const iy = ((ty * TS + sy - b.py) / SC) | 0;
             if (iy < 0 || iy >= s.h) continue;
             for (let sx = 0; sx < TS; sx++) {
-              const ix = tx * TS + sx - b.px;
+              const ix = ((tx * TS + sx - b.px) / SC) | 0;
               if (ix < 0 || ix >= s.w) continue;
               if (s.data[iy * s.w + ix] >= 0) hit++;
             }
@@ -141,15 +147,18 @@ KD.Village = (function () {
     /* the doorway: a 2x3 notch out of the belly, standing on the street.
        Two tiles wide so a 6px-wide king strolls through without hunting
        for pixels, and open downward so there is never a way to be shut in. */
-    const dw = 2;
+    /* Sized to the door the fruit itself draws, now that the fruit is at
+       2x: about three tiles across and five tall. */
+    const dw = 3, dh = 5;
     const dx = b.x + ((b.w - dw) >> 1);
     for (let i = 0; i < dw; i++) {
-      for (let j = 1; j <= 3; j++) {
+      for (let j = 1; j <= dh; j++) {
         const ty = floorRow - j, tx = dx + i;
         if (Wd.inside(tx, ty)) { Wd.fg[ty * w + tx] = T.AIR; Wd.setWater && Wd.setWater(tx, ty, 0); }
       }
     }
-    b.door = { x: dx, y: floorRow - 1, w: dw, h: 3 };
+    b.door = { x: dx, y: floorRow - 1, w: dw, h: dh };
+    b.doorH = dh;
     b.doorCx = dx + dw / 2;
     /* A lantern on the street outside, not bored into the shell: every
        fruit already draws its own lit windows, and a tile lantern sunk
@@ -163,7 +172,7 @@ KD.Village = (function () {
        cannot cover the windows the fruit already has drawn into it. */
     const right = Wd.chance(0.5);
     b.signSide = right ? 1 : -1;
-    b.signAt = { x: right ? b.px + (s ? s.w : 40) - 4 : b.px - 22, y: floorRow * TS - 44 };
+    b.signAt = { x: right ? b.px + (s ? s.w * SC : 80) - 6 : b.px - 24, y: floorRow * TS - 62 };
     return b;
   }
 
@@ -215,14 +224,31 @@ KD.Village = (function () {
       if (sx > KD.Screen.w || sx + b.w * TS < 0) continue;
       const lit = Wd.lit[(b.y + 1) * Wd.W + b.x + (b.w >> 1)] || 0;
       const shade = KD.PX.bandFor(lit, L.MAX);
-      /* Every fruit already has its own door and lit windows drawn into
-         it - all this has to do is darken the reveal so the notch we
-         carved out of the tile layer does not show terrain through it. */
+      const fs = KD.PX.get(b.kind.fruit);
+      KD.PX.blit(ctx, b.kind.fruit, sx, sy,
+        { shade, anchor: false, w: fs.w * SC, h: fs.h * SC });
+      /* The doorway, drawn after the fruit. The notch carved out of the
+         tile layer has to be filled with SOMETHING or the background water
+         shows through the base of the house as a blue box - and the door
+         each fruit draws into its own art does not line up with the notch
+         once the fruit is blitted at 2x. So this is the real door: a plank
+         frame, a dark reveal, warm light spilling out of the room behind
+         it, and a worn step. */
       const dx = Math.round(b.door.x * TS - cam.x);
-      const dy = Math.round((b.door.y - b.door.h + 1) * TS - cam.y);
-      KD.Screen.rect(dx, dy, b.door.w * TS, b.door.h * TS - 1, 'INK.0');
-      KD.Dither.fill(ctx, dx, dy, b.door.w * TS, 6, 'GOLD.0', 0.4);
-      KD.PX.blit(ctx, b.kind.fruit, sx, sy, { shade, anchor: false });
+      const dh = b.door.h * TS, dwp = b.door.w * TS;
+      const dy = Math.round((b.door.y + 1) * TS - cam.y) - dh;
+      KD.Screen.rect(dx, dy, dwp, dh, 'WOOD.3');                     // frame
+      KD.Screen.rect(dx + 2, dy + 2, dwp - 4, dh - 2, 'INK.0');      // reveal
+      /* the room behind: a warm wedge, brightest at the floor */
+      KD.Screen.rect(dx + 3, dy + dh - 14, dwp - 6, 13, 'GOLD.0');
+      KD.Screen.rect(dx + 4, dy + dh - 10, dwp - 8, 9, 'GOLD.1');
+      KD.Screen.rect(dx + 5, dy + dh - 6, dwp - 10, 5, 'GOLD.2');
+      KD.Dither.fill(ctx, dx + 3, dy + dh - 18, dwp - 6, 5, 'GOLD.0', 0.5);
+      /* lintel highlight and a worn stone step */
+      KD.Screen.rect(dx + 1, dy + 1, dwp - 2, 1, 'WOOD.1');
+      KD.Screen.rect(dx - 1, dy + dh - 1, dwp + 2, 2, 'STONE.1');
+      KD.Screen.rect(dx - 1, dy + dh + 1, dwp + 2, 1, 'STONE.0');
+      KD.Screen.frame(dx, dy, dwp, dh, 'INK.0');
       /* the trade sign, hung off the front of the fruit */
       if (b.kind.sign && KD.PX.has(b.kind.sign)) {
         KD.PX.blit(ctx, b.kind.sign, Math.round(b.signAt.x - cam.x),

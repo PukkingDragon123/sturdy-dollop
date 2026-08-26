@@ -7,9 +7,15 @@ KD.Player = (function () {
   const TS = 8;
   const P = {
     x: 0, y: 0, vx: 0, vy: 0,
-    w: 6, h: 16,                      // narrower than one 8px tile ON PURPOSE:
-                                      // a doorway or a dug shaft is 1 tile wide,
-                                      // and a wider box could never enter either
+    w: 6, h: 28,                      /* Narrower than one 8px tile ON PURPOSE:
+                                         a doorway or a dug shaft is 1 tile
+                                         wide and a wider box could never
+                                         enter either. Height follows the
+                                         24x36 sprite - not all of it, since
+                                         the top eight pixels are crown and
+                                         hair, and a hitbox that included
+                                         them would need five tiles of
+                                         headroom to stand up in. */
     face: 1, onGround: false, mode: 'stand',
     swim: 0,                          // 0..1 submersion
     breath: 1, stam: 1, hp: 6, hpMax: 6,
