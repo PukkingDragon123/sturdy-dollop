@@ -346,7 +346,7 @@ KD.Scenes.castle = (function () {
     A1.load();
     P.x = A1.A.beat === 0 ? 120 : P.x || 120;
     P.y = FLOOR; P.vx = 0; P.vy = 0; P.hp = 5;
-    mobs = []; thrown = []; talk = null; mini = null;
+    mobs = []; thrown = []; talk = null; mini = null; arc = null; sparks.length = 0;
     goTo = null; goWhat = null; goT = 0;
     shownRoom = -1; roomT = 0;
     snapCam();
@@ -421,6 +421,8 @@ KD.Scenes.castle = (function () {
     if (KD.In.actHit('use', 'KeyE')) interact();
 
     beatLogic(dt);
+    updateArc(dt);
+    updateSparks(dt);
     for (const m of mobs) updateShark(m, dt);
     mobs = mobs.filter((m) => m.hp > 0 || m.death > 0);
     updateThrown(dt);
@@ -457,25 +459,62 @@ KD.Scenes.castle = (function () {
     goWhat = null;
   }
 
+  /* A swing is an ARC that lives for a fifth of a second, not an instant
+     test. Keeping it around means the hit can be drawn, the shark can be
+     knocked out of a lunge by it, and the timing has some width - an
+     instantaneous check felt like the trident was not connected to anything. */
+  let arc = null;
   function swing() {
     if (P.atk > 0) return;
     P.atk = 0.34;
+    arc = { t: 0.2, face: P.face, x: P.x, y: P.y - 26, hits: [] };
     if (KD.Juice) KD.Juice.pop('swing', 0.2);
     if (KD.Sfx) KD.Sfx.play('swing');
-    const reach = 34;
+  }
+
+  const REACH = 40, ARC_H = 30;
+  function updateArc(dt) {
+    if (!arc) return;
+    arc.t -= dt;
+    if (arc.t <= 0) { arc = null; return; }
     for (const m of mobs) {
-      if (m.hp <= 0) continue;
-      const dx = (m.x - P.x) * P.face;
-      if (dx > -6 && dx < reach && Math.abs(m.y - (P.y - 26)) < 26) {
-        m.hp -= 2; m.kb = P.face * 130; m.flash = 0.18;
-        if (KD.Juice) KD.Juice.hit(0.16);
+      if (m.hp <= 0 || arc.hits.indexOf(m) >= 0) continue;
+      const dx = (m.x - arc.x) * arc.face;
+      if (dx > -8 && dx < REACH && Math.abs(m.y - arc.y) < ARC_H) {
+        arc.hits.push(m);
+        /* A shark caught in its recovery takes double. That is the whole
+           fight: bait the lunge, step aside, hit it while it is turning. */
+        const open = m.state === 'recover';
+        m.hp -= open ? 4 : 2;
+        m.kb = arc.face * (open ? 220 : 120);
+        m.flash = 0.2;
+        m.state = 'recover'; m.st = Math.max(m.st, 0.5);
+        if (KD.Juice) KD.Juice.hit(open ? 0.24 : 0.14);
+        if (KD.Fx) KD.Fx.bubbles(m.x, m.y, open ? 8 : 4);
+        spark(m.x, m.y, open);
         if (m.hp <= 0) {
-          m.death = 0.5;
+          m.death = 0.7; m.spin = 0;
           A1.A.sharks++;
-          if (KD.Fx) KD.Fx.bubbles(m.x, m.y, 10);
+          if (KD.Fx) KD.Fx.bubbles(m.x, m.y, 14);
+          if (KD.Juice) KD.Juice.hit(0.3);
         }
       }
     }
+  }
+
+  /* hit sparks, so a landed blow is visible without a damage number */
+  const sparks = [];
+  function spark(x, y, big) {
+    for (let i = 0; i < (big ? 12 : 7); i++) {
+      const a = i * 0.9 + (big ? 0.3 : 0);
+      sparks.push({ x: x, y: y, vx: Math.cos(a) * (big ? 130 : 80),
+                    vy: Math.sin(a) * (big ? 100 : 60), t: big ? 0.4 : 0.26,
+                    col: big ? 'GOLD.3' : 'BONE.2' });
+    }
+  }
+  function updateSparks(dt) {
+    for (const s2 of sparks) { s2.t -= dt; s2.x += s2.vx * dt; s2.y += s2.vy * dt; s2.vy += 90 * dt; }
+    for (let i = sparks.length - 1; i >= 0; i--) if (sparks[i].t <= 0) sparks.splice(i, 1);
   }
 
   /* ================================================================
@@ -581,10 +620,13 @@ KD.Scenes.castle = (function () {
       if (A1.A.sharks >= (b.n || 3)) { A1.A.sharks = 0; A1.advance(); return; }
       spawnT -= dt;
       if (spawnT <= 0 && mobs.length < 2 && insideRoom(3)) {
-        spawnT = 2.2;
+        spawnT = 2.6;
         const r = ROOMS[3];
-        mobs.push({ x: r.x + r.w - 30, y: FLOOR - 40 - (mobs.length * 22 % 40),
-                    vx: -40, hp: 4, face: -1, flash: 0, kb: 0, death: 0, ph: Math.random() * 6 });
+        mobs.push({ x: r.x + r.w - 24, y: FLOOR - 50 - (mobs.length * 24 % 44),
+                    vx: -40, vy: 0, hp: 6, face: -1, flash: 0, kb: 0, death: 0,
+                    spin: 0, ph: Math.random() * 6,
+                    state: 'swim', st: 0.9 + Math.random(), side: mobs.length ? -1 : 1,
+                    aimX: -1, aimY: 0, max: 6 });
       }
     }
     if (b.kind === 'throw' && A1.A.thrown >= (b.need || 1)) {
@@ -593,22 +635,63 @@ KD.Scenes.castle = (function () {
     }
   }
 
+  /* A shark with a state machine instead of a homing dot. It circles, it
+     WINDS UP where you can see it, it commits to a lunge in a straight line,
+     and then it is slow and open while it turns around. That last state is
+     the fight: without it there is nothing to do but stand still and mash. */
   function updateShark(m, dt) {
-    if (m.death > 0) { m.death -= dt; m.y -= dt * 12; return; }
+    if (m.death > 0) {
+      m.death -= dt; m.y -= dt * 10; m.spin += dt * 9; m.x += m.kb * dt;
+      m.kb *= Math.pow(0.05, dt);
+      return;
+    }
     if (m.flash > 0) m.flash -= dt;
-    /* swim at the king, bob as it goes */
-    const dx = P.x - m.x, dy = (P.y - 24) - m.y;
+    m.st -= dt;
+    const dx = P.x - m.x, dy = (P.y - 26) - m.y;
     const l = Math.max(1, Math.hypot(dx, dy));
-    m.vx += (dx / l * 46 - m.vx) * dt * 2;
-    m.y += (dy / l * 30) * dt + Math.sin(t * 4 + m.ph) * 8 * dt;
-    m.x += (m.vx + m.kb) * dt;
+
+    if (m.state === 'swim') {
+      /* keep station off his shoulder rather than sitting on top of him */
+      const want = P.x - m.side * 62;
+      m.vx += ((want - m.x) * 1.6 - m.vx) * dt * 3;
+      m.vx = Math.max(-70, Math.min(70, m.vx));
+      m.y += ((P.y - 34 + Math.sin(t * 1.6 + m.ph) * 14) - m.y) * dt * 1.6;
+      m.face = m.vx < -2 ? -1 : (m.vx > 2 ? 1 : m.face);
+      if (m.st <= 0 && Math.abs(dx) < 110) { m.state = 'wind'; m.st = 0.55; }
+    } else if (m.state === 'wind') {
+      /* it stops dead and lines up. This is the tell. */
+      m.vx *= Math.pow(0.02, dt);
+      m.face = dx < 0 ? -1 : 1;
+      m.aimX = dx / l; m.aimY = dy / l;
+      if (m.st <= 0) {
+        m.state = 'lunge'; m.st = 0.42;
+        m.vx = m.aimX * 300; m.vy = m.aimY * 220;
+        if (KD.Sfx) KD.Sfx.play('swing');
+      }
+    } else if (m.state === 'lunge') {
+      m.x += m.vx * dt; m.y += m.vy * dt;
+      m.vx *= Math.pow(0.5, dt); m.vy *= Math.pow(0.5, dt);
+      if (m.st <= 0) { m.state = 'recover'; m.st = 0.75; m.side = -m.side; }
+    } else {                                   /* recover: slow, and open */
+      m.vx *= Math.pow(0.1, dt);
+      m.y += Math.sin(t * 3 + m.ph) * 10 * dt;
+      if (m.st <= 0) { m.state = 'swim'; m.st = 0.7 + Math.random() * 0.8; }
+    }
+    if (m.state !== 'lunge') m.x += (m.vx + m.kb) * dt;
     m.kb *= Math.pow(0.02, dt);
-    m.face = m.vx < 0 ? -1 : 1;
-    m.y = Math.max(CEIL + 26, Math.min(FLOOR - 8, m.y));
-    if (Math.abs(dx) < 16 && Math.abs(dy) < 20 && P.hurt <= 0) {
-      P.hurt = 0.9; P.hp--; P.vx = -Math.sign(dx) * 120;
-      if (KD.Juice) KD.Juice.hit(0.2);
-      if (P.hp <= 0) { P.hp = 5; P.x = ROOMS[3].x + 30; mobs = []; }
+    m.y = Math.max(CEIL + 26, Math.min(FLOOR - 10, m.y));
+    m.x = Math.max(ROOMS[3].x - 40, Math.min(CW - 20, m.x));
+
+    /* it only bites during the lunge, so being near one is not a death */
+    if (m.state === 'lunge' && Math.abs(dx) < 20 && Math.abs(dy) < 22 && P.hurt <= 0) {
+      P.hurt = 1.1; P.hp--; P.vx = -Math.sign(dx || 1) * 150; P.vy = -60;
+      m.state = 'recover'; m.st = 0.8;
+      if (KD.Juice) KD.Juice.hit(0.26);
+      if (KD.Sfx) KD.Sfx.play('hurt');
+      if (P.hp <= 0) {
+        P.hp = 5; P.x = ROOMS[3].x + 40; P.hurt = 1.6;
+        for (const k of mobs) { k.state = 'swim'; k.st = 1.4; }
+      }
     }
   }
 
@@ -791,6 +874,8 @@ KD.Scenes.castle = (function () {
     /* the cast */
     for (const e of castHere()) drawCast(ctx, e);
     for (const m of mobs) drawShark(ctx, m);
+    drawArc(ctx);
+    drawSparks();
     for (const p of thrown) drawPlate(ctx, p);
     drawKing(ctx);
 
@@ -880,13 +965,87 @@ KD.Scenes.castle = (function () {
 
   function drawShark(ctx, m) {
     const x = Math.round(m.x - cam.x), y = Math.round(m.y - cam.y);
-    const nm = KD.PX.frameOf('sk_swim', t * 1.4 + m.ph);
+    /* the WIND-UP tell: it stops, the jaw opens, and a line of chevrons runs
+       out along the path it is about to take. You should be able to see the
+       lunge coming from across the room. */
+    if (m.state === 'wind') {
+      const k = 1 - Math.max(0, m.st) / 0.55;
+      for (let i2 = 1; i2 <= 5; i2++) {
+        if (i2 / 5 > k + 0.2) break;
+        const px = Math.round(x + m.aimX * i2 * 15), py = Math.round(y + m.aimY * i2 * 15);
+        const c = i2 > 3 ? 'BLOOD.3' : 'BLOOD.2';
+        KD.Screen.rect(px - 2, py - 3, 2, 6, c);
+        KD.Screen.rect(px, py - 1, 2, 2, c);
+      }
+      /* and a ring of ticks round it, brightening as it commits */
+      const r = 16 + Math.round(k * 4);
+      for (let a = 0; a < 8; a++) {
+        const ang = a * 0.785 + t * 2;
+        KD.Screen.rect(Math.round(x + Math.cos(ang) * r), Math.round(y + Math.sin(ang) * r * 0.7),
+                       2, 2, k > 0.65 ? 'BLOOD.3' : 'BLOOD.1');
+      }
+    }
+    /* open and slow: say so, because this is the window to hit it */
+    if (m.state === 'recover' && m.death <= 0) {
+      const p2 = ((t * 6) | 0) % 2;
+      if (p2) {
+        KD.Screen.rect(x - 20, y - 14, 40, 1, 'KELP.2');
+        KD.Screen.rect(x - 20, y + 13, 40, 1, 'KELP.2');
+      }
+    }
+    const jaw = (m.state === 'wind' || m.state === 'lunge');
+    const nm = jaw ? 'sk_bite' : KD.PX.frameOf('sk_swim', t * 1.4 + m.ph);
     if (nm && KD.PX.has(nm)) {
-      KD.PX.blit(ctx, nm, x, y, { flipX: m.face > 0, shade: m.flash > 0 ? 4 : 0 });
+      /* the sprite is drawn facing right, so flipX is what makes it face
+         LEFT - inverted, both sharks swam at him backwards */
+      const o = { flipX: m.face < 0, shade: m.flash > 0 ? 5 : 0 };
+      if (m.death > 0) { o.shade = 3; o.dh = Math.max(4, Math.round(20 * (m.death / 0.7))); }
+      KD.PX.blit(ctx, nm, x, y, o);
     } else {
       KD.Screen.rect(x - 14, y - 5, 28, 10, m.flash > 0 ? 'BONE.2' : 'STONE.1');
     }
-    if (m.death > 0) KD.Screen.rect(x - 8, y - 10, 16, 2, 'BONE.2');
+    /* a health pip bar, only once it has been hit */
+    if (m.death <= 0 && m.hp < m.max) {
+      const w = 22;
+      KD.Screen.rect(x - (w >> 1) - 1, y - 20, w + 2, 4, 'INK.0');
+      KD.Screen.rect(x - (w >> 1), y - 19, Math.round(w * Math.max(0, m.hp) / m.max), 2, 'BLOOD.2');
+    }
+  }
+
+  /* The trident arc. Thin blades read as three sticks, so this is a solid
+     sweep with a bright leading edge and a wake behind it - a swing has to be
+     visible at a glance or the fight feels like nothing is happening. */
+  function drawArc(ctx) {
+    if (!arc) return;
+    const k = 1 - arc.t / 0.2;
+    const x = Math.round(P.x - cam.x), y = Math.round(P.y - cam.y - 26);
+    const f = arc.face;
+    const len = Math.round(REACH * Math.min(1, k * 2.2));
+    const x0 = f > 0 ? x + 5 : x - 5 - len;
+    /* the wake: a wedge widening away from him */
+    for (let i2 = 0; i2 < len; i2++) {
+      const p2 = i2 / len;
+      const hh = Math.round(6 + p2 * ARC_H * 0.72);
+      const col = p2 > 0.82 ? 'WHITE' : (p2 > 0.5 ? 'BONE.2' : 'WATER.3');
+      const px = f > 0 ? x0 + i2 : x0 + (len - 1 - i2);
+      KD.Screen.rect(px, y - hh, 1, hh * 2, col);
+    }
+    /* three prong lines through it, so it is a TRIDENT arc */
+    for (let i2 = 0; i2 < 3; i2++) {
+      const off = i2 * 11 - 11;
+      KD.Screen.rect(x0, y + off - 1, len, 3, k < 0.45 ? 'WHITE' : 'BONE.2');
+    }
+    /* the flash at the moment it lands */
+    if (k < 0.12) {                                /* one frame, not a slab */
+      KD.Screen.rect(x0, y - ARC_H, len, ARC_H * 2, 'BONE.2');
+    }
+  }
+
+  function drawSparks() {
+    for (const s2 of sparks) {
+      const sz = s2.t > 0.18 ? 2 : 1;
+      KD.Screen.rect(Math.round(s2.x - cam.x), Math.round(s2.y - cam.y), sz, sz, s2.col);
+    }
   }
 
   function drawPlate(ctx, p) {
@@ -915,7 +1074,21 @@ KD.Scenes.castle = (function () {
 
   function hud() {
     const h = A1.hint();
-    if (h) KD.UI.scroll(10, 8, h, { w: Math.min(150, KD.W - 40) });
+    if (h) KD.UI.scroll(10, 8, h, { w: Math.min(124, KD.W - 60) });
+    /* how many are left, so the fight has a finish line */
+    const b = A1.beat();
+    if (b.kind === 'kill') {
+      const need = b.n || 3, got = A1.A.sharks;
+      const lab = 'SHARKS  ' + got + ' / ' + need;
+      const lw = KD.Text.width(lab) + 12;
+      const lx = Math.round((KD.W - lw) / 2);
+      KD.Screen.rect(lx, 6, lw, 13, 'INK.0');
+      KD.Screen.frame(lx, 6, lw, 13, 'BLOOD.1');
+      KD.Text.draw(lab, lx + (lw >> 1), 9, 'BONE.2', { align: 'center' });
+      for (let i2 = 0; i2 < need; i2++) {
+        KD.Screen.rect(lx + 4 + i2 * 5, 20, 3, 3, i2 < got ? 'KELP.2' : 'INK.2');
+      }
+    }
     /* hearts, only while something can hurt him */
     if (mobs.length) {
       for (let i = 0; i < 5; i++) {
@@ -1026,5 +1199,6 @@ KD.Scenes.castle = (function () {
   return { enter, update, draw, snapCam,
            /* exposed for the smoke harness */
            _P: P, _ROOMS: ROOMS, _bake: bake,
-           _throw: throwPlate, _swing: swing, _A1: A1 };
+           _throw: throwPlate, _swing: swing, _A1: A1,
+           get _mobs() { return mobs; }, get _arc() { return arc; } };
 })();

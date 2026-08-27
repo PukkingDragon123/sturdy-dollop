@@ -139,17 +139,17 @@ KD.Parallax = (function () {
        gradient down into BONE and the bottom of the sky came out as a grey
        slab with hard edges - a striped flag, not weather. The haze is a
        thin strip at the waterline instead, where haze actually is. */
-    const SKYB = ['DEEP.3', 'DEEP.4', 'WATER.0', 'WATER.1', 'WATER.2'];
+    /* Six solid bands and ONE light wash at each seam. Two heavy washes per
+       seam turned the sky into a set of stipple rules the width of the
+       screen - which is the fourth time in this file that dithering
+       something large has read as noise rather than as a blend. */
+    const SKYB = ['DEEP.2', 'DEEP.3', 'DEEP.4', 'WATER.0', 'WATER.1', 'WATER.2'];
     for (let k = 0; k < SKYB.length; k++) {
       const y0 = Math.round(h * k / SKYB.length);
       const y1 = Math.round(h * (k + 1) / SKYB.length);
       if (y1 <= 0) continue;
       KD.Screen.rect(0, Math.max(0, y0), KD.W, y1 - Math.max(0, y0), SKYB[k]);
-      /* soften each seam with two dithered rows, so it is a gradient */
-      if (k) {
-        KD.Dither.wash(ctx, 0, y0, KD.W, 3, SKYB[k - 1], 0.5);
-        KD.Dither.wash(ctx, 0, y0 + 3, KD.W, 3, SKYB[k - 1], 0.22);
-      }
+      if (k) KD.Dither.wash(ctx, 0, y0, KD.W, 2, SKYB[k - 1], 0.3);
     }
     KD.Screen.rect(0, Math.max(0, h - 4), KD.W, 3, 'WATER.3');
     KD.Dither.wash(ctx, 0, Math.max(0, h - 9), KD.W, 5, 'WATER.3', 0.45);
@@ -367,14 +367,14 @@ KD.Parallax = (function () {
     for (const s of MEDIUM) if (KD.PX.hasAny(s)) pool.push({ n: s, band: 1 });
     for (const s of BIG) if (KD.PX.hasAny(s)) pool.push({ n: s, band: 2 });
     if (!pool.length) return;
-    const groups = n || 26;
+    const groups = n || 58;   /* the ocean should be BUSY */
     for (let g = 0; g < groups; g++) {
       const p = pool[(Math.random() * pool.length) | 0];
       /* the little ones travel in numbers; the big ones travel alone */
-      const size = p.band === 0 ? 4 + ((Math.random() * 6) | 0)
-                 : p.band === 1 ? 1 + ((Math.random() * 2) | 0) : 1;
+      const size = p.band === 0 ? 7 + ((Math.random() * 11) | 0)
+                 : p.band === 1 ? 1 + ((Math.random() * 3) | 0) : 1;
       const lx = Math.random() * KD.World.W * TS;
-      const ly = (36 + Math.random() * 190) * TS;
+      const ly = (36 + Math.random() * 210) * TS;
       const dir = Math.random() < 0.5 ? -1 : 1;
       const sp = (p.band === 2 ? 11 : p.band === 1 ? 18 : 30) * (0.7 + Math.random() * 0.6);
       const f = p.band === 2 ? 0.72 : p.band === 1 ? 0.86 : 1.0;
@@ -383,8 +383,10 @@ KD.Parallax = (function () {
           name: p.n, band: p.band, x: lx, y: ly, dir, sp, f,
           ph: Math.random() * 9,
           /* offsets fan out BEHIND the leader, so the shoal has a shape */
-          ox: i === 0 ? 0 : -dir * (6 + i * 9) - (i % 2 ? 4 : 0),
-          oy: i === 0 ? 0 : ((i % 3) - 1) * 7 + (i % 2 ? 2 : -2),
+          /* a wedge behind the leader, three ranks deep, so a shoal has a
+             SHAPE - a single trailing line reads as a queue */
+          ox: i === 0 ? 0 : -dir * (7 + ((i / 3) | 0) * 11) - (i % 2 ? 5 : 0),
+          oy: i === 0 ? 0 : ((i % 5) - 2) * 8 + (i % 2 ? 2 : -2),
           sway: 3 + (i % 4)
         });
       }
@@ -397,13 +399,22 @@ KD.Parallax = (function () {
        a hundred fish is one every seventeen tiles - three on screen. Wrapping
        them just past the edge of view keeps a steady stream going past. */
     const cx = KD.Cam ? KD.Cam.x : 0;
+    const cy = KD.Cam ? KD.Cam.y : 0;
+    const sea = (KD.Gen.meta.sea || 34) * TS;
     const span = KD.W + 260;
+    /* Recycle round the camera in BOTH axes. Horizontally this was already
+       right; vertically they were being dropped anywhere in a 1600px water
+       column, so at any moment nearly all of them were above or below a
+       240px viewport and the sea looked empty however many there were. */
+    const relight = () => Math.max(sea + 10, cy - 70 + Math.random() * (KD.H + 140));
     for (const f of fauna) {
       f.x += f.sp * f.dir * dt;
       f.y += Math.sin(f.ph + KD.Game.t * 0.5) * 4 * dt;
       const rel = f.x - cx;
-      if (rel < -260) { f.x += span; f.y = (34 + Math.random() * 200) * TS; }
-      else if (rel > span) { f.x -= span; f.y = (34 + Math.random() * 200) * TS; }
+      if (rel < -260) { f.x += span; f.y = relight(); }
+      else if (rel > span) { f.x -= span; f.y = relight(); }
+      /* drifted a long way out of view vertically? bring it back next pass */
+      if (f.y < cy - 300 || f.y > cy + KD.H + 300) f.y = relight();
       if (f.x < 0) f.x += wpx; else if (f.x > wpx) f.x -= wpx;
     }
   }
@@ -427,11 +438,102 @@ KD.Parallax = (function () {
     }
   }
 
+  /* ---- bubbles ------------------------------------------------------
+     Three kinds, because one kind reads as dust: VENTS chugging up off the
+     seabed in columns, a general drift of small ones through the whole
+     column, and a few fat slow ones that wobble. All of them rise, all of
+     them read the same wind, and none of them are dithered.
+     -------------------------------------------------------------------- */
+  function vents(ctx, cam, t) {
+    const sea = (KD.Gen.meta.sea || 34) * TS;
+    /* vents sit at fixed world positions so they do not swim about */
+    const first = Math.floor((cam.x - 60) / 190);
+    for (let v = first; v < first + Math.ceil(KD.W / 190) + 2; v++) {
+      const seedv = ((v * 2654435761) >>> 0);
+      if (seedv % 3 === 0) continue;
+      const wx = v * 190 + (seedv % 90);
+      const tx = Math.max(0, Math.min(KD.World.W - 1, (wx / TS) | 0));
+      const g = KD.Gen.surfaceAt(tx) * TS;
+      const sx = Math.round(wx - cam.x);
+      if (sx < -12 || sx > KD.W + 12) continue;
+      const n = 7 + (seedv % 5);
+      for (let b = 0; b < n; b++) {
+        const life = ((t * (16 + (seedv % 9)) + b * 37) % 150);
+        const by = g - life;
+        if (by < sea) continue;
+        const sy = Math.round(by - cam.y);
+        if (sy < -4 || sy > KD.H + 4) continue;
+        const sz = life < 40 ? 1 : (life < 100 ? 2 : 3);
+        const drift = Math.round(Math.sin(life * 0.08 + b) * 3 + W.gust * 2);
+        KD.Screen.rect(sx + drift, sy, sz, sz, 'WATER.3');
+        if (sz > 1) KD.Screen.rect(sx + drift, sy, 1, 1, 'BONE.2');
+      }
+      /* the mouth of the vent, so the column comes from somewhere */
+      const gy = Math.round(g - cam.y);
+      if (gy > -6 && gy < KD.H + 6) {
+        KD.Screen.rect(sx - 4, gy - 2, 9, 3, 'STONE.0');
+        KD.Screen.rect(sx - 2, gy - 3, 5, 2, 'INK.1');
+      }
+    }
+  }
+
+  /* the general drift, plus a few fat wobblers */
+  function bubbles(ctx, cam, t) {
+    const sea = (KD.Gen.meta.sea || 34) * TS;
+    const top = Math.max(0, Math.round(sea - cam.y));
+    for (let i = 0; i < 70; i++) {
+      const sp = 12 + (i % 7) * 5;
+      const x = ((i * 149 + Math.sin(t * 0.5 + i) * 6 + W.x * 0.4) % (KD.W + 30) + KD.W + 30) % (KD.W + 30) - 15;
+      const y = KD.H - ((t * sp + i * 61) % (KD.H - top + 40));
+      if (y < top) continue;
+      const big = (i % 11) === 0;
+      const sz = big ? 3 : ((i % 3) ? 1 : 2);
+      KD.Screen.rect(Math.round(x), Math.round(y), sz, sz, big ? 'BONE.2' : 'WATER.3');
+      if (big) KD.Screen.rect(Math.round(x), Math.round(y), 1, 1, 'WHITE');
+    }
+  }
+
+  /* ---- caustics -----------------------------------------------------
+     The ripple of surface light on the first few metres of water. Solid
+     rows one step up the ramp, travelling sideways - the same rule as the
+     shafts, for the same reason. It is what stops the shallows reading as
+     one flat field of turquoise.
+     -------------------------------------------------------------------- */
+  const CAUS_UP = { 'WATER.2': 'WATER.3', 'WATER.1': 'WATER.2',
+                    'WATER.0': 'WATER.1', 'DEEP.2': 'WATER.0' };
+  function caustics(ctx, cam, t) {
+    const sea = (KD.Gen.meta.sea || 34) * TS;
+    const top = Math.round(sea - cam.y);
+    if (top > KD.H) return;
+    for (let row = 0; row < 13; row++) {
+      const wy = sea + 6 + row * 7;
+      const sy = Math.round(wy - cam.y);
+      if (sy < 0) continue;
+      if (sy > KD.H) break;
+      /* Caustics use their own map, NOT the shafts': one step up from
+         WATER.3 is BONE.2, and near-white dashes across the top band came
+         out as a stipple rule the width of the screen. The shallowest band
+         simply does not get them - it is already the bright one. */
+      const col = CAUS_UP[bandColAt(wy)];
+      if (!col) continue;
+      const ph = t * (13 + row * 2) + row * 21 - cam.x * 0.9;
+      for (let k = -1; k < Math.ceil(KD.W / 46) + 1; k++) {
+        const x = Math.round(k * 46 + (ph % 46));
+        const w = 12 - row;
+        if (w < 3) break;
+        KD.Screen.rect(x, sy, w, 1, col);
+        KD.Screen.rect(x + w + 6, sy, Math.max(2, w >> 1), 1, col);
+      }
+    }
+  }
+
   /* ---- the whole back half of the frame ---- */
   function back(ctx, cam, t) {
     const horizon = water(ctx, cam, t);
     shafts(ctx, cam, t);
+    caustics(ctx, cam, t);
     kelp(ctx, cam);
+    vents(ctx, cam, t);
     motes(ctx, cam, t);
     /* Far bands stand on an implied distant floor, lifted clear of the real
        seabed; mid bands sit closer to it. They are drawn straight onto the
@@ -482,6 +584,7 @@ KD.Parallax = (function () {
   /* everything in front of the world */
   function front(ctx, cam, t) {
     life(ctx, cam, true);
+    bubbles(ctx, cam, t);
     /* Foreground plants must stand ON the ground and rise into the WATER.
        Drawn at a fixed row they cover the rock instead, which reads as damage
        on the terrain rather than as a plant in front of the camera. */
@@ -522,7 +625,7 @@ KD.Parallax = (function () {
       }
     }
   }
-  return { back, front, surface, seed, tick, kelp,
+  return { back, front, surface, seed, tick, kelp, vents, bubbles, caustics,
            get wind() { return W.gust; }, get windX() { return W.x; },
            get fauna() { return fauna; } };
 })();
