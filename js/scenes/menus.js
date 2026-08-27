@@ -199,7 +199,7 @@ KD.Scenes.title = (function () {
 
     /* ---- the menu, on a scrim so it reads over the water ----------- */
     const bw = 104, bx = W - bw - 12;
-    const rows = KD.State.hasSave() ? 3 : 2;
+    const rows = KD.State.hasSave() ? 4 : 3;
     const panelH = rows * 21 + 12;
     let by = H - panelH - 6;
     R(bx - 6, by - 6, bw + 12, panelH, 'INK.0');
@@ -227,6 +227,8 @@ KD.Scenes.title = (function () {
       }
       by += 21;
     }
+    if (KD.UI.button(bx, by, bw, 15, 'HOW TO PLAY')) KD.Game.go('help', { from: 'title' });
+    by += 21;
     if (KD.UI.button(bx, by, bw, 15, KD.Sfx.isMuted() ? 'SOUND OFF' : 'SOUND ON')) KD.Sfx.mute();
     KD.Text.draw('every pixel placed by hand', 6, H - 10, 'STONE.2',
                  { tiny: true, shadow: 'INK.0' });

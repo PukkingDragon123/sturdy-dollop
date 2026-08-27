@@ -64,13 +64,24 @@ KD.Scenes.play = (function () {
     KD.Player.walkTo(wx, null);
   }
 
-  function contextAction(S) {
-    const P = KD.Player.P, Wd = KD.World;
-    /* an enemy within a swing? then the button is a weapon */
+  /* the nearest live thing that wants to bite you, and how far off it is */
+  function threat() {
+    const P = KD.Player.P;
+    let best = null, bd = 150;
     for (const m of KD.Mobs.list) {
       if (m.dead > 0) continue;
-      if (Math.hypot(m.x - P.x, m.y - m.K.h / 2 - (P.y - P.h / 2)) < 34) return 'hit';
+      const d = Math.hypot(m.x - P.x, m.y - m.K.h / 2 - (P.y - P.h / 2));
+      if (d < bd) { bd = d; best = m; }
     }
+    return best ? { m: best, d: bd } : null;
+  }
+
+  function contextAction(S) {
+    const P = KD.Player.P, Wd = KD.World;
+    /* Something hunting you? Then the button is a weapon - and it notices at
+       150px rather than 34, so the button is already there when the thing
+       comes at you instead of appearing the frame it reaches your face. */
+    if (threat()) return 'hit';
     /* standing in a fruit doorway? then the button is the door */
     if (KD.Village.doorAt(P.x, P.y - 4)) return 'door';
     /* something interactive under the reticle? then it is USE */
@@ -81,7 +92,7 @@ KD.Scenes.play = (function () {
     if (held && held.tile && Wd.at(P.tgx, P.tgy) === KD.Tiles.AIR) return 'use';
     return 'dig';
   }
-  const ACT_LABEL = { dig: 'DIG', hit: 'HIT', use: 'USE', door: 'ENTER' };
+  const ACT_LABEL = { dig: 'DIG', hit: 'STRIKE', use: 'USE', door: 'ENTER' };
   const ACT_ICON = { dig: 'ic_pick', hit: 'ic_sword', use: 'ic_check', door: 'ic_check' };
 
   function layout(S) {
@@ -94,7 +105,10 @@ KD.Scenes.play = (function () {
     /* ENTER is a USE under the hood, so the door and the chest share one
        button rather than two that do almost the same thing */
     const actName = actMode === 'door' ? 'use' : actMode;
-    BTNS.push({ name: actName, x: bx, y: by, r: R, label: ACT_LABEL[actMode], icon: ACT_ICON[actMode], big: true });
+    /* the strike button is bigger than the others, because it is the one
+       you need to find in a hurry */
+    BTNS.push({ name: actName, x: bx, y: by, r: actMode === 'hit' ? R + 4 : R,
+                label: ACT_LABEL[actMode], icon: ACT_ICON[actMode], big: true });
     BTNS.push({ name: 'jump', x: bx - R - r - 6, y: by - 6, r, label: 'UP', icon: 'ic_arrow_up' });
     /* three small tabs, top right, out of the way of the action */
     const tx = KD.W - 16;
@@ -244,6 +258,18 @@ KD.Scenes.play = (function () {
     }
   }
 
+  /* a chevron over the nearest threat, so you know which way to face */
+  function threatMark(cam) {
+    const th = threat();
+    if (!th) return;
+    const m = th.m;
+    const sx = Math.round(m.x - cam.x), sy = Math.round(m.y - (m.K.h || 12) - cam.y);
+    const bob = Math.round(Math.abs(Math.sin(KD.Game.t * 5)) * 3);
+    for (let k = 0; k < 4; k++) {
+      KD.Screen.rect(sx - 4 + k, sy - 12 - k + bob, 9 - k * 2, 2, 'BLOOD.3');
+    }
+  }
+
   function walkMark(cam) {
     const P = KD.Player.P;
     if (P.goTo === null || P.goTo === undefined) return;
@@ -272,6 +298,7 @@ KD.Scenes.play = (function () {
     KD.Boss.draw(ctx, cam);
     walkMark(cam);
     drawKing(ctx, cam);
+    threatMark(cam);
     KD.Fx.draw(ctx, cam);
     KD.Parallax.front(ctx, cam, dayT);
     KD.Fx.overlay(ctx);

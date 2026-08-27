@@ -25,6 +25,10 @@ you weigh and how much you have trained. The Sea Gate will not open for you at
 a hundred kilos. Neither will the Drop. Neither, in the end, will the King -
 walk into his throne room out of shape and he does not get up.
 
+**New here?** There is a HOW TO PLAY on the title screen: what happened, what
+you do about it, and which button does it, with the control page showing the
+layout you actually have rather than listing both.
+
 **Play it:** open `index.html` in any browser. No build step, no dependencies,
 no server — it runs straight off the filesystem. `npm start` if you want one.
 

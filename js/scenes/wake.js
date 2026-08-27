@@ -19,6 +19,11 @@ KD.Scenes.wake = (function () {
   let t = 0, phase = 'card', pt = 0;
   let sweep = 0, dir = 1, speed = 1.15, tries = 0;
   let hit = -1, msg = '', shock = 0, smashed = false, sat = 0;
+  /* the throw is its own little timeline: wind up, fly, land, sit there */
+  const WIND = 0.22, FLY = 0.34, LAND = 0.12, HOLD = 0.5;
+  const THROW = WIND + FLY + LAND + HOLD;
+  const shards = [];
+  let tx0 = 0, ty0 = 0, tx1 = 0, ty1 = 0, spin = 0, stuckA = 0, landed = false;
   let baked = null, bw = 0, bh = 0;
   const BTNS = [];
 
@@ -29,6 +34,7 @@ KD.Scenes.wake = (function () {
     t = 0; phase = 'card'; pt = 0;
     sweep = 0; dir = 1; speed = 1.15; tries = 0;
     hit = -1; msg = ''; shock = 0; smashed = false; sat = 0;
+    shards.length = 0; spin = 0;
     if (!baked) bake();
   }
 
@@ -132,7 +138,27 @@ KD.Scenes.wake = (function () {
     }
     if (phase === 'strike') {
       sat = Math.min(1, sat + dt * 5);
-      if (pt > 0.9) {
+      spin += dt * (pt > WIND ? 22 : 4);
+      /* the clock only dies at the moment of impact, not when you pressed */
+      if (!landed && pt >= WIND + FLY) {
+        landed = true;
+        if (smashed) {
+          shock = 0.55;
+          burstShards();
+          if (KD.Juice) KD.Juice.hit(0.3);
+          if (KD.Sfx) KD.Sfx.play('hurt');
+        } else {
+          shock = 0.18;
+          if (KD.Sfx) KD.Sfx.play('step');
+        }
+      }
+      for (const sh2 of shards) {
+        sh2.t -= dt; sh2.x += sh2.vx * dt; sh2.vy += 420 * dt; sh2.y += sh2.vy * dt;
+        sh2.sp += dt * 12;
+        if (sh2.y > ty1 + 12) { sh2.y = ty1 + 12; sh2.vy *= -0.35; sh2.vx *= 0.6; }
+      }
+      for (let i = shards.length - 1; i >= 0; i--) if (shards[i].t <= 0) shards.splice(i, 1);
+      if (pt > THROW) {
         if (smashed) { phase = 'after'; pt = 0; }
         else { phase = 'check'; pt = 0; sat = 0; }
       }
@@ -159,7 +185,7 @@ KD.Scenes.wake = (function () {
     const d = Math.abs(sweep - TARGET);
     tries++;
     hit = sweep;
-    pt = 0; sat = 0;
+    pt = 0; sat = 0; landed = false; spin = 0; shards.length = 0;
     if (d < PERFECT) {
       msg = 'STRAIGHT THROUGH IT'; smashed = true; shock = 0.5;
       if (KD.Juice) KD.Juice.hit(0.28);
@@ -175,8 +201,20 @@ KD.Scenes.wake = (function () {
       speed += 0.34;                                 // it gets ruder
       if (KD.Sfx) KD.Sfx.play('hurt');
     }
-    if (smashed && KD.Sfx) KD.Sfx.play('swing');
+    if (KD.Sfx) KD.Sfx.play('swing');
     phase = 'strike';
+  }
+
+  /* the clock coming apart: brass, glass and two little hands */
+  function burstShards() {
+    const COL = ['GOLD.3', 'GOLD.2', 'GOLD.1', 'WHITE', 'BONE.2', 'INK.2'];
+    for (let i = 0; i < 22; i++) {
+      const a = -2.6 + i * 0.14;
+      const sp2 = 60 + (i % 6) * 34;
+      shards.push({ x: tx1, y: ty1 - 12, vx: Math.cos(a) * sp2 * 1.3,
+                    vy: Math.sin(a) * sp2 - 60, t: 0.7 + (i % 4) * 0.16,
+                    sp: 0, w: (i % 5) ? 2 : 3, col: COL[i % COL.length] });
+    }
   }
 
   /* ---- draw -------------------------------------------------------- */
@@ -203,8 +241,26 @@ KD.Scenes.wake = (function () {
        first two attempts put him behind the bed and then inside it. */
     const mtop = FLOOR - MATTRESS, surf = mtop - 9;
     const kx = ox + BEDX + 46, ky = mtop + 9;
-    if (KD.PX.hasAny('kp_idle')) {
-      KD.PX.blit(ctx, KD.PX.frameOf('kp_idle', t), kx, ky, { h: 44 });
+    /* he leans back into the wind-up and follows through on release, and
+       swaps to the thrust pose while the arm is doing the work */
+    let lean = 0, pose = 'kp_idle';
+    if (phase === 'strike') {
+      if (pt < WIND) { lean = -Math.round((pt / WIND) * 3); pose = 'kp_thrust'; }
+      else if (pt < WIND + FLY + 0.2) { lean = 2; pose = 'kp_thrust'; }
+    }
+    if (KD.PX.hasAny(pose)) {
+      const nm = pose === 'kp_thrust'
+        ? (pt < WIND ? 'kp_thrust0' : 'kp_thrust1')
+        : KD.PX.frameOf('kp_idle', t);
+      /* The sprite carries its own trident at columns 31-36. While the real
+         one is in the air his hand has to be EMPTY or he is holding two, so
+         the sprite is cropped narrower for those frames - o.w crops, it does
+         not scale, which is exactly what is wanted. */
+      const airborne = (phase === 'strike' && pt >= WIND) ||
+                       (phase === 'after' && smashed);
+      const o = { h: 44 };
+      if (airborne) o.w = 30;
+      if (KD.PX.has(nm)) KD.PX.blit(ctx, nm, kx + lean, ky, o);
     }
     /* the covers, over his legs and thrown back where he has swung out */
     const bx0 = ox + BEDX + 2, bwid = 124;
@@ -219,7 +275,11 @@ KD.Scenes.wake = (function () {
 
     /* the alarm, on the table, ringing its head off */
     const ax = ox + 203, ay = FLOOR - 30;
-    if (!smashed) {
+    /* It is only broken once the trident LANDS. Keying this off `smashed`
+       alone had it in pieces from the moment you pressed the button, with
+       the trident still in mid-air. */
+    const wrecked = smashed && (phase === 'after' || landed);
+    if (!wrecked) {
       const jig = Math.round(Math.sin(t * 44) * 2);
       const nm = KD.PX.frameOf('al_ring', t * 2);
       if (KD.PX.has(nm)) KD.PX.blit(ctx, nm, ax + jig, ay);
@@ -236,13 +296,70 @@ KD.Scenes.wake = (function () {
     } else if (KD.PX.has('al_dead')) {
       KD.PX.blit(ctx, 'al_dead', ax, ay);
     }
+    /* it stays where he left it: through the table, all morning */
+    if (smashed && phase === 'after') {
+      polearm(ax + 1, ay - 2, Math.cos(1.15), Math.sin(1.15), 34);
+    }
 
-    /* the trident coming down, when it comes down */
+    /* ---- the throw ------------------------------------------------ */
     if (phase === 'strike') {
-      const k = KD.Juice ? KD.Juice.outCubic(sat) : sat;
-      const ty = Math.round(oy - 40 + k * (FLOOR - 30 - (oy - 40)));
-      drawTrident(ax, ty);
-      if (smashed && sat > 0.85) burst(ax, ay - 6);
+      /* the hand it leaves and the thing it is aimed at */
+      tx0 = kx + 6; ty0 = mtop - 34;
+      tx1 = ax + 1; ty1 = ay - 14;
+      if (pt < WIND) {
+        /* WIND UP: cocked back over his shoulder, angle opening as he loads */
+        const k = pt / WIND;
+        const a = -2.5 - k * 0.5;
+        polearm(tx0 - 10 - Math.round(k * 5), ty0 - 6 - Math.round(k * 3),
+                Math.cos(a), Math.sin(a), 30);
+      } else if (pt < WIND + FLY) {
+        /* FLIGHT: a straight run with a little lift, spinning as it goes */
+        const k = (pt - WIND) / FLY;
+        const ez = KD.Juice ? KD.Juice.outQuad(k) : k;
+        const fx = tx0 + (tx1 - tx0) * ez;
+        const fy = ty0 + (ty1 - ty0) * ez - Math.sin(k * Math.PI) * 16;
+        /* a trail of ghosts behind it, so the speed reads */
+        for (let g = 3; g >= 1; g--) {
+          const gk = Math.max(0, k - g * 0.055);
+          const gez = KD.Juice ? KD.Juice.outQuad(gk) : gk;
+          const gx = tx0 + (tx1 - tx0) * gez;
+          const gy = ty0 + (ty1 - ty0) * gez - Math.sin(gk * Math.PI) * 16;
+          const ga = spin - g * 0.55;
+          polearm(gx, gy, Math.cos(ga), Math.sin(ga), 26, g === 1 ? 'BONE.1' : 'INK.3');
+        }
+        polearm(fx, fy, Math.cos(spin), Math.sin(spin), 30);
+      } else {
+        /* LANDED: buried in the table if it hit, flat on the boards if not */
+        if (smashed) {
+          stuckA = 1.15;
+          const wob = Math.sin((pt - WIND - FLY) * 26) * 0.05 *
+                      Math.max(0, 1 - (pt - WIND - FLY) * 2.4);
+          polearm(tx1, ty1 + 12, Math.cos(stuckA + wob), Math.sin(stuckA + wob), 34);
+        } else {
+          polearm(tx1 + 22, ay + 2, 1, 0.06, 32);
+        }
+      }
+      /* The impact. First version was a filled square growing to 46px and
+         it fired on misses too, so a miss lit the whole side table up like a
+         lamp. Hits only, and a starburst of spokes rather than a slab. */
+      const it = pt - WIND - FLY;
+      if (landed && smashed && it < 0.16) {
+        const k = it / 0.16;
+        const r = Math.round(5 + k * 22);
+        const col = k < 0.35 ? 'WHITE' : (k < 0.7 ? 'GOLD.3' : 'GOLD.2');
+        for (let a2 = 0; a2 < 8; a2++) {
+          const an = a2 * 0.785;
+          const ex = Math.cos(an), ey = Math.sin(an);
+          for (let d2 = 3; d2 < r; d2 += 2) {
+            R(Math.round(tx1 + ex * d2), Math.round(ty1 + ey * d2), 2, 2, col);
+          }
+        }
+        if (k < 0.3) R(tx1 - 4, ty1 - 4, 9, 9, 'WHITE');
+      }
+      for (const sh2 of shards) {
+        const w = ((sh2.sp | 0) % 2) ? sh2.w : Math.max(1, sh2.w - 1);
+        R(Math.round(sh2.x), Math.round(sh2.y), w, w, sh2.col);
+      }
     }
 
     /* ---- the words and the check ----------------------------------- */
@@ -272,17 +389,41 @@ KD.Scenes.wake = (function () {
     if (KD.touch) { layout(); KD.In.buttons(BTNS); }
   }
 
-  function drawTrident(x, y) {
-    for (let r = 0; r < 9; r++) {
-      R(x - 7, y - 46 + r * 2, 2, 2, 'WHITE');
-      R(x - 1, y - 46 + r * 2, 2, 2, 'WHITE');
-      R(x + 5, y - 46 + r * 2, 2, 2, 'WHITE');
+  /* A trident at ANY angle, stepped out of 2x2 rects along a direction
+     vector. Rotating the sprite with ctx.rotate would resample hand-placed
+     pixels into mush, and hand-drawing every orientation of a spinning
+     polearm is a dozen sprites - this is one function that reads correctly
+     at every angle it is asked for, which is what a throw needs.
+     (x, y) is the POINT of the middle prong; the haft runs backwards. */
+  function polearm(x, y, dx, dy, len, ghost) {
+    x = Math.round(x); y = Math.round(y);
+    const px = -dy, py = dx;                     // perpendicular, for the head
+    const haft = ghost || 'WOOD.2', grip = ghost || 'WOOD.1';
+    const steel = ghost || 'WHITE', shade = ghost || 'BONE.0';
+    const gold = ghost || 'GOLD.2';
+    /* the haft, running back from the socket */
+    for (let i = 5; i < len; i++) {
+      R(Math.round(x - dx * i), Math.round(y - dy * i), 2, 2,
+        (i % 8 < 2) ? grip : haft);
     }
-    R(x - 7, y - 28, 14, 3, 'WHITE');
-    R(x - 7, y - 25, 14, 2, 'BONE.0');
-    R(x - 2, y - 23, 4, 3, 'GOLD.2');
-    R(x - 2, y - 20, 4, 60, 'WOOD.2');
-    R(x - 2, y - 20, 1, 60, 'WOOD.3');
+    /* the gold ferrule at the socket */
+    for (let i = 3; i < 6; i++) {
+      R(Math.round(x - dx * i), Math.round(y - dy * i), 2, 2, gold);
+    }
+    /* the crossbar the prongs stand on */
+    for (let p = -4; p <= 4; p++) {
+      R(Math.round(x - dx * 3 + px * p), Math.round(y - dy * 3 + py * p), 2, 2,
+        p === 0 ? steel : shade);
+    }
+    /* three prongs, the middle one longest */
+    for (const p of [-4, 0, 4]) {
+      const n = p === 0 ? 7 : 5;
+      for (let j = 0; j < n; j++) {
+        R(Math.round(x - dx * 3 + dx * j + px * p),
+          Math.round(y - dy * 3 + dy * j + py * p), 2, 2,
+          j > n - 3 ? steel : shade);
+      }
+    }
   }
 
   function burst(x, y) {
@@ -334,5 +475,7 @@ KD.Scenes.wake = (function () {
     BTNS.push({ id: 'use', x: KD.W - 10 - r, y: KD.H - 10 - r, r: r, label: 'E' });
   }
 
-  return { enter, update, draw };
+  return { enter, update, draw,
+           /* a seam for the smoke harness: land the needle dead centre */
+           _forceHit: () => { sweep = TARGET; phase = 'check'; strike(); } };
 })();

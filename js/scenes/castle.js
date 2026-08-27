@@ -466,13 +466,34 @@ KD.Scenes.castle = (function () {
   let arc = null;
   function swing() {
     if (P.atk > 0) return;
+    /* Face whatever is closest. Swinging the wrong way because you happened
+       to be walking left is not an interesting way to lose. */
+    const tg = target();
+    if (tg) P.face = tg.x >= P.x ? 1 : -1;
     P.atk = 0.34;
     arc = { t: 0.2, face: P.face, x: P.x, y: P.y - 26, hits: [] };
     if (KD.Juice) KD.Juice.pop('swing', 0.2);
     if (KD.Sfx) KD.Sfx.play('swing');
   }
 
-  const REACH = 40, ARC_H = 30;
+  /* ---- the fight prompt ---------------------------------------------
+     A big obvious STRIKE button that only exists when something is trying
+     to bite you, with the nearest shark called out and the button turning
+     green the moment that shark is open. The idea is that you should be able
+     to win this fight by watching one button.
+     ------------------------------------------------------------------ */
+  function target() {
+    let best = null, bd = 240;
+    for (const m of mobs) {
+      if (m.hp <= 0 || m.death > 0) continue;
+      const d = Math.hypot(m.x - P.x, m.y - (P.y - 26));
+      if (d < bd) { bd = d; best = m; }
+    }
+    return best;
+  }
+  const inFight = () => !!target();
+
+  const REACH = 46, ARC_H = 34;
   function updateArc(dt) {
     if (!arc) return;
     arc.t -= dt;
@@ -887,7 +908,14 @@ KD.Scenes.castle = (function () {
       if (L) KD.Talk.panel(speaker(L[0]), L[1].slice(0, Math.floor(talk.ch)), {});
     }
     if (mini) drawMini();
-    if (KD.touch) { layoutButtons(); KD.In.buttons(BTNS); }
+    if (KD.touch) {
+      layoutButtons();
+      KD.In.buttons(BTNS);
+      /* This was missing: buttons() only registers them for hit-testing.
+         Without touchPad() the whole phone control layout was invisible. */
+      KD.UI.touchPad(BTNS);
+    }
+    combatPrompt();
   }
 
   function liveDetail(ctx) {
@@ -1190,10 +1218,70 @@ KD.Scenes.castle = (function () {
 
   function layoutButtons() {
     BTNS.length = 0;
-    const r = 19, pad = 8;
-    BTNS.push({ id: 'jump', x: KD.W - pad - r, y: KD.H - pad - r * 3 - 4, r: r, label: 'A' });
-    BTNS.push({ id: 'hit',  x: KD.W - pad - r * 3 - 4, y: KD.H - pad - r, r: r, label: 'F' });
-    BTNS.push({ id: 'use',  x: KD.W - pad - r, y: KD.H - pad - r, r: r, label: 'E' });
+    const r = 19, pad = 12;
+    const fight = inFight();
+    BTNS.push({ id: 'jump', name: 'jump', x: KD.W - 34,
+                y: KD.H - pad - r * 3 - 4, r: r, label: 'JUMP' });
+    /* the strike button grows and moves inboard while something is biting */
+    if (fight) {
+      /* octo() draws a little wider than r, so the inset allows for it */
+      BTNS.push({ id: 'hit', name: 'hit', big: true,
+                  x: KD.W - 40, y: KD.H - pad - r * 5 - 10, r: 24,
+                  label: 'STRIKE', icon: 'ic_sword' });
+    } else {
+      BTNS.push({ id: 'hit', name: 'hit', x: KD.W - 34 - r * 2 - 6,
+                  y: KD.H - pad - r, r: r, label: 'HIT' });
+    }
+    BTNS.push({ id: 'use', name: 'use', x: KD.W - 34, y: KD.H - pad - r,
+                r: r, label: 'TALK' });
+  }
+
+  /* the ring round the strike button, the callout over the shark, and the
+     one line of text that tells you what to do about it */
+  function combatPrompt() {
+    const tg = target();
+    if (!tg) return;
+    const open = tg.state === 'recover';
+    const col = open ? 'KELP.3' : 'BLOOD.3';
+
+    /* a chevron bouncing over whoever is nearest */
+    const sx = Math.round(tg.x - cam.x), sy = Math.round(tg.y - cam.y);
+    const bob = Math.round(Math.abs(Math.sin(t * 5)) * 3);
+    for (let k = 0; k < 4; k++) {
+      KD.Screen.rect(sx - 4 + k, sy - 30 - k + bob, 9 - k * 2, 2, col);
+    }
+    if (open) {
+      KD.Text.draw('NOW', sx, sy - 42 + bob, 'KELP.3',
+                   { align: 'center', tiny: true, shadow: 'INK.0' });
+    }
+
+    /* the pulsing ring on the button, on touch; the key prompt otherwise */
+    if (KD.touch) {
+      const b = BTNS.filter((x) => x.id === 'hit')[0];
+      if (b) {
+        const pr = b.r + 4 + Math.round(Math.abs(Math.sin(t * (open ? 7 : 3.5))) * 4);
+        for (let a2 = 0; a2 < 16; a2++) {
+          const an = a2 * 0.3927;
+          KD.Screen.rect(Math.round(b.x + Math.cos(an) * pr) - 1,
+                         Math.round(b.y + Math.sin(an) * pr) - 1, 3, 3, col);
+        }
+      }
+    } else {
+      const lab = open ? 'F  -  STRIKE NOW' : 'F  -  STRIKE';
+      const w = KD.Text.width(lab) + 14;
+      const x = Math.round((KD.W - w) / 2), y = KD.H - 30;
+      KD.Screen.rect(x, y, w, 14, 'INK.0');
+      KD.Screen.frame(x, y, w, 14, col);
+      KD.Text.draw(lab, x + (w >> 1), y + 4, col, { align: 'center' });
+    }
+
+    /* and what the fight actually is, the first time you meet one */
+    if (A1.A.sharks === 0) {
+      const tip = open ? 'IT IS TURNING - HIT IT'
+                       : 'WAIT FOR THE LUNGE, THEN HIT IT';
+      KD.Text.draw(tip, KD.W / 2, KD.touch ? KD.H - 30 : KD.H - 44,
+                   'BONE.2', { align: 'center', tiny: true, shadow: 'INK.0' });
+    }
   }
 
   return { enter, update, draw, snapCam,
