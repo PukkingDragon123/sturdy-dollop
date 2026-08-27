@@ -57,7 +57,14 @@ KD.Cine = (function () {
     };
   }
 
-  /* ---- arriving at the throne --------------------------------------- */
+  /* ---- arriving at the throne ---------------------------------------
+     The cook took the castle; the thing at the foot of the throne is what
+     he keeps to sit on it for him. Before this the cutscene called the boss
+     The Deep while his own health bar said BARON FOAMHELM, and the art is a
+     knight in a beer barrel - so the barrel knight is the Keg's new man and
+     the cook is the one who put him there, which is what the sprite was
+     always saying.
+     ------------------------------------------------------------------ */
   function throne() {
     return {
       id: 'throne',
@@ -65,16 +72,29 @@ KD.Cine = (function () {
         { kind: 'fade', to: 1, t: 0.6 },
         { kind: 'fade', to: 0, t: 0.8 },
         { kind: 'card', t: 2.6, lines: ['THE DROP'], sub: 'four hundred metres down' },
-        { kind: 'art', spr: 'king2_scale0', scale: 2, y: 0.40, t: 0.1 },
-        { kind: 'say', who: 'po_octo', name: 'The Deep', t: 4.4,
-          text: 'Oh. You actually did it. You came all this way, and you are still going to lose.' },
+        { kind: 'art', spr: 'po_octo', scale: 2, y: 0.40, t: 0.1 },
+        { kind: 'say', who: 'po_octo', name: 'The Deep', t: 4.6,
+          text: 'Oh. You actually did it. Eighteen kilos and four hundred metres, for a chair.' },
+        { kind: 'say', who: 'po_king', name: 'You', t: 3.0,
+          text: 'Get off it.' },
+        { kind: 'say', who: 'po_octo', name: 'The Deep', t: 4.6,
+          text: 'I have eight arms, majesty, and not one of them has to touch you. That is what a champion is for.' },
+        { kind: 'card', t: 2.6, lines: ['BARON FOAMHELM'],
+          sub: "the keg's new man, and he is made of her" },
+        { kind: 'art', spr: 'baron0', scale: 2, y: 0.42, t: 0.1 },
         { kind: 'shake', amp: 9, t: 0.3 }
       ],
       after: () => { mark('throne'); KD.Game.go('play', {}); }
     };
   }
 
-  /* ---- the crown comes back ----------------------------------------- */
+  /* ---- the crown comes back -----------------------------------------
+     Three people speak here and the order is the point. The one who left
+     him for the winner comes back first and gets nothing. The one who never
+     asked for anything gets the line. And the one he actually broke a
+     promise to does not take him back, because she said at the start what
+     she was waiting for and he was not there.
+     ------------------------------------------------------------------ */
   function win() {
     return {
       id: 'win',
@@ -82,11 +102,19 @@ KD.Cine = (function () {
         { kind: 'fade', to: 1, t: 0.7 },
         { kind: 'art', world: false, spr: 'ic_crown', scale: 6, y: 0.38, t: 0.1 },
         { kind: 'fade', to: 0, t: 0.8 },
-        { kind: 'card', world: false, t: 3.2, lines: ['THE CROWN IS YOURS'] },
+        { kind: 'card', world: false, t: 3.0, lines: ['THE CROWN IS YOURS'] },
         { kind: 'say', world: false, who: 'po_keg', name: 'The Keg', t: 4.6,
           text: 'There he is. There is the man I got fat. Come home, I have not moved.' },
+        { kind: 'say', world: false, who: 'po_king', name: 'You', t: 3.6,
+          text: 'No. You have not.' },
+        { kind: 'say', world: false, who: 'po_santa', name: 'Santa the Manta', t: 4.8,
+          text: 'HO! Do not look at me like that, majesty, I only carried you the first hundred metres. You did the other three hundred yourself.' },
+        { kind: 'card', world: false, t: 2.6, lines: ['AND THE LONG TABLE'],
+          sub: 'somebody had put the chairs back' },
+        { kind: 'say', world: false, who: 'po_queen', name: 'Coralene', t: 4.8,
+          text: 'I am not coming back. But I will sit down, and you will tell me about the four hundred metres, and we will see.' },
         { kind: 'card', world: false, t: 3.4,
-          lines: ['KING OF THE ATLANTIC'], sub: 'and eighteen kilos of him' }
+          lines: ['KING OF THE ATLANTIC'], sub: 'and eighteen kilos less of him' }
       ],
       after: () => { mark('win'); KD.Game.go('victory', {}); }
     };

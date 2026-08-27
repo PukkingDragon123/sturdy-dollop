@@ -382,10 +382,16 @@ KD.Mobs = (function () {
          whole top of the screen, because he is the one you came for */
       if (m.champ) champBar(m, cam);
       else if (m.K.boss) {
-        const bw = 70;
-        KD.Screen.rect(KD.W / 2 - bw / 2 - 1, 15, bw + 2, 6, 'INK.0');
-        KD.Screen.rect(KD.W / 2 - bw / 2, 16, Math.round(bw * (m.hp / m.hpMax)), 4, 'BLOOD.2');
-        KD.Text.draw('BARON FOAMHELM', KD.W / 2, 6, 'GOLD.3', { align: 'center', shadow: 'INK.0' });
+        const bw = 90;
+        KD.Text.draw('BARON FOAMHELM', KD.W / 2, 4, 'GOLD.3', { align: 'center', shadow: 'INK.0' });
+        /* whose he is, so the fight closes Act One's story instead of being
+           a name nobody in it has heard before */
+        KD.Text.draw("THE DEEP'S CHAMPION", KD.W / 2, 13, 'ROT.3',
+                     { align: 'center', tiny: true, shadow: 'INK.0' });
+        KD.Screen.rect(KD.W / 2 - bw / 2 - 1, 20, bw + 2, 7, 'INK.0');
+        KD.Screen.frame(KD.W / 2 - bw / 2 - 1, 20, bw + 2, 7, 'GOLD.0');
+        KD.Screen.rect(KD.W / 2 - bw / 2, 21, Math.round(bw * (m.hp / m.hpMax)), 5, 'BLOOD.2');
+        KD.Screen.rect(KD.W / 2 - bw / 2, 21, Math.round(bw * (m.hp / m.hpMax)), 1, 'BLOOD.3');
       }
     }
     for (const s of shots) {

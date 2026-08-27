@@ -167,6 +167,55 @@ KD.Convo = (function () {
   }
   const click = () => { if (KD.Sfx) KD.Sfx.play('click'); };
 
+  /* ---- the box itself -----------------------------------------------
+     Pulled out of draw() so the cutscene player can use it too. The
+     cinematics had their own thinner panel and it looked like a different
+     game from the conversations either side of it.
+     ------------------------------------------------------------------ */
+  function box(who, shownText, o) {
+    o = o || {};
+    const L = o.L || layout(0);
+    const w = L.w, h = L.h, x = L.x, y = L.y;
+    /* two frames and a lit inner edge */
+    R(x - 2, y - 2, w + 4, h + 4, 'INK.0');
+    R(x, y, w, h, 'DEEP.0');
+    R(x + 1, y + 1, w - 2, 1, 'DEEP.2');
+    R(x + 1, y + h - 2, w - 2, 1, 'INK.0');
+    KD.Screen.frame(x, y, w, h, 'GOLD.0');
+    KD.Screen.frame(x + 2, y + 2, w - 4, h - 4, 'INK.2');
+    for (const [cx2, cy2, sx, sy] of [[x, y, 1, 1], [x + w - 1, y, -1, 1],
+                                      [x, y + h - 1, 1, -1], [x + w - 1, y + h - 1, -1, -1]]) {
+      R(cx2, cy2, sx * 5, sy * 2, 'GOLD.2');
+      R(cx2, cy2, sx * 2, sy * 5, 'GOLD.2');
+      R(cx2 + sx, cy2 + sy, sx * 2, sy * 2, 'GOLD.3');
+    }
+    /* the portrait, in its own frame, bobbing while its owner is speaking */
+    const bob = o.speaking ? Math.round(Math.sin(t * 22) * 1.2) : 0;
+    const px = x + 7, py = Math.round(y + (h - PH) / 2);
+    R(px - 3, py - 3, PW + 6, PH + 6, 'INK.0');
+    R(px - 2, py - 2, PW + 4, PH + 4, 'GOLD.0');
+    R(px - 1, py - 1, PW + 2, 1, 'GOLD.2');
+    R(px - 1, py - 1, PW + 2, PH + 2, 'DEEP.1');
+    if (who.portrait && KD.PX.has(who.portrait)) {
+      KD.PX.blit(KD.Screen.ctx(), who.portrait, px, py + bob, { anchor: false });
+    }
+    for (const ry of [py - 2, py + PH]) { R(px - 2, ry, 2, 2, 'GOLD.2'); R(px + PW, ry, 2, 2, 'GOLD.2'); }
+    /* the name, on a plaque over the top edge */
+    const nm = (who.name || '').toUpperCase();
+    if (nm) {
+      const nw = KD.Text.width(nm) + 10;
+      R(L.tx - 3, y - 6, nw, 12, 'INK.0');
+      R(L.tx - 2, y - 5, nw - 2, 1, 'GOLD.1');
+      KD.Screen.frame(L.tx - 3, y - 6, nw, 12, 'GOLD.0');
+      KD.Text.draw(nm, L.tx + 2, y - 3, who.tint || 'GOLD.3', { shadow: 'INK.0' });
+    }
+    if (shownText !== null && shownText !== undefined) {
+      KD.Text.block(shownText, L.tx, y + 10, 'BONE.2',
+                    { tiny: true, max: L.tw, maxLines: 3 });
+    }
+    return L;
+  }
+
   /* ---- draw --------------------------------------------------------- */
   function draw() {
     if (!script) return;
@@ -176,49 +225,11 @@ KD.Convo = (function () {
     const isChoice = !!n.choose;
     const list = isChoice ? n.choose.filter((c) => !c.when || c.when(bag)) : null;
 
-    const pw = PW, ph = PH;
     const L = layout(isChoice ? list.length : 0);
     const w = L.w, h = L.h, x = L.x, y = L.y;
-
-    /* ---- the box: two frames and a lit inner edge ---------------- */
-    R(x - 2, y - 2, w + 4, h + 4, 'INK.0');
-    R(x, y, w, h, 'DEEP.0');
-    R(x + 1, y + 1, w - 2, 1, 'DEEP.2');
-    R(x + 1, y + h - 2, w - 2, 1, 'INK.0');
-    KD.Screen.frame(x, y, w, h, 'GOLD.0');
-    KD.Screen.frame(x + 2, y + 2, w - 4, h - 4, 'INK.2');
-    /* corner pieces, so the frame has joinery */
-    for (const [cx2, cy2, sx, sy] of [[x, y, 1, 1], [x + w - 1, y, -1, 1],
-                                      [x, y + h - 1, 1, -1], [x + w - 1, y + h - 1, -1, -1]]) {
-      R(cx2, cy2, sx * 5, sy * 2, 'GOLD.2');
-      R(cx2, cy2, sx * 2, sy * 5, 'GOLD.2');
-      R(cx2 + sx, cy2 + sy, sx * 2, sy * 2, 'GOLD.3');
-    }
-
-    /* ---- the portrait, moving while its owner speaks ------------- */
     const speaking = !isChoice && Math.floor(ch) < (n.text || '').length;
-    const bob = speaking ? Math.round(Math.sin(t * 22) * 1.2) : 0;
-    const px = x + 7, py = Math.round(y + (h - ph) / 2);
-    R(px - 3, py - 3, pw + 6, ph + 6, 'INK.0');
-    R(px - 2, py - 2, pw + 4, ph + 4, 'GOLD.0');
-    R(px - 1, py - 1, pw + 2, 1, 'GOLD.2');
-    R(px - 1, py - 1, pw + 2, ph + 2, 'DEEP.1');
-    if (who.portrait && KD.PX.has(who.portrait)) {
-      KD.PX.blit(KD.Screen.ctx(), who.portrait, px, py + bob, { anchor: false });
-    }
-    /* a lit rim on the frame, and rivets */
-    for (const ry of [py - 2, py + ph]) { R(px - 2, ry, 2, 2, 'GOLD.2'); R(px + pw, ry, 2, 2, 'GOLD.2'); }
-
-    /* ---- the name, on a plaque over the top edge ----------------- */
+    box(who, isChoice ? null : shown, { L: L, speaking: speaking });
     const tx = L.tx, tw = L.tw;
-    const nm = (who.name || '').toUpperCase();
-    if (nm) {
-      const nw = KD.Text.width(nm) + 10;
-      R(tx - 3, y - 6, nw, 12, 'INK.0');
-      R(tx - 2, y - 5, nw - 2, 1, 'GOLD.1');
-      KD.Screen.frame(tx - 3, y - 6, nw, 12, 'GOLD.0');
-      KD.Text.draw(nm, tx + 2, y - 3, who.tint || 'GOLD.3', { shadow: 'INK.0' });
-    }
 
     /* ---- the words, or the choices ------------------------------- */
     if (isChoice) {
@@ -242,7 +253,6 @@ KD.Convo = (function () {
                      { tiny: true, max: tw - 6 });
       }
     } else {
-      KD.Text.block(shown, tx, y + 10, 'BONE.2', { tiny: true, max: tw, maxLines: 3 });
       /* the caret: a small filled triangle that only appears when the line
          is finished, so you know the difference between "still talking" and
          "waiting for you" */
@@ -254,5 +264,5 @@ KD.Convo = (function () {
     return { x, y, w, h };
   }
 
-  return { start, update, draw, active, CAST, get bag() { return bag; } };
+  return { start, update, draw, box, layout, active, CAST, get bag() { return bag; } };
 })();

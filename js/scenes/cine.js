@@ -170,7 +170,16 @@ KD.Scenes.cine = (function () {
           { tiny: true, align: 'center' });
       }
     } else if (b.kind === 'say') {
-      KD.Talk.panel({ portrait: b.who, name: b.name }, b.text, { bottom: bar + 6 });
+      /* the same box the conversations use. The cutscenes had their own
+         thinner panel and it read as a different game from the scene either
+         side of it. */
+      const L = KD.Convo.layout(0);
+      L.y = KD.H - L.h - bar - 6;
+      const cast = KD.Convo.CAST;
+      let tint = 'GOLD.3';
+      for (const k in cast) if (cast[k].portrait === b.who) tint = cast[k].tint;
+      KD.Convo.box({ portrait: b.who, name: b.name, tint: tint }, b.text,
+                   { L: L, speaking: false });
     }
     /* a vignette closes in from the edges when a beat asks for one */
     if (vig > 0.01) {

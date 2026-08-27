@@ -24,10 +24,25 @@ cutscene you skip: it sets your starting number.
 timing bars - pour the beer, then hit a rhythm meter for the kiss. Both were the
 same button pressed to a moving marker and neither of them said anything, so
 they are one conversation now. Every scene that matters gives you lines to
-choose between: how warm you are to the queen at the alarm, whether you take the
-drink, whether you put her down to her face. Those answers are on the record -
-the prologue reads them back when it works out what you weigh, and the queen
-remembers the dinner you promised her at the alarm.
+choose between: how warm you are to the queen at the alarm, whether you are
+cruel to the cook about his crab, whether you take the drink, whether you put
+the trident down when she asks.
+
+**And everybody leaves you for the specific reason you gave them.** Those four
+answers are read back out in the scene where you lose everything. Promise the
+queen dinner and mean it and she goes quietly, which is worse; never promise it
+and she tells you she sat there anyway. Be cruel to the cook and he takes the
+castle with the exact sentence he warned you with; be civil and he says he
+remembered, and that it is the difference between the gate and the pot. Put the
+trident down for the keg and she tells you that was the night she stopped being
+interested. The prologue also reads them when it works out what you weigh, which
+is your starting number for the rest of the game.
+
+**What is on your throne.** The cook runs the castle now and he does not fight
+his own fights: at the bottom of the Drop he is sitting in your chair with the
+keg on a cushion beside him, and the thing he keeps at the foot of it is Baron
+Foamhelm - her new man, in a barrel helmet, carrying a barrel. Beating him is
+the end of the story the prologue started.
 
 **The goal is the scales.** You start at 100kg and the world is gated on what
 you weigh and how much you have trained. The Sea Gate will not open for you at

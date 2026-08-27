@@ -23,41 +23,41 @@ KD.Quests = (function () {
      nobody thanked him for it, and he has never once mentioned either. */
   const Q = [
     { id: 'firstrep', mark: 'use', give: 'santa', name: 'One Honest Set',
-      text: 'HO! Right. First thing. You have never finished a set in your life, your majesty. Do ONE. I will count.',
+      text: 'HO! Right. First thing. You have never finished a set in your life, your majesty. Do ONE, and I will count it out loud so it happened.',
       hint: 'Finish one set at the gym.',
       done: (st) => KD.Goal.trainedTotal(st) >= 1,
       clams: 60, xp: 25 },
 
     { id: 'firstdig', mark: 'use', give: 'santa', name: 'Something With An Edge',
-      text: 'The crab wants twenty stone and you want something sharper than your own wit. Off you go. I shall wait here, cheerfully.',
+      text: 'The crab wants twenty stone and you want something sharper than your own wit. You left a trident on a floor four seasons ago - we are going to make you another one.',
       hint: 'Mine 20 stone.',
       need: 'firstrep',
       done: () => KD.State.count('stone') >= 20,
       take: [['stone', 20]], clams: 90, xp: 30 },
 
     { id: 'lighter', mark: 'use', give: 'santa', name: 'Eighteen Kilos',
-      text: 'The Gate will not open for a hundred kilos of ex-king. Eighty-two and I will carry you through myself.',
+      text: 'The Gate will not open for a hundred kilos of ex-king. Eighty-two and I carry you through myself - and I have never once dropped anybody I offered to carry.',
       hint: 'Get to 82kg and train to 3 levels.',
       need: 'firstdig',
       done: (st) => !KD.Goal.why(st, 'gate'),
       clams: 160, xp: 70 },
 
     { id: 'gatepass', mark: 'go', give: 'santa', name: 'Past The Gate',
-      text: 'Climb on. Mind the hat. HO HO - hold tight, majesty, I have not done this in a while.',
+      text: 'Climb on. Mind the hat. Everything east of that Gate belongs to the cook now, so from here on we are taking it back a piece at a time.',
       hint: 'Get through the Sea Gate.',
       need: 'lighter',
       done: () => (KD.Player.P.x / 8) > KD.Zones.byId.gate.x1,
       clams: 120, xp: 50 },
 
     { id: 'reeffish', mark: 'use', give: 'santa', name: 'Something For The Pot',
-      text: 'Six fish off the reef. Not for me - for YOU. You have eaten nothing but beer for four seasons.',
+      text: 'Six fish off the reef. Not for me - for YOU. You have eaten nothing but beer since the night somebody talked you out of your own dinner.',
       hint: 'Bring back 6 fish.',
       need: 'gatepass',
       done: () => KD.State.count('fish1') + KD.State.count('fish2') >= 6,
       take: [['fish1', 6]], clams: 140, xp: 55 },
 
     { id: 'champ1', mark: 'fight', give: 'santa', name: 'Old Scar',
-      text: 'A shark past the Gate has been taking the nets. And the netmen. Go and be useful - it suits you.',
+      text: 'A shark past the Gate has been taking the nets. And the netmen. The last king who did something about sharks in this ocean was you, once, on a balcony. Go on.',
       hint: 'Kill Old Scar in the Shallow Reef.',
       need: 'reeffish',
       done: (st) => !!st.champs.reef,
@@ -86,7 +86,7 @@ KD.Quests = (function () {
 
     { id: 'crown', mark: 'fight', give: 'santa', name: 'The Crown',
       text: 'She is down there with him, majesty. On a cushion, by his chair. Go and get your hat back - I shall wait right here, as ever.',
-      hint: 'Beat the King at the bottom of The Drop.',
+      hint: "Beat The Deep's champion at the bottom of The Drop.",
       need: 'champ4',
       done: (st) => !!st.flags.kingDead,
       clams: 1200, xp: 900 }

@@ -20,37 +20,78 @@ KD.Scenes.title = (function () {
   }
   const beep = () => { if (KD.Sfx) KD.Sfx.play('click'); };
 
-  /* ---- the menu, as a bronze plaque bolted to the rock ---------------
-     It was three flat blue slabs in a dark box, which is what a debug menu
-     looks like. This is a stone plaque with rivets and barnacles, and each
-     option is an engraved brass plate: the letters are cut IN, with the lit
-     edge below and to the right, which is how a chisel leaves them. The
-     current one is brighter brass with a gold trident pointing at it.
+  /* ---- the logotype ------------------------------------------------
+     A hand-built plate rather than three centred strings. The name is
+     drawn twice - once in ink one pixel down and right, once in gold on
+     top - which is how you get a letter to sit ON something at this size
+     without a shadow blur.
      ------------------------------------------------------------------ */
-  function plate(x, y, w, h, label, on) {
-    /* the recess it sits in */
-    R(x - 1, y - 1, w + 2, h + 2, 'INK.0');
-    R(x, y, w, h, on ? 'RUST.1' : 'RUST.0');
-    /* the plate itself */
-    R(x + 1, y + 1, w - 2, h - 2, on ? 'GOLD.1' : 'GOLD.0');
-    R(x + 1, y + 1, w - 2, 1, on ? 'GOLD.3' : 'GOLD.2');
-    R(x + 1, y + h - 2, w - 2, 1, 'RUST.0');
-    R(x + 1, y + 1, 1, h - 2, on ? 'GOLD.2' : 'GOLD.1');
-    R(x + w - 2, y + 1, 1, h - 2, 'RUST.0');
-    /* incised letters: dark glyph, lit edge below-right */
-    const cx2 = x + (w >> 1), ty2 = y + Math.round((h - 7) / 2);
-    KD.Text.draw(label, cx2 + 1, ty2 + 1, 'GOLD.3', { align: 'center' });
-    KD.Text.draw(label, cx2, ty2, on ? 'INK.0' : 'INK.1', { align: 'center' });
-    /* the pointer */
-    if (on) {
-      const px = x - 12 + Math.round(Math.sin(t * 4) * 2);
-      const py = y + (h >> 1);
-      R(px, py - 4, 2, 2, 'GOLD.3'); R(px, py, 2, 2, 'GOLD.3'); R(px, py + 4, 2, 2, 'GOLD.3');
-      R(px + 2, py - 4, 2, 9, 'GOLD.3');
-      R(px + 4, py - 1, 5, 3, 'GOLD.2');
-      R(px + 4, py - 1, 5, 1, 'GOLD.3');
+  function tridentGlyph(x, y, col) {
+    R(x, y, 1, 5, col); R(x + 3, y, 1, 5, col); R(x + 6, y, 1, 5, col);
+    R(x, y + 4, 7, 1, col);
+    R(x + 3, y + 4, 1, 6, col);
+  }
+  function logo(cx, y) {
+    const nm = 'CROWNDEEP', sub = 'KING OF ATLANTIC';
+    const nw = KD.Text.width(nm, { space: 2 });
+    const sw = KD.Text.width(sub, { space: 1 });
+    const tag = 'he had it all.  then he met a keg.';
+    const w = Math.max(nw + 46, sw + 24, KD.Text.width(tag, { tiny: true }) + 20);
+    const h = 43;
+    const x = cx - (w >> 1);
+    /* the plate */
+    R(x - 2, y - 2, w + 4, h + 4, 'INK.0');
+    R(x, y, w, h, 'DEEP.0');
+    R(x + 1, y + 1, w - 2, 1, 'DEEP.2');
+    R(x + 1, y + h - 2, w - 2, 1, 'INK.0');
+    KD.Screen.frame(x, y, w, h, 'GOLD.1');
+    KD.Screen.frame(x + 2, y + 2, w - 4, h - 4, 'GOLD.0');
+    for (const [cx2, cy2, dx, dy] of [[x, y, 1, 1], [x + w - 1, y, -1, 1],
+                                      [x, y + h - 1, 1, -1],
+                                      [x + w - 1, y + h - 1, -1, -1]]) {
+      R(cx2, cy2, dx * 6, dy * 2, 'GOLD.2');
+      R(cx2, cy2, dx * 2, dy * 6, 'GOLD.2');
+      R(cx2 + dx, cy2 + dy, dx * 2, dy * 2, 'GOLD.3');
     }
-    return { x, y, w, h };
+    /* a trident either side of the name */
+    tridentGlyph(x + 8, y + 8, 'GOLD.2');
+    tridentGlyph(x + w - 15, y + 8, 'GOLD.2');
+    /* the name, cut into the plate */
+    KD.Text.draw(nm, cx + 1, y + 7, 'GOLD.0', { align: 'center', space: 2 });
+    KD.Text.draw(nm, cx, y + 6, 'GOLD.3', { align: 'center', space: 2 });
+    /* a rule under it, with a break in the middle for the diamond */
+    R(x + 8, y + 19, (w >> 1) - 14, 1, 'GOLD.1');
+    R(cx + 6, y + 19, (w >> 1) - 14, 1, 'GOLD.1');
+    R(cx - 2, y + 18, 4, 1, 'GOLD.3'); R(cx - 1, y + 17, 2, 3, 'GOLD.3');
+    KD.Text.draw(sub, cx, y + 23, 'WATER.3', { align: 'center', space: 1 });
+    /* the strapline lives IN the plate. Under it, it landed exactly on the
+       white foam line at the surface and could not be read at all. */
+    KD.Text.draw(tag, cx, y + 34, 'BONE.1', { tiny: true, align: 'center' });
+  }
+
+  /* ---- one menu option --------------------------------------------
+     A recessed dark slot with light letters. The selected one fills with
+     brass, flips its letters to ink, and gets a trident pointing at it.
+     ------------------------------------------------------------------ */
+  function slot(x, y, w, h, label, on) {
+    R(x - 1, y - 1, w + 2, h + 2, 'INK.0');
+    R(x, y, w, h, on ? 'GOLD.1' : 'DEEP.0');
+    R(x, y, w, 1, on ? 'GOLD.3' : 'INK.2');
+    R(x, y + h - 1, w, 1, on ? 'GOLD.0' : 'INK.0');
+    R(x, y, 1, h, on ? 'GOLD.2' : 'INK.2');
+    R(x + w - 1, y, 1, h, on ? 'GOLD.0' : 'INK.0');
+    const ty = y + Math.round((h - 7) / 2);
+    if (on) {
+      KD.Text.draw(label, x + (w >> 1) + 1, ty + 1, 'GOLD.3', { align: 'center' });
+      KD.Text.draw(label, x + (w >> 1), ty, 'INK.0', { align: 'center' });
+      const px = x - 11 + Math.round(Math.sin(t * 4) * 2);
+      tridentGlyph(px, y + (h >> 1) - 5, 'GOLD.3');
+      R(px + 7, y + (h >> 1) - 1, 4, 2, 'GOLD.2');
+    } else {
+      KD.Text.draw(label, x + (w >> 1), ty + 1, 'INK.0', { align: 'center' });
+      KD.Text.draw(label, x + (w >> 1), ty, 'BONE.2', { align: 'center' });
+    }
+    return { x: x, y: y, w: w, h: h };
   }
 
   /* a rivet, and a barnacle, for the plaque itself */
@@ -75,44 +116,101 @@ KD.Scenes.title = (function () {
     return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
   }
 
-  /* ---- his kingdom, small and far away ---------------------------- */
-  function castle(x, base, sc) {
-    const T = (tx, tw, th, top) => {              // one tower
-      tx = Math.round(tx); tw = Math.round(tw); th = Math.round(th);
-      R(tx, base - th, tw, th, 'INK.2');
-      R(tx, base - th, 2, th, 'INK.3');
-      R(tx - 1, base - th - top, tw + 2, top, 'INK.2');
-      for (let k = 0; k < tw + 2; k += 4)         // crenellations
-        R(tx - 1 + k, base - th - top - 2, 2, 2, 'INK.2');
-      for (let k = 3; k < th - 3; k += 7)         // lit windows
-        R(tx + 2, base - th + k, 2, 3, 'GOLD.2');
-    };
-    /* The shelf it stands on. A tapering diamond left the whole castle
-       floating on a dark lozenge in mid-water, so this runs off both sides
-       and keeps going down out of frame. */
-    const cxr = Math.round(x + 14 * sc);
+  /* ---- his kingdom, small and far away ----------------------------
+     The old one was three INK rectangles with orange dots in them, at the
+     far dark end of the ramp against light water, and it read as a factory
+     chimney cut out of black paper.
+
+     Two things fix it. Architecture: a curtain wall with crenellations, a
+     gatehouse with a real arch, three towers of different heights with
+     roofs on them, and banners. And VALUE: something that far away through
+     water is only a step or two darker than the water behind it, not eight.
+     The only thing allowed to be bright is the light in the windows, and
+     that is what makes it read as a home he does not live in any more.
+     ------------------------------------------------------------------ */
+  function litWindow(x, y, w, h) {
+    R(x, y, w, h, 'GOLD.1');
+    R(x, y, w, 1, 'GOLD.3');
+    R(x, y + h - 1, w, 1, 'GOLD.0');
+  }
+
+  /* a tower: shaft, a corbelled band under the parapet, crenellations, and
+     a roof. `lit` rows get a window. */
+  function tower(x, base, w, h, roof) {
+    R(x, base - h, w, h, 'DEEP.2');
+    R(x, base - h, 2, h, 'DEEP.3');               /* the sunward face */
+    R(x + w - 1, base - h, 1, h, 'DEEP.1');
+    /* the parapet, wider than the shaft */
+    const py = base - h - 4;
+    R(x - 2, py, w + 4, 4, 'DEEP.2');
+    R(x - 2, py, w + 4, 1, 'DEEP.3');
+    for (let k = 0; k < w + 4; k += 4) R(x - 2 + k, py - 2, 2, 2, 'DEEP.2');
+    if (roof) {
+      /* a stepped cone, because a triangle drawn any other way needs a
+         diagonal and diagonals in eight pixels are just stairs anyway */
+      for (let k = 0; k < roof; k++) {
+        const rw = Math.max(1, w + 2 - k * 2);
+        R(x - 1 + k, py - 2 - roof + k, rw, 1, k < 2 ? 'ROT.1' : 'ROT.0');
+      }
+      R(x + (w >> 1) - 1, py - 4 - roof, 1, 4, 'DEEP.3');
+      const f = Math.sin(t * 2.2 + x) > 0 ? 0 : 1;
+      R(x + (w >> 1), py - 4 - roof, 4 - f, 3, 'BLOOD.1');
+    }
+    /* windows up the shaft, two rows of them */
+    for (let k = 6; k < h - 5; k += 9) litWindow(x + 2, base - h + k, 2, 3);
+  }
+
+  function castle(cx, base, sc) {
+    /* the shelf it stands on: it runs off both sides and keeps going down
+       out of frame, so the castle is not floating on a dark lozenge */
     for (let k = 0; k < KD.H; k++) {
-      const spread = Math.round(30 * sc + k * 2.2);
+      const spread = Math.round(36 * sc + k * 2.4);
       const y = base + k;
       if (y > KD.H) break;
-      R(cxr - spread, y, spread * 2, 1, k < 2 ? 'INK.2' : 'INK.1');
-      if (k > 3 && k % 7 === 0) R(cxr - spread + 4, y, spread * 2 - 8, 1, 'INK.2');
+      R(cx - spread, y, spread * 2, 1, k < 2 ? 'DEEP.2' : 'DEEP.1');
+      if (k > 3 && k % 8 === 0) R(cx - spread + 5, y, spread * 2 - 10, 1, 'DEEP.2');
     }
-    T(x, 9 * sc, 30 * sc, 4);
-    T(x + 20 * sc, 9 * sc, 24 * sc, 4);
-    T(x + 9 * sc, 12 * sc, 40 * sc, 5);           // the keep, tallest
-    R(x + 9 * sc, base - 46 * sc, 12 * sc, 2, 'INK.3');
-    /* a banner still flying on it, which is the sad part */
-    R(x + 15 * sc, base - 52 * sc, 1, 6 * sc, 'INK.3');
-    const f = Math.sin(t * 2) > 0 ? 1 : 0;
-    R(x + 16 * sc, base - 52 * sc, 5 * sc - f, 4, 'BLOOD.0');
+    R(cx - Math.round(36 * sc), base, Math.round(72 * sc), 1, 'DEEP.3');
+
+    const w = Math.round(74 * sc);
+    const x0 = cx - (w >> 1);
+    /* ---- the curtain wall ---- */
+    const wh = Math.round(15 * sc);
+    R(x0, base - wh, w, wh, 'DEEP.1');
+    R(x0, base - wh, w, 1, 'DEEP.2');
+    for (let k = 0; k < w; k += 5) R(x0 + k, base - wh - 3, 3, 3, 'DEEP.1');
+    /* arrow slits along it */
+    for (let k = 4; k < w - 4; k += 9) R(x0 + k, base - wh + 4, 1, 4, 'DEEP.0');
+    /* ---- the gatehouse, in the middle of the wall ---- */
+    const gw = Math.round(16 * sc), gx = cx - (gw >> 1);
+    const gh = Math.round(26 * sc);
+    R(gx, base - gh, gw, gh, 'DEEP.2');
+    R(gx, base - gh, 2, gh, 'DEEP.3');
+    for (let k = 0; k < gw; k += 4) R(gx + k, base - gh - 2, 2, 2, 'DEEP.2');
+    /* the arch: a lit passage, which is the one warm thing at ground level */
+    const aw = Math.max(4, Math.round(7 * sc)), ax = cx - (aw >> 1);
+    const ah = Math.round(10 * sc);
+    R(ax, base - ah, aw, ah, 'INK.0');
+    R(ax + 1, base - ah - 1, aw - 2, 1, 'INK.0');
+    R(ax + 1, base - 3, aw - 2, 3, 'GOLD.0');
+    R(ax + 2, base - 2, aw - 4, 2, 'GOLD.1');
+    litWindow(gx + 3, base - gh + 5, Math.round(3 * sc), Math.round(4 * sc));
+    litWindow(gx + gw - 3 - Math.round(3 * sc), base - gh + 5,
+              Math.round(3 * sc), Math.round(4 * sc));
+    /* ---- three towers, none of them the same height ---- */
+    tower(x0 + Math.round(3 * sc), base, Math.round(9 * sc), Math.round(30 * sc), 6);
+    tower(x0 + w - Math.round(12 * sc), base, Math.round(9 * sc), Math.round(24 * sc), 5);
+    tower(cx - Math.round(6 * sc), base - gh, Math.round(12 * sc), Math.round(26 * sc), 10);
+    /* and two more lights up the keep, so somebody is home in it */
+    litWindow(cx - 1, base - gh - Math.round(14 * sc), 2, 3);
+    litWindow(cx - 1, base - gh - Math.round(22 * sc), 2, 3);
   }
 
   /* ---- kelp, as silhouettes ---------------------------------------- */
   /* A stalk that tapers, with blades on ONE side per segment and angled
      down. The first version put an even blade either side of a parallel bar
      and the whole seabed came out as a field of crosses. */
-  function weed(x, groundY, h, seed, col) {
+  function weed(x, groundY, h, seed, col, edge) {
     const segs = Math.max(3, h >> 3);
     let px = x;
     for (let s2 = 0; s2 < segs; s2++) {
@@ -121,14 +219,15 @@ KD.Scenes.title = (function () {
       px = x + Math.sin(t * 0.8 + seed) * 4 * f * f;
       const w = f > 0.7 ? 1 : (f > 0.35 ? 2 : 3);
       R(Math.round(px), y - 8, w, 9, col);
-      R(Math.round(px), y - 8, 1, 9, 'KELP.2');   // a lit edge down the stem
+      R(Math.round(px), y - 8, 1, 9, edge || 'KELP.2');   // a lit edge down the stem
       if (s2 % 2 === 1) {                          // a frond, alternating sides
         const dir = (s2 & 2) ? 1 : -1;
         const len = 7 + (seed % 4);
         for (let b = 0; b < len; b++) {
-          const bx2 = Math.round(px) + (dir > 0 ? w + b : -1 - b);
-          R(bx2, y - 6 + Math.round(b * 0.7), 1, 3 - (b > len - 3 ? 1 : 0),
-            b < 2 ? 'KELP.2' : col);
+          const bx2 = Math.round(px) + (dir > 0 ? w + b : -2 - b);
+          const bh = 4 - (b > len - 3 ? 2 : 0);
+          R(bx2, y - 6 + Math.round(b * 0.7), 2, bh, col);
+          R(bx2, y - 6 + Math.round(b * 0.7), 2, 1, edge || 'KELP.2');
         }
       }
     }
@@ -144,13 +243,27 @@ KD.Scenes.title = (function () {
       const y0 = Math.round(sea * k / SKYB.length);
       R(0, y0, W, Math.round(sea * (k + 1) / SKYB.length) - y0 + 1, SKYB[k]);
     }
-    /* the sun, low and behind him */
-    const sx = Math.round(W * 0.78);
-    for (let r = 0; r < 6; r++) {
-      const w = [10, 18, 22, 22, 18, 10][r];
-      R(sx - (w >> 1), 6 + r * 3, w, 3, r === 0 || r === 5 ? 'GOLD.3' : 'WHITE');
+    /* The sun, low and ahead of him. It was a white lozenge with a gold
+       line top and bottom, which read as a poached egg; concentric stepped
+       rings and a couple of spikes read as light. */
+    const sx = Math.round(W * 0.78), sy = 17;
+    for (const [rr, col] of [[13, 'GOLD.1'], [10, 'GOLD.3'], [7, 'WHITE']]) {
+      for (let dy = -rr; dy <= rr; dy++) {
+        const hw = Math.round(Math.sqrt(Math.max(0, rr * rr - dy * dy)));
+        if (hw < 1) continue;
+        R(sx - hw, sy + dy, hw * 2, 1, col);
+      }
+    }
+    for (let k = 0; k < 8; k++) {                 /* eight short spikes */
+      const a = k * 0.785 + t * 0.15;
+      const c0 = 14, c1 = 19;
+      R(Math.round(sx + Math.cos(a) * c0), Math.round(sy + Math.sin(a) * c0),
+        Math.max(1, Math.round(Math.abs(Math.cos(a)) * (c1 - c0))) || 1,
+        Math.max(1, Math.round(Math.abs(Math.sin(a)) * (c1 - c0))) || 1, 'GOLD.2');
     }
     /* ---- water, in bands ------------------------------------------ */
+    /* light at the top, dark at the bottom. The shafts below index into
+       this, because a shaft has to be lighter than the band it crosses. */
     const WB = [['WATER.3', 0.06], ['WATER.2', 0.16], ['WATER.1', 0.34],
                 ['WATER.0', 0.56], ['DEEP.2', 1.0]];
     let prev = sea, above = null;
@@ -167,36 +280,58 @@ KD.Scenes.title = (function () {
     for (let x = 0; x < W; x += 2) {
       const y = sea + Math.round(Math.sin(x * 0.05 + t * 1.4) * 2
                                + Math.sin(x * 0.017 - t * 0.8) * 2);
-      R(x, y - 2, 2, 2, 'WHITE');
+      /* broken foam, not a continuous white cable: two crests in three */
+      if (((x >> 2) + ((t * 3) | 0)) % 3) R(x, y - 2, 2, 1, 'WHITE');
+      R(x, y - 1, 2, 1, 'BONE.2');
       R(x, y, 2, 3, 'WATER.3');
       if (((x >> 1) + ((t * 6) | 0)) % 13 === 0) R(x, y - 4, 1, 1, 'WHITE');
     }
-    /* ---- sunlight, solid and slanted ------------------------------- */
-    /* Three, not five, and one step up the ramp rather than white all the
-       way down - at five wide bars of BONE they became the subject of the
-       picture instead of the light in it. */
+    /* ---- sunlight, solid and slanted -------------------------------
+       Three, not five, and one step UP the ramp from whatever band the
+       shaft is crossing. They used to be picked from a fixed list of four
+       WATER tones, which meant that below a third of the way down the
+       "light" was the same value as the water or darker than it - three
+       dark streaks running through the middle of the picture.
+       ------------------------------------------------------------------ */
+    const bandAt = (yy) => {
+      const f = (yy - sea) / Math.max(1, H - sea);
+      for (let i = 0; i < WB.length; i++) if (f <= WB[i][1]) return i;
+      return WB.length - 1;
+    };
     for (let i = 0; i < 3; i++) {
       const bx = Math.round(W * (0.16 + i * 0.27) + Math.sin(t * 0.2 + i) * 8);
       for (let y = 0; y < (H - sea) * 0.72; y += 2) {
         const k = y / ((H - sea) * 0.72);
         const w = Math.round(11 * (1 - k * 0.8));
         if (w < 2) break;
-        const col = k < 0.10 ? 'WATER.3' : (k < 0.40 ? 'WATER.2'
-                  : (k < 0.72 ? 'WATER.1' : 'WATER.0'));
+        const bi = bandAt(sea + y);
+        const col = bi === 0 ? 'BONE.2' : WB[bi - 1][0];
         R(bx + Math.round(y * 0.28), sea + y, w, 2, col);
       }
     }
-    /* ---- his kingdom, on the far rock ------------------------------ */
-    castle(Math.round(W * 0.50), Math.round(H * 0.62), 1.6);
+    /* ---- his kingdom, on the far rock ------------------------------
+       There was a band of lighter water behind it here for atmospheric
+       haze. With hard ends it read as a pale rectangle painted on the sea,
+       which is the same lesson as the god rays and the window light: at
+       this size, either the whole surface changes or nothing does. The
+       castle is only two steps darker than the water now, which does the
+       job on its own. */
+    const cbase = Math.round(H * 0.62);
+    castle(Math.round(W * 0.50), cbase, 1.6);
     /* ---- a bed of weed between here and there ---------------------- */
     for (let i = 0; i < 22; i++) {
       const x = Math.round(((i * 137 + 40) % (W + 60)) - 30);
       const g = Math.round(H * (0.70 + (i % 3) * 0.03));
-      weed(x, g, 26 + ((i * 53) % 30), i, i % 2 ? 'DEEP.1' : 'DEEP.0');
+      weed(x, g, 26 + ((i * 53) % 30), i,
+           i % 3 === 0 ? 'DEEP.1' : 'KELP.0',
+           i % 3 === 0 ? 'DEEP.2' : 'KELP.1');
     }
-    /* ---- fish, at three depths ------------------------------------- */
-    const FISH = ['an_clown', 'an_parrot', 'an_cuttle', 'an_lion', 'an_cuda'];
-    for (let i = 0; i < 16; i++) {
+    /* ---- fish, at three depths -------------------------------------
+       an_cuda and an_moray are long grey capsules at this size and read as
+       torpedoes, so the named species here are the ones with a shape and a
+       colour, and the density comes from hand-drawn schools instead. */
+    const FISH = ['an_clown', 'an_parrot', 'an_lion', 'an_cuttle'];
+    for (let i = 0; i < 14; i++) {
       const name = FISH[i % FISH.length];
       if (!KD.PX.hasAny(name)) continue;
       const sp = 8 + (i % 5) * 7;
@@ -205,7 +340,22 @@ KD.Scenes.title = (function () {
       const y = Math.round(sea + 14 + ((i * 61) % Math.max(20, H - sea - 40))
                           + Math.sin(t * 1.1 + i) * 4);
       KD.PX.blit(ctx, KD.PX.frameOf(name, t + i), x, y,
-                 { anchor: false, flipX: dir < 0, shade: 1 + (i % 3) });
+                 { anchor: false, flipX: dir < 0, shade: i % 3 });
+    }
+    /* schools: three fish to a group, a body and a tail, nothing more */
+    for (let g = 0; g < 11; g++) {
+      const dir = g & 1 ? 1 : -1;
+      const sp = 9 + (g % 4) * 5;
+      const gx = Math.round((((g * 233 + t * sp * dir) % (W + 90)) + W + 90) % (W + 90)) - 45;
+      const gy = Math.round(sea + 10 + ((g * 97) % Math.max(16, H - sea - 34)));
+      const col = g % 3 ? 'DEEP.3' : 'CORAL.1';
+      for (let f = 0; f < 4; f++) {
+        const fx = gx + f * 6, fy = gy + ((f % 2) ? 4 : 0)
+                 + Math.round(Math.sin(t * 2 + g + f) * 1.5);
+        R(fx, fy, 3, 2, col);
+        R(fx + (dir > 0 ? 3 : -1), fy, 1, 2, dir > 0 ? 'DEEP.2' : 'DEEP.2');
+        R(fx + (dir > 0 ? -1 : 3), fy, 1, 1, col);
+      }
     }
     /* ---- bubbles, lots of them ------------------------------------- */
     for (let i = 0; i < 60; i++) {
@@ -215,43 +365,57 @@ KD.Scenes.title = (function () {
       const sz = (i % 5) ? 1 : 2;
       R(bx, Math.round(by), sz, sz, i % 4 ? 'WATER.3' : 'BONE.2');
     }
-    /* ---- the rock he is standing on -------------------------------- */
+    /* ---- the rock he is standing on --------------------------------
+       Blocked, so it reads as a broken quay rather than a platform, with
+       the top course catching the light and weed in the joints. */
     const ledge = Math.round(H * 0.78);
     const lw = Math.round(W * 0.46);
     for (let k = 0; k < H - ledge + 4; k++) {
       const w = lw - Math.round(k * 0.6);
       R(0, ledge + k, Math.max(0, w), 1, k < 3 ? 'STONE.1' : 'INK.1');
     }
-    /* blocked rock, so it reads as stone rather than as a platform */
     for (let ry = ledge + 4; ry < H + 4; ry += 9) {
       const w = lw - Math.round((ry - ledge) * 0.6);
       for (let rx = ((ry / 9) | 0) % 2 ? -9 : 0; rx < w; rx += 19) {
         const q = hash(rx, ry);
-        R(rx, ry, Math.min(18, w - rx), 8, q < 0.4 ? 'INK.1' : (q < 0.85 ? 'INK.2' : 'STONE.0'));
+        R(rx, ry, Math.min(18, w - rx), 8,
+          q < 0.34 ? 'INK.1' : (q < 0.62 ? 'INK.2' : (q < 0.88 ? 'STONE.0' : 'STONE.1')));
         R(rx, ry, Math.min(18, w - rx), 1, 'INK.3');
+        if (q > 0.72) R(rx + 2, ry + 5, Math.min(9, w - rx - 3), 2, 'INK.1');
       }
     }
+    /* the top course, and a lit lip along the front of it */
     R(0, ledge, lw, 3, 'STONE.1');
     R(0, ledge, lw, 1, 'STONE.3');
+    R(lw - 2, ledge, 2, 4, 'STONE.3');
     R(0, ledge + 3, lw, 1, 'INK.0');
-    /* a few sprigs on the lip, because a bare rock reads as a platform */
-    for (let i = 0; i < 7; i++) {
-      const x = Math.round(lw * (0.12 + i * 0.13));
-      weed(x, ledge, 12 + ((i * 37) % 12), i + 40, 'KELP.0');
+    /* sprigs and barnacles in the joints, because bare rock is a platform */
+    for (let i = 0; i < 8; i++) {
+      const x = Math.round(lw * (0.06 + i * 0.12));
+      weed(x, ledge, 11 + ((i * 37) % 13), i + 40, 'KELP.0');
     }
+
     /* ---- and the man himself --------------------------------------- */
     if (KD.PX.hasAny('ti_king')) {
       KD.PX.blit(ctx, KD.PX.frameOf('ti_king', t), Math.round(W * 0.22), ledge + 1);
     }
 
-    /* ---- the words ------------------------------------------------- */
-    const cx = Math.round(W / 2);
-    const top = Math.round(H * 0.04);
-    KD.Text.draw('CROWNDEEP', cx, top, 'GOLD.3', { align: 'center', space: 2, shadow: 'INK.0' });
-    KD.Text.draw('KING OF ATLANTIC', cx, top + 13, 'WATER.3',
-                 { align: 'center', space: 1, shadow: 'INK.0' });
-    KD.Text.draw('he had it all. then he met a keg.', cx, top + 24, 'BONE.2',
-                 { tiny: true, align: 'center', shadow: 'INK.0' });
+    /* ---- foreground kelp down the left edge, in front of everything ---
+       Without it the composition ran off the side and the eye fell out of
+       frame before it ever reached the castle. Drawn last, and at the ink
+       end of the ramp, so it reads as a near silhouette. */
+    for (let i = 0; i < 3; i++) {
+      weed(-8 + i * 11, H + 10, 86 + ((i * 41) % 40), i + 90, 'INK.0', 'INK.1');
+    }
+
+    /* ---- the words --------------------------------------------------
+       Three lines of bare centred text over a picture is a debug overlay,
+       not a title. This is a plate: ink ground, a gold double frame with
+       corner joinery, a trident either side of the name, a rule under it,
+       and the subtitle inside the same box. The tagline hangs below on its
+       own, in tiny text, because it is an aside and should read as one.
+       ------------------------------------------------------------------ */
+    logo(Math.round(W / 2), Math.round(H * 0.03));
 
     /* ---- the menu ------------------------------------------------- */
     items = [];
@@ -270,7 +434,7 @@ KD.Scenes.title = (function () {
         if (!KD.Cine.play('intro')) KD.Game.go('wake', {});
       } });
     } else {
-      items.push({ label: 'DIG IN', act: () => {
+      items.push({ label: 'ANOTHER DAY', act: () => {
         if (!KD.Cine.play('intro')) KD.Game.go('wake', {});
       } });
     }
@@ -278,44 +442,57 @@ KD.Scenes.title = (function () {
     items.push({ label: KD.Sfx.isMuted() ? 'SOUND OFF' : 'SOUND ON', act: () => KD.Sfx.mute() });
     if (sel >= items.length) sel = items.length - 1;
 
-    const pw = 128, ph = items.length * 22 + 22;
+    const pw = 136, ph = items.length * 21 + 26;
     const pxx = W - pw - 14, pyy = H - ph - 12;
-    /* the plaque: a stone slab, rivets at the corners, barnacles on it */
+    /* The plaque. It was a grey stone slab with three flat brown plates on
+       it and dark letters cut into them, and brown-on-grey at this size is
+       cardboard. Dark slate, a gold frame, and light letters on dark slots -
+       with gold used only for the one that is selected, so the eye goes
+       straight to it instead of having to compare three brown bars. */
     R(pxx - 2, pyy - 2, pw + 4, ph + 4, 'INK.0');
-    R(pxx, pyy, pw, ph, 'STONE.0');
-    for (let ry = pyy; ry < pyy + ph; ry += 7) {
-      for (let rx = pxx + (((ry - pyy) / 7 | 0) % 2 ? -8 : 0); rx < pxx + pw; rx += 17) {
+    R(pxx, pyy, pw, ph, 'INK.1');
+    for (let ry = pyy + 2; ry < pyy + ph - 2; ry += 6) {
+      for (let rx = pxx + (((ry - pyy) / 6 | 0) % 2 ? -7 : 1); rx < pxx + pw - 1; rx += 15) {
         const q = hash(rx, ry);
-        const cw = Math.min(16, pxx + pw - Math.max(pxx, rx));
+        const cw = Math.min(14, pxx + pw - 1 - Math.max(pxx + 1, rx));
         if (cw <= 0) continue;
-        R(Math.max(pxx, rx), ry, cw, 6, q < 0.45 ? 'STONE.0' : (q < 0.9 ? 'STONE.1' : 'STONE.2'));
-        R(Math.max(pxx, rx), ry, cw, 1, 'STONE.2');
+        R(Math.max(pxx + 1, rx), ry, cw, 5, q < 0.5 ? 'INK.1' : 'INK.2');
+        R(Math.max(pxx + 1, rx), ry, cw, 1, 'INK.2');
       }
     }
-    R(pxx, pyy, pw, 2, 'STONE.3');
-    R(pxx, pyy + ph - 2, pw, 2, 'INK.1');
-    KD.Screen.frame(pxx, pyy, pw, ph, 'GOLD.0');
-    R(pxx + 2, pyy + 2, pw - 4, 1, 'GOLD.1');
-    rivet(pxx + 6, pyy + 6); rivet(pxx + pw - 7, pyy + 6);
-    rivet(pxx + 6, pyy + ph - 7); rivet(pxx + pw - 7, pyy + ph - 7);
-    barnacle(pxx + 4, pyy + ph - 22, 4);
+    R(pxx, pyy, pw, 1, 'INK.3');
+    R(pxx, pyy + ph - 1, pw, 1, 'INK.0');
+    KD.Screen.frame(pxx, pyy, pw, ph, 'GOLD.1');
+    KD.Screen.frame(pxx + 2, pyy + 2, pw - 4, ph - 4, 'GOLD.0');
+    /* corner joinery, so the frame is made of parts */
+    for (const [cx2, cy2, dx, dy] of [[pxx, pyy, 1, 1], [pxx + pw - 1, pyy, -1, 1],
+                                      [pxx, pyy + ph - 1, 1, -1],
+                                      [pxx + pw - 1, pyy + ph - 1, -1, -1]]) {
+      R(cx2, cy2, dx * 7, dy * 2, 'GOLD.2');
+      R(cx2, cy2, dx * 2, dy * 7, 'GOLD.2');
+      R(cx2 + dx, cy2 + dy, dx * 2, dy * 2, 'GOLD.3');
+    }
+    rivet(pxx + 7, pyy + 7); rivet(pxx + pw - 8, pyy + 7);
+    barnacle(pxx + 4, pyy + ph - 20, 3);
 
     /* and the options */
     for (let i = 0; i < items.length; i++) {
-      const iy = pyy + 12 + i * 22;
-      const b = plate(pxx + 18, iy, pw - 30, 18, items[i].label, i === sel);
+      const iy = pyy + 10 + i * 21;
+      const b = slot(pxx + 16, iy, pw - 28, 17, items[i].label, i === sel);
       /* mouse and touch: hovering picks, clicking commits */
       if (KD.UI.inside(b.x, b.y, b.w, b.h)) {
         if (sel !== i) { sel = i; }
         if (KD.In.mouse.click && !KD.UI.blocked()) { KD.In.consumedClick(); items[i].act(); }
       }
     }
-    const hw = KD.Text.width('W / S  -  ENTER', { tiny: true }) + 10;
+    const hint = KD.touch ? 'TAP TO CHOOSE' : 'W / S  -  ENTER';
+    const hw = KD.Text.width(hint, { tiny: true }) + 10;
     R(pxx + ((pw - hw) >> 1), pyy + ph - 13, hw, 11, 'INK.0');
-    KD.Text.draw('W / S  -  ENTER', pxx + (pw >> 1), pyy + ph - 11, 'GOLD.2',
+    KD.Text.draw(hint, pxx + (pw >> 1), pyy + ph - 11, 'GOLD.2',
                  { tiny: true, align: 'center' });
-    KD.Text.draw('every pixel placed by hand', 6, H - 10, 'STONE.2',
-                 { tiny: true, shadow: 'INK.0' });
+    const fw = KD.Text.width('every pixel placed by hand', { tiny: true }) + 8;
+    R(4, H - 11, fw, 9, 'INK.0');
+    KD.Text.draw('every pixel placed by hand', 8, H - 9, 'STONE.2', { tiny: true });
   }
   return { enter, update, draw };
 })();

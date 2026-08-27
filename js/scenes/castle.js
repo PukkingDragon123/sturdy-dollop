@@ -750,7 +750,10 @@ KD.Scenes.castle = (function () {
      leaving the castle and coming back. The `after` both advances the beat
      and walks us back in. */
   function playCine(id) {
-    const beats = CINE[id];
+    const mk = CINE[id];
+    /* the beats are built from the answers he gave, so they are made here
+       rather than read out of a fixed table */
+    const beats = typeof mk === 'function' ? mk(A1.A.said || {}) : mk;
     if (!beats) { A1.advance(); return; }
     const back = P.x;
     KD.Game.go('cine', { scene: { id: id, beats: beats, after: () => {
@@ -772,8 +775,22 @@ KD.Scenes.castle = (function () {
     KD.Game.go('gen', {});
   }
 
+  /* ================================================================
+     CINEMATICS
+
+     These are FUNCTIONS of the conversation bag, not fixed lists. Act One
+     asked four questions - how warm he was to the queen at the alarm,
+     whether he was cruel to the cook, whether he took the drink, whether
+     he moved closer - and before this the answers went into a bag and
+     nothing ever read them back out. Four choices with no consequence is
+     worse than no choices at all, because the game has told you they
+     mattered.
+
+     Everybody who leaves him now leaves him for the specific reason he
+     gave them.
+     ================================================================ */
   const CINE = {
-    a1_text: [
+    a1_text: () => [
       { kind: 'card', world: false, t: 2.4, vig: 0.6,
         lines: ['A LIGHT UNDER THE THRONE'],
         sub: 'something buzzing where nothing should be' },
@@ -788,37 +805,56 @@ KD.Scenes.castle = (function () {
       { kind: 'card', world: false, t: 2.6, lines: ['HE PUT THE TRIDENT DOWN'],
         sub: 'and did not pick it up for four seasons' }
     ],
-    a1_fall: [
-      { kind: 'card', world: false, t: 2.6, vig: 0.7, lines: ['FOUR SEASONS LATER'],
-        sub: 'the candles on the long table had been out for most of it' },
-      { kind: 'two', world: false, l: 'po_queen', r: 'po_king', t: 3.4,
-        text: 'She had already had the chairs taken away.' },
-      { kind: 'say', world: false, who: 'po_queen', name: 'Coralene', t: 4.4,
-        text: 'I waited at that table until the wax ran onto the floor. Then I stopped waiting.' },
-      { kind: 'say', world: false, who: 'po_king', name: 'You', t: 3.0,
-        text: 'I can fix it. Give me one tide.' },
-      { kind: 'say', world: false, who: 'po_queen', name: 'Coralene', t: 4.2,
-        text: 'You are not the man on the banner any more. You are not even the man in the doorway.' },
-      { kind: 'fade', world: false, to: 1, t: 0.8 },
-      { kind: 'card', world: false, t: 2.4, lines: ['AND THEN THE KEG LEFT TOO'] },
-      { kind: 'say', world: false, who: 'po_keg', name: 'The Keg', t: 4.0,
-        text: 'u were fun when u were a king. u are not a king.' },
-      { kind: 'rumble', world: false, amp: 4, t: 1.4, vig: 1 },
-      { kind: 'card', world: false, t: 2.8, vig: 1,
-        lines: ['THE KITCHENS CAME UP THE STAIRS'] },
-      { kind: 'art', world: false, spr: 'po_deep', scale: 2, y: 0.42, t: 0.1, vig: 1 },
-      { kind: 'say', world: false, who: 'po_deep', name: 'The Deep', t: 4.2, vig: 1,
-        text: 'I said one day this kitchen would be the whole castle. It is that day, majesty.' },
-      { kind: 'shake', world: false, amp: 10, t: 0.4 },
-      { kind: 'flash', world: false, col: 'BLOOD.3', t: 0.4 },
-      { kind: 'card', world: false, t: 3.0, vig: 1,
-        lines: ['THEY THREW HIM OUT OF HIS OWN GATE'],
-        sub: 'and the current took him where it liked' },
-      { kind: 'art', world: false, spr: 'po_santa', scale: 2, y: 0.40, t: 0.1 },
-      { kind: 'say', world: false, who: 'po_santa', name: 'Santa the Manta', t: 4.4,
-        text: 'Found you face down in the sand, big fella. Come on. I know a village.' },
-      { kind: 'fade', world: false, to: 1, t: 1.0 }
-    ]
+
+    a1_fall: (S) => {
+      const warm = S.warm, cruel = S.cruel, fell = S.fell, put = S.putDown;
+      const B = [];
+      B.push({ kind: 'card', world: false, t: 2.6, vig: 0.7,
+               lines: ['FOUR SEASONS LATER'],
+               sub: 'the candles on the long table had been out for most of it' });
+      B.push({ kind: 'two', world: false, l: 'po_queen', r: 'po_king', t: 3.4,
+               text: 'She had already had the chairs taken away.' });
+      B.push({ kind: 'art', world: false, spr: 'po_queen', scale: 2, y: 0.40, t: 0.1 });
+      /* ---- the queen, on the promise he made her at the alarm ---- */
+      B.push({ kind: 'say', world: false, who: 'po_queen', name: 'Coralene', t: 4.6,
+               text: warm
+                 ? 'You looked at me that morning and said tonight, and you meant it. I have thought about that more than I would like.'
+                 : 'You never once said you would come. I sat there anyway, every night. That is the part I cannot forgive myself for.' });
+      B.push({ kind: 'say', world: false, who: 'po_king', name: 'You', t: 3.0,
+               text: 'I can fix it. Give me one tide.' });
+      B.push({ kind: 'say', world: false, who: 'po_queen', name: 'Coralene', t: 4.4,
+               text: warm
+                 ? 'You have had four hundred tides. I am not angry, and that should frighten you more than if I were.'
+                 : 'You are not the man on the banner any more. You are not even the man in the doorway.' });
+      B.push({ kind: 'fade', world: false, to: 1, t: 0.8 });
+      /* ---- and the keg, on exactly how far he came over ---- */
+      B.push({ kind: 'card', world: false, t: 2.4, lines: ['AND THEN THE KEG LEFT TOO'] });
+      B.push({ kind: 'say', world: false, who: 'po_keg', name: 'The Keg', t: 4.4,
+               text: put
+                 ? 'u put the trident down for me. thats the night i stopped being interested, if u want to know'
+                 : (fell ? 'u were fun when u were a king. u are not a king.'
+                         : 'u never really came over. i was bored the whole time. thought u should know') });
+      B.push({ kind: 'rumble', world: false, amp: 4, t: 1.4, vig: 1 });
+      /* ---- the cook, on the sentence he actually said ---- */
+      B.push({ kind: 'card', world: false, t: 2.8, vig: 1,
+               lines: ['THE KITCHENS CAME UP THE STAIRS'] });
+      B.push({ kind: 'art', world: false, spr: 'po_deep', scale: 2, y: 0.42, t: 0.1, vig: 1 });
+      B.push({ kind: 'say', world: false, who: 'po_deep', name: 'The Deep', t: 4.6, vig: 1,
+               text: cruel
+                 ? 'I told you I had finished explaining things to you. This is me not explaining, majesty.'
+                 : 'You were civil to me once. I said I would remember, and I have - which is why you are going out of the gate and not into the pot.' });
+      B.push({ kind: 'shake', world: false, amp: 10, t: 0.4 });
+      B.push({ kind: 'flash', world: false, col: 'BLOOD.3', t: 0.4 });
+      B.push({ kind: 'card', world: false, t: 3.0, vig: 1,
+               lines: ['THEY THREW HIM OUT OF HIS OWN GATE'],
+               sub: 'and the current took him where it liked' });
+      /* ---- the one who had nothing to gain ---- */
+      B.push({ kind: 'art', world: false, spr: 'po_santa', scale: 2, y: 0.40, t: 0.1 });
+      B.push({ kind: 'say', world: false, who: 'po_santa', name: 'Santa the Manta', t: 4.6,
+               text: 'Found you face down in the sand, big fella. Nobody sent me and nobody is paying me. Come on. I know a village.' });
+      B.push({ kind: 'fade', world: false, to: 1, t: 1.0 });
+      return B;
+    }
   };
 
   /* ================================================================
