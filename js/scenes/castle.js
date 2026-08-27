@@ -564,7 +564,8 @@ KD.Scenes.castle = (function () {
     /* the long table: sit and eat */
     if (b.kind === 'use' && b.target === 'table' && insideRoom(1) &&
         Math.abs(P.x - (ROOMS[1].x + (ROOMS[1].w >> 1))) < 70) {
-      startTalk(b.lines, () => { A1.gain(3); A1.advance(); });
+      /* the dinner is its own scene now, not a dialogue box */
+      KD.Game.go('dinner', {});
       return;
     }
     /* pick a plate up off the table for the cook */

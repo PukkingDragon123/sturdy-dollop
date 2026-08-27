@@ -7,10 +7,66 @@ KD.Scenes.title = (function () {
      at the castle he does not live in any more. Everything in it is drawn
      here rather than baked, because it is four hundred rects and the title
      screen has nothing else to do with its frame. */
-  let t = 0;
+  let t = 0, sel = 0, items = [];
   const R = KD.Screen.rect;
-  function enter() { t = 0; KD.UI.guard(0.2); }
-  function update(dt) { t += dt; if (KD.In.isHit('F2')) KD.Game.go('spritetest', {}); }
+  function enter() { t = 0; sel = 0; KD.UI.guard(0.2); }
+  function update(dt) {
+    t += dt;
+    if (KD.In.isHit('F2')) KD.Game.go('spritetest', {});
+    if (!items.length) return;
+    if (KD.In.isHit('ArrowDown', 'KeyS')) { sel = (sel + 1) % items.length; beep(); }
+    if (KD.In.isHit('ArrowUp', 'KeyW')) { sel = (sel + items.length - 1) % items.length; beep(); }
+    if (KD.In.isHit('Enter', 'Space') && !KD.UI.blocked()) items[sel].act();
+  }
+  const beep = () => { if (KD.Sfx) KD.Sfx.play('click'); };
+
+  /* ---- the menu, as a bronze plaque bolted to the rock ---------------
+     It was three flat blue slabs in a dark box, which is what a debug menu
+     looks like. This is a stone plaque with rivets and barnacles, and each
+     option is an engraved brass plate: the letters are cut IN, with the lit
+     edge below and to the right, which is how a chisel leaves them. The
+     current one is brighter brass with a gold trident pointing at it.
+     ------------------------------------------------------------------ */
+  function plate(x, y, w, h, label, on) {
+    /* the recess it sits in */
+    R(x - 1, y - 1, w + 2, h + 2, 'INK.0');
+    R(x, y, w, h, on ? 'RUST.1' : 'RUST.0');
+    /* the plate itself */
+    R(x + 1, y + 1, w - 2, h - 2, on ? 'GOLD.1' : 'GOLD.0');
+    R(x + 1, y + 1, w - 2, 1, on ? 'GOLD.3' : 'GOLD.2');
+    R(x + 1, y + h - 2, w - 2, 1, 'RUST.0');
+    R(x + 1, y + 1, 1, h - 2, on ? 'GOLD.2' : 'GOLD.1');
+    R(x + w - 2, y + 1, 1, h - 2, 'RUST.0');
+    /* incised letters: dark glyph, lit edge below-right */
+    const cx2 = x + (w >> 1), ty2 = y + Math.round((h - 7) / 2);
+    KD.Text.draw(label, cx2 + 1, ty2 + 1, 'GOLD.3', { align: 'center' });
+    KD.Text.draw(label, cx2, ty2, on ? 'INK.0' : 'INK.1', { align: 'center' });
+    /* the pointer */
+    if (on) {
+      const px = x - 12 + Math.round(Math.sin(t * 4) * 2);
+      const py = y + (h >> 1);
+      R(px, py - 4, 2, 2, 'GOLD.3'); R(px, py, 2, 2, 'GOLD.3'); R(px, py + 4, 2, 2, 'GOLD.3');
+      R(px + 2, py - 4, 2, 9, 'GOLD.3');
+      R(px + 4, py - 1, 5, 3, 'GOLD.2');
+      R(px + 4, py - 1, 5, 1, 'GOLD.3');
+    }
+    return { x, y, w, h };
+  }
+
+  /* a rivet, and a barnacle, for the plaque itself */
+  function rivet(x, y) {
+    R(x - 2, y - 2, 5, 5, 'RUST.0');
+    R(x - 1, y - 1, 3, 3, 'RUST.2');
+    R(x - 1, y - 1, 2, 1, 'RUST.3');
+  }
+  function barnacle(x, y, n) {
+    for (let i = 0; i < n; i++) {
+      const bx = x + (i % 3) * 5, by = y + ((i / 3) | 0) * 4;
+      R(bx, by, 5, 4, 'BONE.0');
+      R(bx + 1, by, 3, 1, 'BONE.2');
+      R(bx + 2, by + 1, 1, 2, 'INK.1');
+    }
+  }
 
   /* deterministic scatter, so nothing shimmers between frames */
   function hash(a, b) {
@@ -197,16 +253,10 @@ KD.Scenes.title = (function () {
     KD.Text.draw('he had it all. then he met a keg.', cx, top + 24, 'BONE.2',
                  { tiny: true, align: 'center', shadow: 'INK.0' });
 
-    /* ---- the menu, on a scrim so it reads over the water ----------- */
-    const bw = 104, bx = W - bw - 12;
-    const rows = KD.State.hasSave() ? 4 : 3;
-    const panelH = rows * 21 + 12;
-    let by = H - panelH - 6;
-    R(bx - 6, by - 6, bw + 12, panelH, 'INK.0');
-    R(bx - 5, by - 5, bw + 10, 1, 'GOLD.0');
-    KD.Screen.frame(bx - 6, by - 6, bw + 12, panelH, 'GOLD.0');
+    /* ---- the menu ------------------------------------------------- */
+    items = [];
     if (KD.State.hasSave()) {
-      if (KD.UI.button(bx, by, bw, 18, 'CONTINUE', { key: 'Enter' })) {
+      items.push({ label: 'CONTINUE', act: () => {
         if (KD.State.load()) {
           /* Somebody who quit halfway through Act One has a save but no
              generated world, so sending them to `play` dropped them into an
@@ -214,22 +264,56 @@ KD.Scenes.title = (function () {
           const a = KD.State.S.act1;
           KD.Game.go(a && !a.done ? 'castle' : 'play', {});
         } else KD.State.say('That save is broken.', 'BLOOD.2');
-      }
-      by += 21;
-      if (KD.UI.button(bx, by, bw, 15, 'NEW WORLD')) {
+      } });
+      items.push({ label: 'NEW WORLD', act: () => {
         KD.State.wipe();
         if (!KD.Cine.play('intro')) KD.Game.go('wake', {});
-      }
-      by += 21;
+      } });
     } else {
-      if (KD.UI.button(bx, by, bw, 18, 'DIG IN', { key: 'Enter' })) {
+      items.push({ label: 'DIG IN', act: () => {
         if (!KD.Cine.play('intro')) KD.Game.go('wake', {});
-      }
-      by += 21;
+      } });
     }
-    if (KD.UI.button(bx, by, bw, 15, 'HOW TO PLAY')) KD.Game.go('help', { from: 'title' });
-    by += 21;
-    if (KD.UI.button(bx, by, bw, 15, KD.Sfx.isMuted() ? 'SOUND OFF' : 'SOUND ON')) KD.Sfx.mute();
+    items.push({ label: 'HOW TO PLAY', act: () => KD.Game.go('help', { from: 'title' }) });
+    items.push({ label: KD.Sfx.isMuted() ? 'SOUND OFF' : 'SOUND ON', act: () => KD.Sfx.mute() });
+    if (sel >= items.length) sel = items.length - 1;
+
+    const pw = 128, ph = items.length * 22 + 22;
+    const pxx = W - pw - 14, pyy = H - ph - 12;
+    /* the plaque: a stone slab, rivets at the corners, barnacles on it */
+    R(pxx - 2, pyy - 2, pw + 4, ph + 4, 'INK.0');
+    R(pxx, pyy, pw, ph, 'STONE.0');
+    for (let ry = pyy; ry < pyy + ph; ry += 7) {
+      for (let rx = pxx + (((ry - pyy) / 7 | 0) % 2 ? -8 : 0); rx < pxx + pw; rx += 17) {
+        const q = hash(rx, ry);
+        const cw = Math.min(16, pxx + pw - Math.max(pxx, rx));
+        if (cw <= 0) continue;
+        R(Math.max(pxx, rx), ry, cw, 6, q < 0.45 ? 'STONE.0' : (q < 0.9 ? 'STONE.1' : 'STONE.2'));
+        R(Math.max(pxx, rx), ry, cw, 1, 'STONE.2');
+      }
+    }
+    R(pxx, pyy, pw, 2, 'STONE.3');
+    R(pxx, pyy + ph - 2, pw, 2, 'INK.1');
+    KD.Screen.frame(pxx, pyy, pw, ph, 'GOLD.0');
+    R(pxx + 2, pyy + 2, pw - 4, 1, 'GOLD.1');
+    rivet(pxx + 6, pyy + 6); rivet(pxx + pw - 7, pyy + 6);
+    rivet(pxx + 6, pyy + ph - 7); rivet(pxx + pw - 7, pyy + ph - 7);
+    barnacle(pxx + 4, pyy + ph - 22, 4);
+
+    /* and the options */
+    for (let i = 0; i < items.length; i++) {
+      const iy = pyy + 12 + i * 22;
+      const b = plate(pxx + 18, iy, pw - 30, 18, items[i].label, i === sel);
+      /* mouse and touch: hovering picks, clicking commits */
+      if (KD.UI.inside(b.x, b.y, b.w, b.h)) {
+        if (sel !== i) { sel = i; }
+        if (KD.In.mouse.click && !KD.UI.blocked()) { KD.In.consumedClick(); items[i].act(); }
+      }
+    }
+    const hw = KD.Text.width('W / S  -  ENTER', { tiny: true }) + 10;
+    R(pxx + ((pw - hw) >> 1), pyy + ph - 13, hw, 11, 'INK.0');
+    KD.Text.draw('W / S  -  ENTER', pxx + (pw >> 1), pyy + ph - 11, 'GOLD.2',
+                 { tiny: true, align: 'center' });
     KD.Text.draw('every pixel placed by hand', 6, H - 10, 'STONE.2',
                  { tiny: true, shadow: 'INK.0' });
   }

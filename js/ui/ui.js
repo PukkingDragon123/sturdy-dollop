@@ -162,10 +162,13 @@ KD.UI = (function () {
 
   /* The touch cluster. Big, stepped-octagonal, icon-first, and it fades out
      while you are not touching it so it never covers the game. */
-  function touchPad(defs) {
+  /* o.noStick: for scenes with no movement in them. The MOVE hint sitting in
+     the corner of a dinner table is a control that does nothing. */
+  function touchPad(defs, o) {
     if (!KD.touch) return;
     const pad = KD.In.padState();
-    if (pad.on) {
+    if (o && o.noStick) { /* buttons only */ }
+    else if (pad.on) {
       octo(Math.round(pad.cx), Math.round(pad.cy), 20, null, 'BONE.0');
       octo(Math.round(pad.cx + pad.dx * 13), Math.round(pad.cy + pad.dy * 13), 7, 'BONE.2', 'INK.0');
     } else {

@@ -386,7 +386,13 @@ KD.Scenes.wake = (function () {
                  : 'It will be back tomorrow. They always come back.';
       KD.Talk.panel({ name: 'You', portrait: 'po_king' }, line, {});
     }
-    if (KD.touch) { layout(); KD.In.buttons(BTNS); }
+    if (KD.touch) {
+      layout();
+      KD.In.buttons(BTNS);
+      /* buttons() only registers; without touchPad() the phone button was
+         invisible here too. No stick - there is nowhere to walk in bed. */
+      KD.UI.touchPad(BTNS, { noStick: true });
+    }
   }
 
   /* A trident at ANY angle, stepped out of 2x2 rects along a direction
