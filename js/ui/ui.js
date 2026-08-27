@@ -240,6 +240,18 @@ KD.UI = (function () {
     R(x - 3, y + h + 4, w + 6, 1, 'WOOD.2');
     R(x - 5, y + h + 4, 3, 4, 'WOOD.2');
     R(x + w + 2, y + h + 4, 3, 4, 'WOOD.2');
+    /* A brass tag on the left of the bottom rod saying what KIND of thing
+       this is - talk to someone, hit something, go somewhere. The line of
+       text says where; the glyph says what, at a glance, without reading. */
+    if (o.kind && KD.Mark) {
+      const tx = x + 6, ty = y + h + 1;
+      R(tx - 1, y + h + 4, 2, 3, 'GOLD.0');            /* the ring */
+      R(tx - 2, ty + 1, 11, 10, 'INK.0');
+      R(tx - 1, ty + 2, 9, 8, 'GOLD.1');
+      R(tx - 1, ty + 2, 9, 1, 'GOLD.3');
+      R(tx - 1, ty + 9, 9, 1, 'GOLD.0');
+      KD.Mark.glyph(tx + 1, ty + 3, o.kind, 'INK.0');
+    }
     /* a wax seal on the bottom rod, because a scroll has one */
     const sx = x + w - 14;
     R(sx, y + h + 2, 8, 7, 'BLOOD.1');

@@ -25,42 +25,29 @@ KD.Act1 = (function () {
 
   /* Each beat: where the marker goes, what the objective line says, and
      the `kind` the scene switches on. */
+  /* Each beat names a conversation in rpg/talks.js rather than carrying its
+     own lines, and `mark` says what kind of objective it is so the marker
+     and the scroll can show the right icon.
+
+     There used to be two timing minigames in here - pour the beer, then a
+     rhythm game for the kiss. They were the same button pressed to a bar and
+     neither of them said anything, so they are one conversation now: the
+     beat where he throws his life away is a beat about what he SAYS. */
   const BEATS = [
-    { id: 'wake', kind: 'talk', who: 'queen', room: 1,
-      hint: 'Find the Queen in the Great Hall',
-      lines: [
-        ['queen', 'There you are. You promised me dinner three tides ago.'],
-        ['king',  'Tonight, then. The long table. Candles. All of it.'],
-        ['queen', 'You said that last time and then you fought an eel.']
-      ] },
-    { id: 'dinner', kind: 'use', target: 'table', room: 1,
-      hint: 'Sit down and eat with her',
-      lines: [
-        ['queen', 'It is good. You are here and it is good.'],
-        ['king',  'I will not miss another one.']
-      ] },
-    { id: 'sharks', kind: 'kill', n: 3, room: 3,
-      hint: 'Sharks in off the balcony - three of them',
-      lines: [
-        ['queen', 'Do NOT let them near the table.'],
-        ['king',  'Stay behind me.']
-      ] },
-    { id: 'bully', kind: 'throw', who: 'deep', room: 2, need: 1,
-      hint: 'Take a plate from the table. The cook has it coming',
-      lines: [
-        ['deep',  'Your Majesty. I do not appreciate being thrown at.'],
-        ['king',  'Cook better and I will stop.'],
-        ['deep',  'One day this kitchen will be the whole castle.']
-      ] },
-    { id: 'text', kind: 'cine', cine: 'a1_text',
+    { id: 'wake', kind: 'talk', who: 'queen', room: 1, mark: 'talk',
+      hint: 'Find the Queen in the Great Hall', talk: 'wake' },
+    { id: 'dinner', kind: 'use', target: 'table', room: 1, mark: 'use',
+      hint: 'Sit down and eat with her' },
+    { id: 'sharks', kind: 'kill', n: 3, room: 3, mark: 'fight',
+      hint: 'Sharks in off the balcony - three of them', talk: 'sharks' },
+    { id: 'bully', kind: 'throw', who: 'deep', room: 2, need: 1, mark: 'fight',
+      hint: 'Take a plate from the table. The cook has it coming', talk: 'bully' },
+    { id: 'text', kind: 'cine', cine: 'a1_text', mark: 'go',
       hint: 'Something buzzed in the throne room' },
-    { id: 'drink', kind: 'mini', mini: 'beer', room: 0,
-      hint: 'She is waiting by the throne. Drink with her',
-      lines: [['keg', 'You look like a man who is bored of being loved.']] },
-    { id: 'kiss', kind: 'mini', mini: 'kiss', room: 0,
-      hint: 'One more and you will not remember the promise' },
-    { id: 'fall', kind: 'cine', cine: 'a1_fall',
-      hint: 'Go back to the Great Hall' , room: 1 }
+    { id: 'night', kind: 'talk', who: 'keg', room: 0, mark: 'talk',
+      hint: 'She is waiting by the throne', talk: 'keg' },
+    { id: 'fall', kind: 'cine', cine: 'a1_fall', mark: 'go',
+      hint: 'Go back to the Great Hall', room: 1 }
   ];
 
   const beat = () => BEATS[Math.min(A.beat, BEATS.length - 1)];

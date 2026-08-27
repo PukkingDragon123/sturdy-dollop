@@ -258,26 +258,23 @@ KD.Scenes.play = (function () {
     }
   }
 
-  /* a chevron over the nearest threat, so you know which way to face */
+  /* the lock-on bracket over the nearest threat, so you know which way to
+     face - same shape the castle fight uses, from ui/mark.js */
   function threatMark(cam) {
     const th = threat();
     if (!th) return;
     const m = th.m;
-    const sx = Math.round(m.x - cam.x), sy = Math.round(m.y - (m.K.h || 12) - cam.y);
-    const bob = Math.round(Math.abs(Math.sin(KD.Game.t * 5)) * 3);
-    for (let k = 0; k < 4; k++) {
-      KD.Screen.rect(sx - 4 + k, sy - 12 - k + bob, 9 - k * 2, 2, 'BLOOD.3');
-    }
+    const h = m.K.h || 12, w = m.K.w || 16;
+    /* m.y is the mob's feet, so the box centres half a body higher */
+    KD.Mark.threat(Math.round(m.x - cam.x), Math.round(m.y - h / 2 - cam.y),
+                   KD.Game.t, false,
+                   { rx: Math.round(w / 2) + 3, ry: Math.round(h / 2) + 3 });
   }
 
   function walkMark(cam) {
     const P = KD.Player.P;
     if (P.goTo === null || P.goTo === undefined) return;
-    const gx = Math.round(P.goTo - cam.x);
-    const gy = Math.round(P.y - cam.y);
-    const bob = Math.round(Math.sin(KD.Game.t * 6) * 2);
-    for (let k = 0; k < 3; k++) KD.Screen.rect(gx - 4 + k, gy - 22 - k * 2 + bob, 9 - k * 2, 2, 'GOLD.3');
-    KD.Screen.rect(gx - 6, gy - 2, 13, 2, 'GOLD.2');
+    KD.Mark.dest(Math.round(P.goTo - cam.x), Math.round(P.y - cam.y), KD.Game.t);
   }
 
   function draw(ctx) {

@@ -45,8 +45,7 @@ KD.Scenes.castle = (function () {
   let mobs = [];                             // sharks, when they come
   let thrown = [];                           // plates in flight
   let talk = null;                           // {lines, i, ch}
-  let mini = null;                           // a minigame in progress
-  let spawnT = 0;
+  let spawnT = 0, warned = false;
   const BTNS = [];
   /* tap-to-walk: a world x he is heading for, and what he does on arrival */
   let goTo = null, goWhat = null, goT = 0;
@@ -346,8 +345,8 @@ KD.Scenes.castle = (function () {
     A1.load();
     P.x = A1.A.beat === 0 ? 120 : P.x || 120;
     P.y = FLOOR; P.vx = 0; P.vy = 0; P.hp = 5;
-    mobs = []; thrown = []; talk = null; mini = null; arc = null; sparks.length = 0;
-    goTo = null; goWhat = null; goT = 0;
+    mobs = []; thrown = []; talk = null; arc = null; sparks.length = 0;
+    goTo = null; goWhat = null; goT = 0; warned = false;
     shownRoom = -1; roomT = 0;
     snapCam();
   }
@@ -359,8 +358,7 @@ KD.Scenes.castle = (function () {
 
   function update(dt) {
     t += dt;
-    if (mini) { updateMini(dt); return; }
-    if (talk) { updateTalk(dt); return; }
+    if (talk) { KD.Convo.update(dt); return; }
 
     tapTarget();
     /* ---- movement ------------------------------------------------- */
@@ -434,7 +432,7 @@ KD.Scenes.castle = (function () {
   function tapTarget() {
     if (!KD.In.mouse.click || KD.UI.blocked()) return;
     KD.In.consumedClick();
-    if (talk || mini) return;
+    if (talk) return;
     /* mouse.x/y are already in buffer space - Screen.toBuf does the scaling
        when the event lands, so dividing by cssScale here would halve it */
     const wx = cam.x + KD.In.mouse.x;
@@ -576,9 +574,14 @@ KD.Scenes.castle = (function () {
     }
     if (near) {
       if (b.kind === 'talk' && b.who === near.id) {
-        startTalk(b.lines, () => A1.advance());
-      } else if (b.kind === 'mini' && near.id === 'keg') {
-        startTalk(b.lines || [['keg', 'Come here.']], () => startMini(b.mini));
+        startTalk(b.talk || b.lines, () => {
+          /* the night with the keg is where the weight comes from */
+          if (b.id === 'night') {
+            const said = A1.A.said || {};
+            A1.gain(10 + (said.drank ? 8 : 0) + (said.fell === 2 ? 8 : 0));
+          }
+          A1.advance();
+        });
       } else {
         startTalk([[near.id, idleLine(near.id)]], null);
       }
@@ -602,35 +605,28 @@ KD.Scenes.castle = (function () {
   const idleLine = (id) => IDLE[id][Math.floor(t * 0.4) % IDLE[id].length];
 
   /* ================================================================
-     TALK
+     TALK - a script played by ui/convo.js
      ================================================================ */
+  /* `lines` may be a script name from rpg/talks.js, a script array, or a
+     single string; whatever comes in, a script goes out. */
   function startTalk(lines, after) {
-    talk = { lines: lines, i: 0, ch: 0, after: after || null };
-  }
-  function updateTalk(dt) {
-    const L = talk.lines[talk.i];
-    if (!L) { endTalk(); return; }
-    talk.ch += dt * 44;
-    const full = talk.ch >= L[1].length;
-    const tapped = KD.In.mouse.click && !KD.UI.blocked();
-    if (tapped) KD.In.consumedClick();
-    if (KD.In.actHit('use', 'KeyE') || KD.In.isHit('Space', 'Enter') || tapped) {
-      if (!full) { talk.ch = L[1].length; return; }
-      talk.i++;
-      talk.ch = 0;
-      if (talk.i >= talk.lines.length) endTalk();
+    let sc = lines;
+    if (typeof lines === 'string') {
+      sc = (KD.Talks && KD.Talks[lines]) || [{ who: 'folk', text: lines }];
+    } else if (Array.isArray(lines) && lines.length && Array.isArray(lines[0])) {
+      sc = lines.map((L) => ({ who: L[0], text: L[1] }));   // legacy pairs
     }
-  }
-  function endTalk() {
-    const after = talk.after;
-    talk = null;
-    if (after) after();
-  }
-
-  function speaker(id) {
-    if (id === 'king') return { name: 'You', portrait: 'po_king' };
-    const c = A1.CAST[id];
-    return c ? { name: c.name, portrait: c.portrait } : { name: '', portrait: null };
+    talk = true;
+    KD.Convo.start(sc, {
+      bag: A1.A.said || (A1.A.said = {}),
+      after: (bag) => {
+        talk = null;
+        /* the choices land on Act One's own bag, so later beats can read them */
+        A1.A.said = bag;
+        A1.save();
+        if (after) after();
+      }
+    });
   }
 
   /* ================================================================
@@ -640,6 +636,8 @@ KD.Scenes.castle = (function () {
     const b = A1.beat();
     if (b.kind === 'kill') {
       if (A1.A.sharks >= (b.n || 3)) { A1.A.sharks = 0; A1.advance(); return; }
+      /* she says her piece once, the first time one comes in */
+      if (!warned && mobs.length && b.talk) { warned = true; startTalk(b.talk, null); return; }
       spawnT -= dt;
       if (spawnT <= 0 && mobs.length < 2 && insideRoom(3)) {
         spawnT = 2.6;
@@ -653,7 +651,7 @@ KD.Scenes.castle = (function () {
     }
     if (b.kind === 'throw' && A1.A.thrown >= (b.need || 1)) {
       A1.A.thrown = 0;
-      startTalk(b.lines, () => A1.advance());
+      startTalk(b.talk || b.lines, () => A1.advance());
     }
   }
 
@@ -739,58 +737,11 @@ KD.Scenes.castle = (function () {
     if (KD.Sfx) KD.Sfx.play('swing');
   }
 
-  /* ================================================================
-     MINIGAMES
-     ================================================================ */
-  function startMini(kind) {
-    mini = kind === 'beer'
-      ? { kind: 'beer', fill: 0, target: 0.72, band: 0.1, tries: 3, msg: '', done: 0 }
-      : { kind: 'kiss', beat: 0, n: 0, want: 0, hit: 0, msg: '', done: 0, tt: 0 };
-  }
-
-  function updateMini(dt) {
-    mini.tt = (mini.tt || 0) + dt;
-    if (mini.done > 0) {
-      mini.done -= dt;
-      if (mini.done <= 0) { mini = null; A1.advance(); }
-      return;
-    }
-    const tapped = KD.In.mouse.click && !KD.UI.blocked();
-    if (tapped) KD.In.consumedClick();
-    const press = KD.In.actHit('use', 'KeyE') || KD.In.isHit('Space') || tapped;
-    if (mini.kind === 'beer') {
-      /* hold to pour, let go in the band. Overfill and it goes everywhere. */
-      const hold = KD.In.act('use', 'KeyE') || KD.In.isDown('Space') || KD.In.mouse.down;
-      if (hold) mini.fill += dt * 0.62;
-      if (mini.fill > 1.12) {
-        mini.msg = 'ALL OVER THE FLOOR'; mini.tries--; mini.fill = 0;
-        if (mini.tries <= 0) { mini.msg = 'GOOD ENOUGH'; A1.gain(6); mini.done = 1.2; }
-        return;
-      }
-      if (!hold && mini.fill > 0.05) {
-        const ok = Math.abs(mini.fill - mini.target) < mini.band;
-        if (ok) {
-          A1.A.drinks++; A1.gain(5);
-          mini.msg = 'PERFECT POUR'; mini.done = 1.1;
-        } else {
-          mini.msg = mini.fill < mini.target ? 'TOO LITTLE' : 'TOO MUCH';
-          mini.tries--; mini.fill = 0;
-          if (mini.tries <= 0) { mini.msg = 'GOOD ENOUGH'; A1.gain(6); mini.done = 1.2; }
-        }
-      }
-    } else {
-      /* a rhythm of three: press when the heart is full */
-      mini.beat += dt * 1.6;
-      const ph = mini.beat % 1;
-      if (press) {
-        if (ph > 0.62 && ph < 0.88) {
-          mini.n++; mini.hit = 0.3; A1.A.kisses++; A1.gain(4);
-          mini.msg = ['SHE LAUGHS', 'YOU FORGET THE TIME', 'YOU FORGET HER NAME'][Math.min(2, mini.n - 1)];
-        } else { mini.msg = 'TOO EARLY'; mini.hit = 0; }
-        if (mini.n >= 3) mini.done = 1.4;
-      }
-    }
-  }
+  /* The beer-pour bar and the kiss rhythm used to live here. Both were the
+     same button pressed to a moving marker, neither of them said anything,
+     and the beat they were dramatising - a man throwing his life away in one
+     evening - is about what he says, not about his timing. They are one
+     conversation in rpg/talks.js now, and this file is shorter for it. */
 
   /* ================================================================
      CUTSCENES
@@ -885,13 +836,7 @@ KD.Scenes.castle = (function () {
 
     /* where the tap sent him */
     if (goTo !== null) {
-      const gx = Math.round(goTo - cam.x), gy = Math.round(FLOOR - cam.y);
-      const bob = Math.round(Math.sin(t * 6) * 2);
-      for (let k = 0; k < 3; k++) {
-        KD.Screen.rect(gx - 4 + k, gy - 16 - k * 2 + bob, 9 - k * 2, 2, 'GOLD.3');
-      }
-      KD.Screen.rect(gx - 6, gy - 2, 13, 2, 'GOLD.2');
-      KD.Screen.rect(gx - 3, gy - 4, 7, 2, 'GOLD.1');
+      KD.Mark.dest(Math.round(goTo - cam.x), Math.round(FLOOR - cam.y), t);
     }
     /* the cast */
     for (const e of castHere()) drawCast(ctx, e);
@@ -900,23 +845,24 @@ KD.Scenes.castle = (function () {
     drawSparks();
     for (const p of thrown) drawPlate(ctx, p);
     drawKing(ctx);
+    beatMark();
 
     /* UI */
     if (roomT > 0) roomBanner();
     hud();
-    if (talk) {
-      const L = talk.lines[talk.i];
-      if (L) KD.Talk.panel(speaker(L[0]), L[1].slice(0, Math.floor(talk.ch)), {});
-    }
-    if (mini) drawMini();
+    if (talk) KD.Convo.draw();
     if (KD.touch) {
       layoutButtons();
       KD.In.buttons(BTNS);
       /* This was missing: buttons() only registers them for hit-testing.
          Without touchPad() the whole phone control layout was invisible. */
-      KD.UI.touchPad(BTNS);
+      /* the stick sits bottom-left, which is exactly where the conversation
+         portrait goes - and there is nothing to walk to mid-sentence */
+      KD.UI.touchPad(BTNS, { noStick: !!talk });
     }
-    combatPrompt();
+    /* not while somebody is talking: the strike prompt lands at H-30, which
+       is the middle of the conversation panel */
+    if (!talk) combatPrompt();
   }
 
   function liveDetail(ctx) {
@@ -963,16 +909,44 @@ KD.Scenes.castle = (function () {
     const nm = KD.PX.frameOf ? KD.PX.frameOf(c.sprite, t) : null;
     const name = nm && KD.PX.has(nm) ? nm : (KD.PX.has(c.sprite + '0') ? c.sprite + '0' : null);
     if (name) KD.PX.blit(ctx, name, x, y, { flipX: c.x > P.x ? true : false });
-    /* a marker over whoever the current beat wants */
+    /* the objective marker over them is drawn by beatMark(), on top of the
+       whole cast - it used to be two rects stapled on here, which put it
+       under anyone standing to the right of them. */
+    if (Math.abs(c.x - P.x) < 26 && !talk) {
+      KD.Text.draw(KD.touch ? 'TAP' : 'E', x, y - 74, 'GOLD.3',
+                   { align: 'center', shadow: 'INK.0', tiny: true });
+    }
+  }
+
+  /* ----------------------------------------------------------------
+     Where the current beat wants him, in world coordinates, and the
+     marker for it. One place computes this now, so the floating
+     marker, the edge arrow and the scroll all agree about where the
+     objective is. */
+  function beatSpot(b) {
+    if (b.who && A1.CAST[b.who]) return { x: A1.CAST[b.who].x, y: FLOOR, up: 82 };
+    if (b.kind === 'kill') {
+      let best = null;
+      for (const m of mobs) {
+        if (!best || Math.abs(m.x - P.x) < Math.abs(best.x - P.x)) best = m;
+      }
+      if (best) return { x: best.x, y: best.y + 10, up: 40 };
+    }
+    const rm = ROOMS[b.room !== undefined ? b.room : 0];
+    return { x: rm.x + (rm.w >> 1), y: FLOOR, up: 62 };
+  }
+
+  function beatMark() {
+    if (talk) return;
     const b = A1.beat();
-    if ((b.who === e.id) && !talk) {
-      const bob = Math.round(Math.sin(t * 4) * 2);
-      KD.Screen.rect(x - 1, y - 68 + bob, 3, 8, 'GOLD.3');
-      KD.Screen.rect(x - 3, y - 62 + bob, 7, 2, 'GOLD.3');
-    }
-    if (Math.abs(c.x - P.x) < 26 && !talk && !mini) {
-      KD.Text.draw('E', x, y - 74, 'GOLD.3', { align: 'center', shadow: 'INK.0', tiny: true });
-    }
+    if (!b || !b.mark) return;
+    const sp = beatSpot(b);
+    /* off the edge of frame: pin an arrow to the edge with the distance */
+    if (KD.Mark.offscreen(sp.x, sp.y - 30, cam, b.mark, t)) return;
+    /* a fight marks the shark itself, which threat() already brackets */
+    if (b.kind === 'kill' && mobs.length) return;
+    KD.Mark.objective(Math.round(sp.x - cam.x), Math.round(sp.y - cam.y), b.mark, t,
+                      { up: sp.up || 46 });
   }
 
   function drawKing(ctx) {
@@ -1103,7 +1077,9 @@ KD.Scenes.castle = (function () {
 
   function hud() {
     const h = A1.hint();
-    if (h) KD.UI.scroll(10, 8, h, { w: Math.min(124, KD.W - 60) });
+    if (h) {
+      KD.UI.scroll(10, 8, h, { w: Math.min(124, KD.W - 60), kind: A1.beat().mark });
+    }
     /* how many are left, so the fight has a finish line */
     const b = A1.beat();
     if (b.kind === 'kill') {
@@ -1129,92 +1105,6 @@ KD.Scenes.castle = (function () {
       KD.Text.draw('F: THROW', KD.W - 8, KD.H - 16, 'GOLD.3',
                    { align: 'right', tiny: true, shadow: 'INK.0' });
     }
-  }
-
-  function drawMini() {
-    const w = 196, h = 84;
-    const x = Math.round((KD.W - w) / 2), y = Math.round((KD.H - h) / 2) + 8;
-    /* the two of them, either side of the panel, because a minigame with no
-       faces in it is a progress bar */
-    const pk = KD.PX.has('po_king') ? 'po_king' : null;
-    const pg = KD.PX.has('po_keg') ? 'po_keg' : null;
-    const lean = mini.kind === 'kiss' ? Math.min(3, mini.n) * 5 + (mini.hit > 0 ? 3 : 0) : 0;
-    const py = y - 24;
-    if (pk) portraitFramed(pk, x - 44 + lean, py, false);
-    if (pg) portraitFramed(pg, x + w + 8 - lean, py, true);
-
-    KD.Screen.rect(x - 2, y - 2, w + 4, h + 4, 'INK.0');
-    KD.Screen.rect(x, y, w, h, 'DEEP.0');
-    KD.Screen.rect(x + 1, y + 1, w - 2, 1, 'DEEP.2');
-    KD.Screen.frame(x, y, w, h, 'GOLD.1');
-    if (mini.kind === 'beer') {
-      KD.Text.draw('POUR IT', x + (w >> 1), y + 6, 'GOLD.3', { align: 'center', shadow: 'INK.0' });
-      const gx = x + 22, gy = y + 24, gw = w - 44, gh = 28;
-      /* the tankard */
-      KD.Screen.rect(gx - 4, gy - 2, gw + 8, gh + 6, 'STONE.0');
-      KD.Screen.rect(gx, gy, gw, gh, 'INK.1');
-      KD.Screen.frame(gx - 1, gy - 1, gw + 2, gh + 2, 'BONE.1');
-      const fw = Math.round(Math.min(1, mini.fill) * (gw - 4));
-      KD.Screen.rect(gx + 2, gy + 2, fw, gh - 4, 'GOLD.1');
-      KD.Screen.rect(gx + 2, gy + 2, fw, gh - 12, 'GOLD.2');
-      /* a head of foam that wobbles as it rises */
-      for (let k = 0; k < fw; k += 3) {
-        const bob = ((k + ((mini.tt * 22) | 0)) % 6) < 3 ? 0 : 1;
-        KD.Screen.rect(gx + 2 + k, gy + 1 + bob, 3, 4, 'BONE.2');
-      }
-      /* the band you are aiming for, marked top and bottom */
-      const bx = gx + 2 + Math.round((mini.target - mini.band) * (gw - 4));
-      const bw = Math.max(4, Math.round(mini.band * 2 * (gw - 4)));
-      KD.Screen.rect(bx, gy - 5, bw, 3, 'KELP.2');
-      KD.Screen.rect(bx, gy + gh + 2, bw, 3, 'KELP.1');
-      KD.Text.draw('HOLD E, LET GO IN THE GREEN', x + (w >> 1), y + h - 22,
-                   'BONE.2', { align: 'center', tiny: true });
-      for (let i = 0; i < mini.tries; i++) {
-        KD.Screen.rect(x + 8 + i * 7, y + h - 11, 5, 5, 'GOLD.2');
-      }
-      KD.Text.draw(mini.msg, x + (w >> 1) + 12, y + h - 11, 'GOLD.3',
-                   { align: 'center', tiny: true });
-    } else {
-      KD.Text.draw('DO NOT THINK ABOUT HER', x + (w >> 1), y + 6, 'CORAL.3',
-                   { align: 'center', shadow: 'INK.0' });
-      const ph = mini.beat % 1;
-      const good = ph > 0.62 && ph < 0.88;
-      const sz = 4 + Math.round(ph * 12);
-      const cx = x + (w >> 1), cy = y + 40;
-      heart(cx, cy, sz, good ? 'CORAL.3' : 'CORAL.1');
-      if (good) heart(cx, cy, sz + 3, 'CORAL.2');
-      if (mini.hit > 0) {                          /* a burst on a good press */
-        for (let k = 0; k < 8; k++) {
-          const a = k * 0.785, r = 14 + (1 - mini.hit / 0.3) * 12;
-          KD.Screen.rect(Math.round(cx + Math.cos(a) * r), Math.round(cy + Math.sin(a) * r),
-                         2, 2, 'CORAL.3');
-        }
-      }
-      /* the window you are aiming for, drawn as a ring of ticks */
-      for (let k = 0; k < 3; k++) {
-        KD.Screen.rect(cx - 22 + k * 22, y + 20, 2, 4, k < mini.n ? 'CORAL.3' : 'INK.2');
-      }
-      KD.Text.draw(mini.msg || 'PRESS E WHEN THE HEART IS FULL', x + (w >> 1), y + h - 12,
-                   'BONE.2', { align: 'center', tiny: true });
-    }
-  }
-
-  /* a heart out of rects, because that is the whole rule */
-  function heart(cx, cy, sz, col) {
-    const h = sz >> 1;
-    KD.Screen.rect(cx - sz, cy - h, sz, sz, col);
-    KD.Screen.rect(cx, cy - h, sz, sz, col);
-    for (let i = 0; i < sz; i++) {
-      KD.Screen.rect(cx - sz + i, cy + h + i, (sz - i) * 2, 1, col);
-    }
-    KD.Screen.rect(cx - sz + 2, cy - h + 2, 3, 3, 'CORAL.3');
-  }
-
-  function portraitFramed(name, x, y, flip) {
-    KD.Screen.rect(x - 2, y - 2, 40, 44, 'INK.0');
-    KD.Screen.rect(x - 1, y - 1, 38, 42, 'GOLD.0');
-    KD.Screen.rect(x, y, 36, 40, 'DEEP.1');
-    KD.PX.blit(KD.Screen.ctx(), name, x, y, { anchor: false, flipX: !!flip });
   }
 
   function layoutButtons() {
@@ -1245,16 +1135,8 @@ KD.Scenes.castle = (function () {
     const open = tg.state === 'recover';
     const col = open ? 'KELP.3' : 'BLOOD.3';
 
-    /* a chevron bouncing over whoever is nearest */
-    const sx = Math.round(tg.x - cam.x), sy = Math.round(tg.y - cam.y);
-    const bob = Math.round(Math.abs(Math.sin(t * 5)) * 3);
-    for (let k = 0; k < 4; k++) {
-      KD.Screen.rect(sx - 4 + k, sy - 30 - k + bob, 9 - k * 2, 2, col);
-    }
-    if (open) {
-      KD.Text.draw('NOW', sx, sy - 42 + bob, 'KELP.3',
-                   { align: 'center', tiny: true, shadow: 'INK.0' });
-    }
+    /* a lock-on bracket over whoever is nearest */
+    KD.Mark.threat(Math.round(tg.x - cam.x), Math.round(tg.y - cam.y), t, open);
 
     /* the pulsing ring on the button, on touch; the key prompt otherwise */
     if (KD.touch) {
@@ -1289,5 +1171,7 @@ KD.Scenes.castle = (function () {
            /* exposed for the smoke harness */
            _P: P, _ROOMS: ROOMS, _bake: bake,
            _throw: throwPlate, _swing: swing, _A1: A1,
-           get _mobs() { return mobs; }, get _arc() { return arc; } };
+           get _mobs() { return mobs; }, get _arc() { return arc; },
+           /* a seam for the smoke harness: play a named script here */
+           _say: (n) => startTalk(n, null) };
 })();

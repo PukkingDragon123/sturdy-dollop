@@ -20,6 +20,15 @@ you are standing in. Whatever weight you put on in there is the weight you are
 carrying when a manta pulls you out of the sand, so the prologue is not a
 cutscene you skip: it sets your starting number.
 
+**What you say is the mechanic.** The night the keg comes over used to be two
+timing bars - pour the beer, then hit a rhythm meter for the kiss. Both were the
+same button pressed to a moving marker and neither of them said anything, so
+they are one conversation now. Every scene that matters gives you lines to
+choose between: how warm you are to the queen at the alarm, whether you take the
+drink, whether you put her down to her face. Those answers are on the record -
+the prologue reads them back when it works out what you weigh, and the queen
+remembers the dinner you promised her at the alarm.
+
 **The goal is the scales.** You start at 100kg and the world is gated on what
 you weigh and how much you have trained. The Sea Gate will not open for you at
 a hundred kilos. Neither will the Drop. Neither, in the end, will the King -

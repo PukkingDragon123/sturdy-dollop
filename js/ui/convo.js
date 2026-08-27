@@ -1,0 +1,258 @@
+/* ============================================================
+   ui/convo.js - conversations.
+
+   The old dialogue was one line in a box and a keypress to
+   dismiss it. This plays a SCRIPT: lines with a typewriter that
+   pauses on punctuation, a portrait that moves while its owner
+   is talking, and choices the player actually makes, which set
+   flags the rest of the act reads.
+
+   A script is a flat list of nodes, because a tree drawn as a
+   tree is unreadable in source. Jumps are by label:
+
+     { who:'queen', text:'...' }        one line
+     { label:'x' }                      a jump target
+     { goto:'x' }                       jump
+     { choose:[ {label,goto,set,tint} ] }  the player picks
+     { do:fn }                          a side effect
+     { end:true }                       stop early
+
+   Anything a choice puts in `set` lands on the bag the caller
+   handed in, so the scene owns the consequences and this file
+   owns the presentation.
+   ============================================================ */
+KD.Convo = (function () {
+  const R = KD.Screen.rect;
+
+  /* who is who: name, portrait, and the colour their name plate takes */
+  const CAST = {
+    king:  { name: 'You',              portrait: 'po_king',  tint: 'WATER.3' },
+    queen: { name: 'Coralene',         portrait: 'po_queen', tint: 'CORAL.3' },
+    deep:  { name: 'The Deep',         portrait: 'po_deep',  tint: 'ROT.3' },
+    keg:   { name: 'The Keg',          portrait: 'po_keg',   tint: 'GOLD.3' },
+    santa: { name: 'Santa the Manta',  portrait: 'po_santa', tint: 'KELP.3' },
+    folk:  { name: 'A Neighbour',      portrait: 'po_crab',  tint: 'BONE.2' }
+  };
+
+  let script = null, i = 0, ch = 0, done = null, bag = null;
+  let sel = 0, hold = 0, t = 0, shown = '';
+  /* punctuation gets an extra beat, which is most of what makes a
+     typewriter read like speech rather than like a printer */
+  const SPEED = 46, PAUSE = { '.': 0.16, ',': 0.09, '!': 0.18, '?': 0.18, '-': 0.07 };
+  let pause = 0;
+
+  function start(s, o) {
+    o = o || {};
+    script = s; i = 0; ch = 0; sel = 0; hold = 0.12; pause = 0; shown = '';
+    done = o.after || null;
+    bag = o.bag || {};
+    step();
+  }
+  const active = () => !!script;
+
+  /* skip forward over nodes that are not lines or choices */
+  function step() {
+    let guard = 0;
+    while (script && i < script.length && guard++ < 400) {
+      const n = script[i];
+      if (n.end) { finish(); return; }
+      if (n.label !== undefined && n.text === undefined) { i++; continue; }
+      if (n.goto !== undefined) { jump(n.goto); continue; }
+      if (n.do) { n.do(bag); i++; continue; }
+      if (n.set) { Object.assign(bag, n.set); i++; continue; }
+      return;                                    /* a line or a choice */
+    }
+    finish();
+  }
+  function jump(lab) {
+    for (let k = 0; k < script.length; k++) {
+      if (script[k].label === lab) { i = k + 1; return; }
+    }
+    i = script.length;
+  }
+  function finish() {
+    const cb = done, b = bag;
+    script = null; done = null;
+    if (cb) cb(b);
+  }
+
+  /* ---- layout -------------------------------------------------------
+     One place computes the box, because the choice rows have to be
+     hit-testable as well as drawn. A phone tap used to confirm whatever
+     happened to be selected and there was no way to move the selection, so
+     a phone could only ever pick the first line - which, in a scene whose
+     only mechanic is what he chooses to say, meant no choice at all. */
+  const PW = 36, PH = 40;
+  function layout(nRows) {
+    /* the right-hand column belongs to the touch buttons; at 390 wide the
+       panel ran underneath JUMP/HIT/TALK and cut the last word off */
+    const gap = KD.touch ? 96 : 0;
+    const w = Math.min(KD.W - 12 - gap, 352);
+    const h = Math.max(nRows ? 20 + nRows * 13 : 54, PH + 16);
+    const x = Math.round((KD.W - gap - w) / 2);
+    const y = KD.H - h - 12;
+    const tx = x + 7 + PW + 10;
+    return { w: w, h: h, x: x, y: y, tx: tx, tw: x + w - tx - 8 };
+  }
+  const rowY = (L, k) => L.y + 20 + k * 13;
+  function rowAt(L, n) {
+    const m = KD.In.mouse;
+    if (m.x < L.tx - 10 || m.x > L.tx + L.tw + 2) return -1;
+    for (let k = 0; k < n; k++) {
+      const ry = rowY(L, k);
+      if (m.y >= ry - 3 && m.y < ry + 10) return k;
+    }
+    return -1;
+  }
+
+  /* ---- update ------------------------------------------------------- */
+  function update(dt) {
+    if (!script) return false;
+    t += dt;
+    if (hold > 0) { hold -= dt; return true; }
+    const n = script[i];
+    if (!n) { finish(); return true; }
+
+    if (n.choose) {
+      const list = n.choose.filter((c) => !c.when || c.when(bag));
+      if (KD.In.isHit('ArrowDown', 'KeyS')) { sel = (sel + 1) % list.length; click(); }
+      if (KD.In.isHit('ArrowUp', 'KeyW')) { sel = (sel + list.length - 1) % list.length; click(); }
+      const L = layout(list.length);
+      /* a mouse hover moves the selection, so what is lit is what Enter
+         takes. On touch there is no hover - mouse.x/y is just where the
+         last tap landed - so the selection is left alone there. */
+      if (!KD.touch) {
+        const over = rowAt(L, list.length);
+        if (over >= 0) sel = over;
+      }
+      /* a tap TAKES the line it landed on; a tap anywhere else is ignored */
+      let take = -1;
+      if (KD.In.mouse.click && !KD.UI.blocked()) {
+        take = rowAt(L, list.length);
+        if (take >= 0) { sel = take; KD.In.consumedClick(); }
+      }
+      if (take >= 0 || KD.In.actHit('use', 'KeyE') || KD.In.isHit('Space', 'Enter')) {
+        const c = list[Math.min(sel, list.length - 1)];
+        if (c.set) Object.assign(bag, c.set);
+        if (c.do) c.do(bag);
+        sel = 0; hold = 0.1; click();
+        if (c.goto !== undefined) { jump(c.goto); step(); }
+        else { i++; step(); }
+      }
+      return true;
+    }
+
+    /* a line: type it out, then wait */
+    const full = n.text || '';
+    if (ch < full.length) {
+      if (pause > 0) pause -= dt;
+      else {
+        ch += SPEED * dt;
+        const c = full[Math.max(0, Math.floor(ch) - 1)];
+        if (PAUSE[c]) pause = PAUSE[c];
+      }
+      if (press()) ch = full.length;              /* skip the typing */
+      shown = full.slice(0, Math.floor(ch));
+      return true;
+    }
+    shown = full;
+    if (press()) { i++; ch = 0; pause = 0; hold = 0.06; step(); }
+    return true;
+  }
+
+  function press() {
+    const tapped = KD.In.mouse.click && !KD.UI.blocked();
+    if (tapped) KD.In.consumedClick();
+    return KD.In.actHit('use', 'KeyE') || KD.In.isHit('Space', 'Enter') || tapped;
+  }
+  const click = () => { if (KD.Sfx) KD.Sfx.play('click'); };
+
+  /* ---- draw --------------------------------------------------------- */
+  function draw() {
+    if (!script) return;
+    const n = script[i];
+    if (!n) return;
+    const who = CAST[n.who] || CAST[(n.choose ? 'king' : 'folk')];
+    const isChoice = !!n.choose;
+    const list = isChoice ? n.choose.filter((c) => !c.when || c.when(bag)) : null;
+
+    const pw = PW, ph = PH;
+    const L = layout(isChoice ? list.length : 0);
+    const w = L.w, h = L.h, x = L.x, y = L.y;
+
+    /* ---- the box: two frames and a lit inner edge ---------------- */
+    R(x - 2, y - 2, w + 4, h + 4, 'INK.0');
+    R(x, y, w, h, 'DEEP.0');
+    R(x + 1, y + 1, w - 2, 1, 'DEEP.2');
+    R(x + 1, y + h - 2, w - 2, 1, 'INK.0');
+    KD.Screen.frame(x, y, w, h, 'GOLD.0');
+    KD.Screen.frame(x + 2, y + 2, w - 4, h - 4, 'INK.2');
+    /* corner pieces, so the frame has joinery */
+    for (const [cx2, cy2, sx, sy] of [[x, y, 1, 1], [x + w - 1, y, -1, 1],
+                                      [x, y + h - 1, 1, -1], [x + w - 1, y + h - 1, -1, -1]]) {
+      R(cx2, cy2, sx * 5, sy * 2, 'GOLD.2');
+      R(cx2, cy2, sx * 2, sy * 5, 'GOLD.2');
+      R(cx2 + sx, cy2 + sy, sx * 2, sy * 2, 'GOLD.3');
+    }
+
+    /* ---- the portrait, moving while its owner speaks ------------- */
+    const speaking = !isChoice && Math.floor(ch) < (n.text || '').length;
+    const bob = speaking ? Math.round(Math.sin(t * 22) * 1.2) : 0;
+    const px = x + 7, py = Math.round(y + (h - ph) / 2);
+    R(px - 3, py - 3, pw + 6, ph + 6, 'INK.0');
+    R(px - 2, py - 2, pw + 4, ph + 4, 'GOLD.0');
+    R(px - 1, py - 1, pw + 2, 1, 'GOLD.2');
+    R(px - 1, py - 1, pw + 2, ph + 2, 'DEEP.1');
+    if (who.portrait && KD.PX.has(who.portrait)) {
+      KD.PX.blit(KD.Screen.ctx(), who.portrait, px, py + bob, { anchor: false });
+    }
+    /* a lit rim on the frame, and rivets */
+    for (const ry of [py - 2, py + ph]) { R(px - 2, ry, 2, 2, 'GOLD.2'); R(px + pw, ry, 2, 2, 'GOLD.2'); }
+
+    /* ---- the name, on a plaque over the top edge ----------------- */
+    const tx = L.tx, tw = L.tw;
+    const nm = (who.name || '').toUpperCase();
+    if (nm) {
+      const nw = KD.Text.width(nm) + 10;
+      R(tx - 3, y - 6, nw, 12, 'INK.0');
+      R(tx - 2, y - 5, nw - 2, 1, 'GOLD.1');
+      KD.Screen.frame(tx - 3, y - 6, nw, 12, 'GOLD.0');
+      KD.Text.draw(nm, tx + 2, y - 3, who.tint || 'GOLD.3', { shadow: 'INK.0' });
+    }
+
+    /* ---- the words, or the choices ------------------------------- */
+    if (isChoice) {
+      KD.Text.draw(n.text || 'SAY:', tx, y + 8, 'BONE.0', { tiny: true, max: tw });
+      /* on a phone you tap the line you want, so no line is pre-chosen and
+         every one of them gets the plate and the bullet that says "tap me" */
+      const lit = KD.touch ? -1 : Math.min(sel, list.length - 1);
+      for (let k = 0; k < list.length; k++) {
+        const ry = rowY(L, k);
+        const on = k === lit;
+        R(tx - 2, ry - 2, tw + 2, 12, on ? 'DEEP.2' : (KD.touch ? 'DEEP.1' : 'DEEP.0'));
+        if (on) R(tx - 2, ry - 2, tw + 2, 1, 'WATER.2');
+        if (on || KD.touch) {
+          /* a little trident bullet on a line you can take */
+          const c = on ? 'GOLD.3' : 'GOLD.1';
+          R(tx - 8, ry + 1, 2, 2, c); R(tx - 8, ry + 5, 2, 2, c);
+          R(tx - 6, ry + 1, 2, 6, c);
+          R(tx - 4, ry + 3, 3, 2, on ? 'GOLD.2' : 'GOLD.0');
+        }
+        KD.Text.draw(list[k].label, tx + 2, ry, on ? 'WHITE' : 'BONE.2',
+                     { tiny: true, max: tw - 6 });
+      }
+    } else {
+      KD.Text.block(shown, tx, y + 10, 'BONE.2', { tiny: true, max: tw, maxLines: 3 });
+      /* the caret: a small filled triangle that only appears when the line
+         is finished, so you know the difference between "still talking" and
+         "waiting for you" */
+      if (!speaking) {
+        const cxx = x + w - 12, cyy = y + h - 11 + (Math.sin(t * 5) > 0 ? 0 : 1);
+        for (let k = 0; k < 4; k++) R(cxx - k, cyy + k, 1 + k * 2, 1, 'GOLD.3');
+      }
+    }
+    return { x, y, w, h };
+  }
+
+  return { start, update, draw, active, CAST, get bag() { return bag; } };
+})();

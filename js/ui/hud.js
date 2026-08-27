@@ -91,7 +91,8 @@ KD.Hud = (function () {
       /* Hung as a scroll rather than printed as a line: a bare string in the
          corner reads as a debug label, and this is the one thing telling you
          what the next hour of the game is for. */
-      KD.UI.scroll(6, KD.H - 96, task, { w: Math.min(118, KD.W - 150), maxLines: 3 });
+      KD.UI.scroll(6, KD.H - 96, task, { w: Math.min(118, KD.W - 150), maxLines: 3,
+                                         kind: KD.Quests.currentMark() });
     }
     /* depth read-out, so the layers are legible as progress */
     const d = (KD.Player.P.y / 8) | 0;

@@ -37,6 +37,9 @@ KD.Scenes.dinner = (function () {
      The first pass had them a hundred pixels apart with a grey band between
      and it read as two people at a bus stop. */
   const TABLE = 96;
+  /* Two bites a course, not three. Nine presses to clear a dinner made it a
+     minigame; six makes it a scene with a rhythm. */
+  const BITES = 2;
 
   function enter() {
     t = 0; phase = 'in'; pt = 0;
@@ -188,13 +191,13 @@ KD.Scenes.dinner = (function () {
                     vy: Math.sin(a) * 60 - 30, t: 0.5 + (i % 3) * 0.12,
                     col: i % 2 ? 'CORAL.1' : 'SAND.2' });
     }
-    if (bite >= 3) {
+    if (bite >= BITES) {
       phase = 'clear'; pt = 0;
       say(warm > 0.55 ? 'You are still here. Good.'
                       : 'You have not looked up once.');
     } else {
       const L = COURSES[course].lines;
-      if (bite === 2 && L[1]) say(L[1]);
+      if (L[1]) say(L[1]);
     }
   }
 
