@@ -48,6 +48,8 @@ KD.Scenes.castle = (function () {
   let mini = null;                           // a minigame in progress
   let spawnT = 0;
   const BTNS = [];
+  /* tap-to-walk: a world x he is heading for, and what he does on arrival */
+  let goTo = null, goWhat = null, goT = 0;
 
   /* ================================================================
      BAKING
@@ -345,6 +347,7 @@ KD.Scenes.castle = (function () {
     P.x = A1.A.beat === 0 ? 120 : P.x || 120;
     P.y = FLOOR; P.vx = 0; P.vy = 0; P.hp = 5;
     mobs = []; thrown = []; talk = null; mini = null;
+    goTo = null; goWhat = null; goT = 0;
     shownRoom = -1; roomT = 0;
     snapCam();
   }
@@ -359,9 +362,24 @@ KD.Scenes.castle = (function () {
     if (mini) { updateMini(dt); return; }
     if (talk) { updateTalk(dt); return; }
 
+    tapTarget();
     /* ---- movement ------------------------------------------------- */
     const s = KD.In.stick();
-    const want = Math.abs(s.x) > 0.2 ? Math.sign(s.x) : 0;
+    let want = Math.abs(s.x) > 0.2 ? Math.sign(s.x) : 0;
+    if (want) { goTo = null; goWhat = null; }        // the stick always wins
+    if (goTo !== null) {
+      const d = goTo - P.x;
+      if (Math.abs(d) < 7) {
+        /* arrived: if he was walking TO something, do the thing */
+        const what = goWhat;
+        goTo = null; goWhat = null;
+        if (what) interact();
+      } else {
+        want = Math.sign(d);
+        goT += dt;
+        if (goT > 8) { goTo = null; goWhat = null; }  // gave up; wall in the way
+      }
+    }
     P.vx += (want * SPD - P.vx) * Math.min(1, ACC * dt / SPD);
     if (!want) P.vx *= Math.pow(0.02, dt);
     if (want) P.face = want;
@@ -406,6 +424,37 @@ KD.Scenes.castle = (function () {
     for (const m of mobs) updateShark(m, dt);
     mobs = mobs.filter((m) => m.hp > 0 || m.death > 0);
     updateThrown(dt);
+  }
+
+  /* A tap on the world means "go there". A tap ON somebody means "go there
+     and talk to them", which is the half that makes it feel like a game and
+     not a joystick: on a phone you should be able to point at the queen. */
+  function tapTarget() {
+    if (!KD.In.mouse.click || KD.UI.blocked()) return;
+    KD.In.consumedClick();
+    if (talk || mini) return;
+    /* mouse.x/y are already in buffer space - Screen.toBuf does the scaling
+       when the event lands, so dividing by cssScale here would halve it */
+    const wx = cam.x + KD.In.mouse.x;
+    const wy = cam.y + KD.In.mouse.y;
+    if (wy < CEIL || wy > FLOOR + 30) return;        // ceiling and cellar are not floor
+    goT = 0;
+    /* did they point at somebody? */
+    for (const e of castHere()) {
+      if (Math.abs(e.c.x - wx) < 26) { goTo = e.c.x + (e.c.x > P.x ? -20 : 20); goWhat = e.id; return; }
+    }
+    /* the long table and the throne are things you interact with too */
+    const hall = ROOMS[1], thr = ROOMS[0];
+    const b = A1.beat();
+    if ((b.kind === 'use' || b.kind === 'throw') &&
+        Math.abs(wx - (hall.x + (hall.w >> 1))) < 70) {
+      goTo = hall.x + (hall.w >> 1); goWhat = 'table'; return;
+    }
+    if (b.kind === 'cine' && Math.abs(wx - (thr.x + (thr.w >> 1))) < 50) {
+      goTo = thr.x + (thr.w >> 1); goWhat = 'throne'; return;
+    }
+    goTo = Math.max(18, Math.min(CW - 18, wx));
+    goWhat = null;
   }
 
   function swing() {
@@ -502,8 +551,9 @@ KD.Scenes.castle = (function () {
     if (!L) { endTalk(); return; }
     talk.ch += dt * 44;
     const full = talk.ch >= L[1].length;
-    if (KD.In.actHit('use', 'KeyE') || KD.In.isHit('Space', 'Enter') ||
-        (KD.In.mouse.click && !KD.In.consumedClick)) {
+    const tapped = KD.In.mouse.click && !KD.UI.blocked();
+    if (tapped) KD.In.consumedClick();
+    if (KD.In.actHit('use', 'KeyE') || KD.In.isHit('Space', 'Enter') || tapped) {
       if (!full) { talk.ch = L[1].length; return; }
       talk.i++;
       talk.ch = 0;
@@ -600,8 +650,9 @@ KD.Scenes.castle = (function () {
       if (mini.done <= 0) { mini = null; A1.advance(); }
       return;
     }
-    const press = KD.In.actHit('use', 'KeyE') || KD.In.isHit('Space') ||
-                  (KD.In.mouse.click && !KD.In.consumedClick);
+    const tapped = KD.In.mouse.click && !KD.UI.blocked();
+    if (tapped) KD.In.consumedClick();
+    const press = KD.In.actHit('use', 'KeyE') || KD.In.isHit('Space') || tapped;
     if (mini.kind === 'beer') {
       /* hold to pour, let go in the band. Overfill and it goes everywhere. */
       const hold = KD.In.act('use', 'KeyE') || KD.In.isDown('Space') || KD.In.mouse.down;
@@ -727,6 +778,16 @@ KD.Scenes.castle = (function () {
     /* live: fire, candles, the sea moving through the arch */
     liveDetail(ctx);
 
+    /* where the tap sent him */
+    if (goTo !== null) {
+      const gx = Math.round(goTo - cam.x), gy = Math.round(FLOOR - cam.y);
+      const bob = Math.round(Math.sin(t * 6) * 2);
+      for (let k = 0; k < 3; k++) {
+        KD.Screen.rect(gx - 4 + k, gy - 16 - k * 2 + bob, 9 - k * 2, 2, 'GOLD.3');
+      }
+      KD.Screen.rect(gx - 6, gy - 2, 13, 2, 'GOLD.2');
+      KD.Screen.rect(gx - 3, gy - 4, 7, 2, 'GOLD.1');
+    }
     /* the cast */
     for (const e of castHere()) drawCast(ctx, e);
     for (const m of mobs) drawShark(ctx, m);
@@ -854,10 +915,7 @@ KD.Scenes.castle = (function () {
 
   function hud() {
     const h = A1.hint();
-    if (h) {
-      KD.Screen.rect(6, 6, KD.Text.width(h, { tiny: true }) + 10, 12, 'INK.0');
-      KD.Text.draw(h, 11, 9, 'BONE.2', { tiny: true });
-    }
+    if (h) KD.UI.scroll(10, 8, h, { w: Math.min(150, KD.W - 40) });
     /* hearts, only while something can hurt him */
     if (mobs.length) {
       for (let i = 0; i < 5; i++) {
@@ -959,9 +1017,9 @@ KD.Scenes.castle = (function () {
 
   function layoutButtons() {
     BTNS.length = 0;
-    const r = 17, pad = 8;
-    BTNS.push({ id: 'jump', x: KD.W - pad - r, y: KD.H - pad - r * 3, r: r, label: 'A' });
-    BTNS.push({ id: 'hit',  x: KD.W - pad - r * 3, y: KD.H - pad - r, r: r, label: 'F' });
+    const r = 19, pad = 8;
+    BTNS.push({ id: 'jump', x: KD.W - pad - r, y: KD.H - pad - r * 3 - 4, r: r, label: 'A' });
+    BTNS.push({ id: 'hit',  x: KD.W - pad - r * 3 - 4, y: KD.H - pad - r, r: r, label: 'F' });
     BTNS.push({ id: 'use',  x: KD.W - pad - r, y: KD.H - pad - r, r: r, label: 'E' });
   }
 

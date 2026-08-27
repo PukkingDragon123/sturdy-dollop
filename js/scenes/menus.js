@@ -3,39 +3,208 @@
    the ending. All drawn from the same hand-drawn kit.
    ============================================================ */
 KD.Scenes.title = (function () {
-  let t = 0, seedBox = '';
+  /* The menu is a PICTURE, not a card: the fat king on a rock, looking east
+     at the castle he does not live in any more. Everything in it is drawn
+     here rather than baked, because it is four hundred rects and the title
+     screen has nothing else to do with its frame. */
+  let t = 0;
+  const R = KD.Screen.rect;
   function enter() { t = 0; KD.UI.guard(0.2); }
   function update(dt) { t += dt; if (KD.In.isHit('F2')) KD.Game.go('spritetest', {}); }
+
+  /* deterministic scatter, so nothing shimmers between frames */
+  function hash(a, b) {
+    let h = (a * 73856093) ^ (b * 19349663);
+    h = (h ^ (h >>> 13)) * 1274126177;
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+  }
+
+  /* ---- his kingdom, small and far away ---------------------------- */
+  function castle(x, base, sc) {
+    const T = (tx, tw, th, top) => {              // one tower
+      tx = Math.round(tx); tw = Math.round(tw); th = Math.round(th);
+      R(tx, base - th, tw, th, 'INK.2');
+      R(tx, base - th, 2, th, 'INK.3');
+      R(tx - 1, base - th - top, tw + 2, top, 'INK.2');
+      for (let k = 0; k < tw + 2; k += 4)         // crenellations
+        R(tx - 1 + k, base - th - top - 2, 2, 2, 'INK.2');
+      for (let k = 3; k < th - 3; k += 7)         // lit windows
+        R(tx + 2, base - th + k, 2, 3, 'GOLD.2');
+    };
+    /* The shelf it stands on. A tapering diamond left the whole castle
+       floating on a dark lozenge in mid-water, so this runs off both sides
+       and keeps going down out of frame. */
+    const cxr = Math.round(x + 14 * sc);
+    for (let k = 0; k < KD.H; k++) {
+      const spread = Math.round(30 * sc + k * 2.2);
+      const y = base + k;
+      if (y > KD.H) break;
+      R(cxr - spread, y, spread * 2, 1, k < 2 ? 'INK.2' : 'INK.1');
+      if (k > 3 && k % 7 === 0) R(cxr - spread + 4, y, spread * 2 - 8, 1, 'INK.2');
+    }
+    T(x, 9 * sc, 30 * sc, 4);
+    T(x + 20 * sc, 9 * sc, 24 * sc, 4);
+    T(x + 9 * sc, 12 * sc, 40 * sc, 5);           // the keep, tallest
+    R(x + 9 * sc, base - 46 * sc, 12 * sc, 2, 'INK.3');
+    /* a banner still flying on it, which is the sad part */
+    R(x + 15 * sc, base - 52 * sc, 1, 6 * sc, 'INK.3');
+    const f = Math.sin(t * 2) > 0 ? 1 : 0;
+    R(x + 16 * sc, base - 52 * sc, 5 * sc - f, 4, 'BLOOD.0');
+  }
+
+  /* ---- kelp, as silhouettes ---------------------------------------- */
+  /* A stalk that tapers, with blades on ONE side per segment and angled
+     down. The first version put an even blade either side of a parallel bar
+     and the whole seabed came out as a field of crosses. */
+  function weed(x, groundY, h, seed, col) {
+    const segs = Math.max(3, h >> 3);
+    let px = x;
+    for (let s2 = 0; s2 < segs; s2++) {
+      const f = s2 / segs;
+      const y = groundY - s2 * 8;
+      px = x + Math.sin(t * 0.8 + seed) * 4 * f * f;
+      const w = f > 0.7 ? 1 : (f > 0.35 ? 2 : 3);
+      R(Math.round(px), y - 8, w, 9, col);
+      R(Math.round(px), y - 8, 1, 9, 'KELP.2');   // a lit edge down the stem
+      if (s2 % 2 === 1) {                          // a frond, alternating sides
+        const dir = (s2 & 2) ? 1 : -1;
+        const len = 7 + (seed % 4);
+        for (let b = 0; b < len; b++) {
+          const bx2 = Math.round(px) + (dir > 0 ? w + b : -1 - b);
+          R(bx2, y - 6 + Math.round(b * 0.7), 1, 3 - (b > len - 3 ? 1 : 0),
+            b < 2 ? 'KELP.2' : col);
+        }
+      }
+    }
+    R(Math.round(px), groundY - segs * 8 - 3, 2, 3, col);   // a float on top
+  }
+
   function draw(ctx) {
-    /* a dithered deep-sea backdrop, no gradients allowed */
-    KD.Screen.clear('DEEP.0');
-    for (let i = 0; i < 5; i++) {
-      const y = Math.round(i * KD.H / 5);
-      KD.Dither.fill(ctx, 0, y, KD.W, KD.H / 5 + 1, 'DEEP.' + Math.min(4, 4 - i), 0.85 - i * 0.14);
+    const H = KD.H, W = KD.W;
+    const sea = Math.round(H * 0.20);             // the waterline
+    /* ---- sky ------------------------------------------------------ */
+    const SKYB = ['DEEP.3', 'DEEP.4', 'WATER.0', 'WATER.1', 'WATER.2'];
+    for (let k = 0; k < SKYB.length; k++) {
+      const y0 = Math.round(sea * k / SKYB.length);
+      R(0, y0, W, Math.round(sea * (k + 1) / SKYB.length) - y0 + 1, SKYB[k]);
     }
-    /* drifting bubbles: 2x2 rects, nothing round */
-    for (let i = 0; i < 26; i++) {
-      const bx = (i * 71 + 13) % KD.W;
-      const by = KD.H - ((t * (12 + i % 7) + i * 37) % (KD.H + 20));
-      KD.Screen.rect(bx, Math.round(by), (i % 3) ? 1 : 2, (i % 3) ? 1 : 2, 'WATER.2');
+    /* the sun, low and behind him */
+    const sx = Math.round(W * 0.78);
+    for (let r = 0; r < 6; r++) {
+      const w = [10, 18, 22, 22, 18, 10][r];
+      R(sx - (w >> 1), 6 + r * 3, w, 3, r === 0 || r === 5 ? 'GOLD.3' : 'WHITE');
     }
-    const cx = KD.W / 2;
-    /* Everything here is a fraction of KD.H. Pinning the layout to one height
-       is how a resolution bump silently buries the start button. */
-    const top = Math.round(KD.H * 0.07);
+    /* ---- water, in bands ------------------------------------------ */
+    const WB = [['WATER.3', 0.06], ['WATER.2', 0.16], ['WATER.1', 0.34],
+                ['WATER.0', 0.56], ['DEEP.2', 1.0]];
+    let prev = sea, above = null;
+    for (const [col, f] of WB) {
+      const y1 = Math.round(sea + (H - sea) * f);
+      R(0, prev, W, y1 - prev, col);
+      if (above) {                                 // soften the seam
+        KD.Dither.wash(ctx, 0, prev, W, 3, above, 0.5);
+        KD.Dither.wash(ctx, 0, prev + 3, W, 3, above, 0.22);
+      }
+      above = col; prev = y1;
+    }
+    /* ---- the surface, from underneath ------------------------------ */
+    for (let x = 0; x < W; x += 2) {
+      const y = sea + Math.round(Math.sin(x * 0.05 + t * 1.4) * 2
+                               + Math.sin(x * 0.017 - t * 0.8) * 2);
+      R(x, y - 2, 2, 2, 'WHITE');
+      R(x, y, 2, 3, 'WATER.3');
+      if (((x >> 1) + ((t * 6) | 0)) % 13 === 0) R(x, y - 4, 1, 1, 'WHITE');
+    }
+    /* ---- sunlight, solid and slanted ------------------------------- */
+    /* Three, not five, and one step up the ramp rather than white all the
+       way down - at five wide bars of BONE they became the subject of the
+       picture instead of the light in it. */
+    for (let i = 0; i < 3; i++) {
+      const bx = Math.round(W * (0.16 + i * 0.27) + Math.sin(t * 0.2 + i) * 8);
+      for (let y = 0; y < (H - sea) * 0.72; y += 2) {
+        const k = y / ((H - sea) * 0.72);
+        const w = Math.round(11 * (1 - k * 0.8));
+        if (w < 2) break;
+        const col = k < 0.10 ? 'WATER.3' : (k < 0.40 ? 'WATER.2'
+                  : (k < 0.72 ? 'WATER.1' : 'WATER.0'));
+        R(bx + Math.round(y * 0.28), sea + y, w, 2, col);
+      }
+    }
+    /* ---- his kingdom, on the far rock ------------------------------ */
+    castle(Math.round(W * 0.50), Math.round(H * 0.62), 1.6);
+    /* ---- a bed of weed between here and there ---------------------- */
+    for (let i = 0; i < 22; i++) {
+      const x = Math.round(((i * 137 + 40) % (W + 60)) - 30);
+      const g = Math.round(H * (0.70 + (i % 3) * 0.03));
+      weed(x, g, 26 + ((i * 53) % 30), i, i % 2 ? 'DEEP.1' : 'DEEP.0');
+    }
+    /* ---- fish, at three depths ------------------------------------- */
+    const FISH = ['an_clown', 'an_parrot', 'an_cuttle', 'an_lion', 'an_cuda'];
+    for (let i = 0; i < 16; i++) {
+      const name = FISH[i % FISH.length];
+      if (!KD.PX.hasAny(name)) continue;
+      const sp = 8 + (i % 5) * 7;
+      const dir = i & 1 ? 1 : -1;
+      const x = Math.round((((i * 191 + t * sp * dir) % (W + 80)) + W + 80) % (W + 80)) - 40;
+      const y = Math.round(sea + 14 + ((i * 61) % Math.max(20, H - sea - 40))
+                          + Math.sin(t * 1.1 + i) * 4);
+      KD.PX.blit(ctx, KD.PX.frameOf(name, t + i), x, y,
+                 { anchor: false, flipX: dir < 0, shade: 1 + (i % 3) });
+    }
+    /* ---- bubbles, lots of them ------------------------------------- */
+    for (let i = 0; i < 60; i++) {
+      const bx = Math.round((i * 71 + 13) % W + Math.sin(t * 1.3 + i) * 3);
+      const by = H - ((t * (11 + i % 9) + i * 43) % (H - sea + 30));
+      if (by < sea) continue;
+      const sz = (i % 5) ? 1 : 2;
+      R(bx, Math.round(by), sz, sz, i % 4 ? 'WATER.3' : 'BONE.2');
+    }
+    /* ---- the rock he is standing on -------------------------------- */
+    const ledge = Math.round(H * 0.78);
+    const lw = Math.round(W * 0.46);
+    for (let k = 0; k < H - ledge + 4; k++) {
+      const w = lw - Math.round(k * 0.6);
+      R(0, ledge + k, Math.max(0, w), 1, k < 3 ? 'STONE.1' : 'INK.1');
+    }
+    /* blocked rock, so it reads as stone rather than as a platform */
+    for (let ry = ledge + 4; ry < H + 4; ry += 9) {
+      const w = lw - Math.round((ry - ledge) * 0.6);
+      for (let rx = ((ry / 9) | 0) % 2 ? -9 : 0; rx < w; rx += 19) {
+        const q = hash(rx, ry);
+        R(rx, ry, Math.min(18, w - rx), 8, q < 0.4 ? 'INK.1' : (q < 0.85 ? 'INK.2' : 'STONE.0'));
+        R(rx, ry, Math.min(18, w - rx), 1, 'INK.3');
+      }
+    }
+    R(0, ledge, lw, 3, 'STONE.1');
+    R(0, ledge, lw, 1, 'STONE.3');
+    R(0, ledge + 3, lw, 1, 'INK.0');
+    /* a few sprigs on the lip, because a bare rock reads as a platform */
+    for (let i = 0; i < 7; i++) {
+      const x = Math.round(lw * (0.12 + i * 0.13));
+      weed(x, ledge, 12 + ((i * 37) % 12), i + 40, 'KELP.0');
+    }
+    /* ---- and the man himself --------------------------------------- */
+    if (KD.PX.hasAny('ti_king')) {
+      KD.PX.blit(ctx, KD.PX.frameOf('ti_king', t), Math.round(W * 0.22), ledge + 1);
+    }
+
+    /* ---- the words ------------------------------------------------- */
+    const cx = Math.round(W / 2);
+    const top = Math.round(H * 0.04);
     KD.Text.draw('CROWNDEEP', cx, top, 'GOLD.3', { align: 'center', space: 2, shadow: 'INK.0' });
-    KD.Text.draw('KING OF ATLANTIC', cx, top + 13, 'WATER.3', { align: 'center', space: 1, shadow: 'INK.0' });
-    KD.Text.draw('he had it all. then he met a keg.', cx, top + 26, 'BONE.0', { tiny: true, align: 'center' });
+    KD.Text.draw('KING OF ATLANTIC', cx, top + 13, 'WATER.3',
+                 { align: 'center', space: 1, shadow: 'INK.0' });
+    KD.Text.draw('he had it all. then he met a keg.', cx, top + 24, 'BONE.2',
+                 { tiny: true, align: 'center', shadow: 'INK.0' });
 
-    /* the seabed, and the two of them standing on it */
-    const gy = KD.H - Math.round(KD.H * 0.16);
-    KD.Screen.rect(0, gy, KD.W, KD.H - gy, 'SAND.1');
-    KD.Dither.fill(ctx, 0, gy, KD.W, 5, 'SAND.2', 0.6);
-    if (KD.PX.hasAny('king_idle')) KD.PX.blit(ctx, KD.PX.frameOf('king_idle', t), cx - 24, gy + 2);
-    if (KD.PX.hasAny('npc_princess_idle')) KD.PX.blit(ctx, KD.PX.frameOf('npc_princess_idle', t), cx + 14, gy + 2);
-
-    const bw = 110, bx = cx - bw / 2;
-    let by = Math.round(KD.H * 0.40);
+    /* ---- the menu, on a scrim so it reads over the water ----------- */
+    const bw = 104, bx = W - bw - 12;
+    const rows = KD.State.hasSave() ? 3 : 2;
+    const panelH = rows * 21 + 12;
+    let by = H - panelH - 6;
+    R(bx - 6, by - 6, bw + 12, panelH, 'INK.0');
+    R(bx - 5, by - 5, bw + 10, 1, 'GOLD.0');
+    KD.Screen.frame(bx - 6, by - 6, bw + 12, panelH, 'GOLD.0');
     if (KD.State.hasSave()) {
       if (KD.UI.button(bx, by, bw, 18, 'CONTINUE', { key: 'Enter' })) {
         if (KD.State.load()) {
@@ -46,15 +215,21 @@ KD.Scenes.title = (function () {
           KD.Game.go(a && !a.done ? 'castle' : 'play', {});
         } else KD.State.say('That save is broken.', 'BLOOD.2');
       }
-      by += 22;
-      if (KD.UI.button(bx, by, bw, 15, 'NEW WORLD')) { KD.State.wipe(); if (!KD.Cine.play('intro')) KD.Game.go('gen', {}); }
-      by += 19;
+      by += 21;
+      if (KD.UI.button(bx, by, bw, 15, 'NEW WORLD')) {
+        KD.State.wipe();
+        if (!KD.Cine.play('intro')) KD.Game.go('wake', {});
+      }
+      by += 21;
     } else {
-      if (KD.UI.button(bx, by, bw, 18, 'DIG IN', { key: 'Enter' })) { if (!KD.Cine.play('intro')) KD.Game.go('gen', {}); }
-      by += 22;
+      if (KD.UI.button(bx, by, bw, 18, 'DIG IN', { key: 'Enter' })) {
+        if (!KD.Cine.play('intro')) KD.Game.go('wake', {});
+      }
+      by += 21;
     }
     if (KD.UI.button(bx, by, bw, 15, KD.Sfx.isMuted() ? 'SOUND OFF' : 'SOUND ON')) KD.Sfx.mute();
-    KD.Text.draw('every pixel placed by hand', cx, KD.H - 12, 'INK.3', { tiny: true, align: 'center' });
+    KD.Text.draw('every pixel placed by hand', 6, H - 10, 'STONE.2',
+                 { tiny: true, shadow: 'INK.0' });
   }
   return { enter, update, draw };
 })();

@@ -191,6 +191,65 @@ KD.UI = (function () {
       }
     }
   }
-  return { panel, titled, button, slot, bar, bevel, octo, inside, tooltips, touchPad,
+  /* ---- the quest scroll ---------------------------------------------
+     Both the castle and the village need to say what you are supposed to be
+     doing, and a bare line of text at the top of the screen reads as a debug
+     label. This is a hanging piece of parchment: two rods, a curled top and
+     bottom edge, a wax seal, and the objective written on it. It sways, so
+     the eye finds it.
+     ------------------------------------------------------------------ */
+  function scroll(x, y, text, o) {
+    o = o || {};
+    const R = KD.Screen.rect;
+    const t = KD.Game ? KD.Game.t : 0;
+    const tiny = o.tiny !== false;
+    const maxW = o.w || Math.min(150, KD.W - 24);
+    const lines = KD.Text.wrap(text, maxW - 16, { tiny: tiny });
+    const n = Math.min(o.maxLines || 3, lines.length);
+    let tw = 0;
+    for (let i = 0; i < n; i++) tw = Math.max(tw, KD.Text.width(lines[i], { tiny: tiny }));
+    const w = Math.max(64, Math.min(maxW, tw + 18));
+    const lh = KD.Text.H(tiny) + 3;
+    const h = n * lh + 16;
+    /* it hangs, so it swings a little */
+    const sway = Math.round(Math.sin(t * 1.1 + x * 0.05) * 1.2);
+    x = Math.round(x) + sway; y = Math.round(y);
+
+    /* the two cords it hangs from */
+    R(x + 4, y - 5, 1, 5, 'WOOD.0');
+    R(x + w - 5, y - 5, 1, 5, 'WOOD.0');
+    /* the top rod, with knobs */
+    R(x - 3, y, w + 6, 4, 'WOOD.1');
+    R(x - 3, y, w + 6, 1, 'WOOD.3');
+    R(x - 5, y, 3, 4, 'WOOD.2');
+    R(x + w + 2, y, 3, 4, 'WOOD.2');
+    /* the parchment: SAND, with a darker edge either side so it curls */
+    R(x, y + 4, w, h, 'SAND.2');
+    R(x, y + 4, w, 1, 'SAND.1');
+    R(x, y + 4, 2, h, 'SAND.1');
+    R(x + w - 2, y + 4, 2, h, 'SAND.1');
+    R(x + 2, y + 5, w - 4, 1, 'SAND.3');
+    /* a couple of foxed patches, so it is not a flat card */
+    R(x + 6, y + h - 4, 9, 2, 'SAND.1');
+    R(x + w - 18, y + 8, 7, 2, 'SAND.1');
+    /* the bottom rod */
+    R(x - 3, y + h + 4, w + 6, 4, 'WOOD.1');
+    R(x - 3, y + h + 4, w + 6, 1, 'WOOD.2');
+    R(x - 5, y + h + 4, 3, 4, 'WOOD.2');
+    R(x + w + 2, y + h + 4, 3, 4, 'WOOD.2');
+    /* a wax seal on the bottom rod, because a scroll has one */
+    const sx = x + w - 14;
+    R(sx, y + h + 2, 8, 7, 'BLOOD.1');
+    R(sx + 1, y + h + 3, 6, 5, 'BLOOD.2');
+    R(sx + 2, y + h + 4, 4, 1, 'BLOOD.0');
+    R(sx + 3, y + h + 5, 2, 2, 'BLOOD.0');
+    /* and the words, in ink on parchment */
+    for (let i = 0; i < n; i++) {
+      KD.Text.draw(lines[i], x + 8, y + 10 + i * lh, 'INK.1', { tiny: tiny });
+    }
+    return { x: x, y: y, w: w, h: h + 8 };
+  }
+
+  return { panel, titled, button, slot, bar, bevel, octo, inside, tooltips, touchPad, scroll,
            guard, blocked, tickGuard, hasKit, kit };
 })();

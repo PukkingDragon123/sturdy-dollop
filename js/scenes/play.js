@@ -30,6 +30,40 @@ KD.Scenes.play = (function () {
      tabs out of the way. Six buttons that all did one thing each was a menu;
      this is a controller. */
   let actMode = 'dig';
+  /* ---- tap to walk, and tap to talk -------------------------------
+     On touch the world tap is free: player.js only digs on mouse.down when
+     KD.touch is false, and digging on a phone goes through the DIG button.
+     So a tap on the world means "go there", and a tap on a villager, a door
+     or Santa means "go there and do the obvious thing when you arrive".
+     ----------------------------------------------------------------- */
+  function tapWalk(S, cam) {
+    if (!KD.touch) return;
+    if (!KD.In.mouse.click || KD.UI.blocked() || KD.Panels.isOpen()) return;
+    const wx = cam.x + KD.In.mouse.x, wy = cam.y + KD.In.mouse.y;
+    KD.In.consumedClick();
+    /* Santa first: he is the one who moves you around the map */
+    if (KD.Santa && Math.abs(KD.Santa.x - wx) < 28 && Math.abs(KD.Santa.y - wy) < 44) {
+      KD.Player.walkTo(KD.Santa.x + (KD.Santa.x > KD.Player.P.x ? -18 : 18), null);
+      return;
+    }
+    /* a villager */
+    if (KD.Folk && KD.Folk.list) {
+      for (const f of KD.Folk.list) {
+        if (Math.abs(f.x - wx) < 22 && Math.abs(f.y - wy) < 40) {
+          KD.Player.walkTo(f.x + (f.x > KD.Player.P.x ? -16 : 16), null);
+          return;
+        }
+      }
+    }
+    /* a doorway */
+    const d = KD.Village.doorAt(wx, wy);
+    if (d) {
+      KD.Player.walkTo(wx, () => KD.Player.tryEnter(S));
+      return;
+    }
+    KD.Player.walkTo(wx, null);
+  }
+
   function contextAction(S) {
     const P = KD.Player.P, Wd = KD.World;
     /* an enemy within a swing? then the button is a weapon */
@@ -102,6 +136,7 @@ KD.Scenes.play = (function () {
     }
     if (KD.Panels.isOpen()) { KD.Fx.update(dt); return; }
 
+    tapWalk(S, { x: KD.Cam.x, y: KD.Cam.y });
     KD.Player.update(dt, S);
     KD.Boss.update(dt, S);
     KD.Mobs.update(dt, S);
@@ -209,6 +244,16 @@ KD.Scenes.play = (function () {
     }
   }
 
+  function walkMark(cam) {
+    const P = KD.Player.P;
+    if (P.goTo === null || P.goTo === undefined) return;
+    const gx = Math.round(P.goTo - cam.x);
+    const gy = Math.round(P.y - cam.y);
+    const bob = Math.round(Math.sin(KD.Game.t * 6) * 2);
+    for (let k = 0; k < 3; k++) KD.Screen.rect(gx - 4 + k, gy - 22 - k * 2 + bob, 9 - k * 2, 2, 'GOLD.3');
+    KD.Screen.rect(gx - 6, gy - 2, 13, 2, 'GOLD.2');
+  }
+
   function draw(ctx) {
     const sh = KD.Fx.shakeOffset();
     const cam = { x: Math.round(KD.Cam.x + sh.x), y: Math.round(KD.Cam.y + sh.y) };
@@ -225,6 +270,7 @@ KD.Scenes.play = (function () {
     KD.Santa.draw(ctx, cam);
     KD.Mobs.draw(ctx, cam);
     KD.Boss.draw(ctx, cam);
+    walkMark(cam);
     drawKing(ctx, cam);
     KD.Fx.draw(ctx, cam);
     KD.Parallax.front(ctx, cam, dayT);

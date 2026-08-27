@@ -88,8 +88,10 @@ KD.Hud = (function () {
       /* Bottom left, above the hotbar. It used to sit at y=38 on the right,
          which is exactly where a say() message box lands, so the two
          overlapped every time the game told you anything. */
-      const col = task.startsWith('READY') ? 'KELP.2' : 'BONE.1';
-      KD.Text.draw(task, 4, KD.H - 40, col, { tiny: true, shadow: 'INK.0', max: KD.W - 120 });
+      /* Hung as a scroll rather than printed as a line: a bare string in the
+         corner reads as a debug label, and this is the one thing telling you
+         what the next hour of the game is for. */
+      KD.UI.scroll(6, KD.H - 74, task, { w: Math.min(146, KD.W - 130), maxLines: 3 });
     }
     /* depth read-out, so the layers are legible as progress */
     const d = (KD.Player.P.y / 8) | 0;

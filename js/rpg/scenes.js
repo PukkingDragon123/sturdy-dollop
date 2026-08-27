@@ -39,7 +39,7 @@ KD.Cine = (function () {
           sub: 'and there was a queen, and a very long table' },
         { kind: 'fade', world: false, to: 1, t: 0.8 }
       ],
-      after: () => { mark('intro'); KD.Game.go('castle', {}); }
+      after: () => { mark('intro'); KD.Game.go('wake', {}); }
     };
   }
 

@@ -16,7 +16,7 @@ KD.Player = (function () {
                                          hair, and a hitbox that included
                                          them would need five tiles of
                                          headroom to stand up in. */
-    face: 1, onGround: false, mode: 'stand',
+    face: 1, onGround: false, mode: 'stand', goTo: null, onArrive: null, goT: 0, stall: 0,
     swim: 0,                          // 0..1 submersion
     breath: 1, stam: 1, hp: 6, hpMax: 6,
     mineT: 0, mineTx: -1, mineTy: -1, mineAcc: 0,
@@ -86,7 +86,34 @@ KD.Player = (function () {
      * feel - the water has weight and momentum, and stopping is a thing
      * you have to do rather than something that happens to you.
      * ---------------------------------------------------------------- */
-    const v = In.stick();
+    /* Tap-to-walk: a world x he is heading for. The stick always wins, so
+       one nudge cancels it - a destination you cannot override is a cage. */
+    let v = In.stick();
+    if (Math.abs(v.x) > 0.2 || Math.abs(v.y) > 0.2) P.goTo = null;
+    else if (P.goTo !== null && P.goTo !== undefined) {
+      const d = P.goTo - P.x;
+      P.goT = (P.goT || 0) + dt;
+      if (Math.abs(d) < 8 || P.goT > 9) {
+        const done = P.onArrive;
+        P.goTo = null; P.onArrive = null; P.goT = 0;
+        if (done && Math.abs(d) < 24) done();
+      } else {
+        v = { x: Math.sign(d), y: 0 };
+        /* AUTO-JUMP. Tap-to-walk with no pathfinding walks straight into the
+           first terrace wall and stands there pushing, which is exactly what
+           the village did on the first try. If he is heading somewhere and
+           has stopped moving, hop; in water, swim up instead. */
+        if (Math.abs(P.vx) < 8) {
+          P.stall = (P.stall || 0) + dt;
+          if (P.stall > 0.18) {
+            if (P.swim > 0.45) v.y = -0.9;
+            else if (P.onGround || P.coyote > 0) { P.jumpBuf = 0.12; P.stall = 0; }
+            /* still nowhere after a couple of seconds? the way is shut */
+            if (P.stall > 2.2) { P.goTo = null; P.onArrive = null; P.stall = 0; }
+          }
+        } else P.stall = 0;
+      }
+    }
     const jumpHeld = In.act('jump', 'Space', 'KeyK') || v.y < -0.5;
     if (In.actHit('jump', 'Space', 'KeyK')) P.jumpBuf = 0.12;
     P.jumpBuf -= dt; P.coyote -= dt;
@@ -436,6 +463,7 @@ KD.Player = (function () {
     if (P.hp <= 0) S.die(from);
   }
   const heal = (n) => { P.hp = Math.min(P.hpMax, P.hp + n); };
-  return { P, spawn, update, hurt, heal, interact, tryEnter, openChest, zoneGate, buildingAt,
+  const walkTo = (x, onArrive) => { P.goTo = x; P.onArrive = onArrive || null; P.goT = 0; };
+  return { walkTo, P, spawn, update, hurt, heal, interact, tryEnter, openChest, zoneGate, buildingAt,
            get x() { return P.x; }, get y() { return P.y; } };
 })();
