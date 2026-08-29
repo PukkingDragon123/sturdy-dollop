@@ -44,6 +44,13 @@ keg on a cushion beside him, and the thing he keeps at the foot of it is Baron
 Foamhelm - her new man, in a barrel helmet, carrying a barrel. Beating him is
 the end of the story the prologue started.
 
+**He is dressed for the water.** Ninety per cent of this game happens
+underwater and the king used to swim through it in a t-shirt. He has a dive
+mask pushed up on his forehead, a wetsuit, an air tank over his shoulder and
+flippers - with the crown still on top of the mask, because he has not stopped
+being the king about it. Crown plus goggles is a silhouette you can pick out at
+twenty-four pixels wide, which is all he gets.
+
 **The goal is the scales.** You start at 100kg and the world is gated on what
 you weigh and how much you have trained. The Sea Gate will not open for you at
 a hundred kilos. Neither will the Drop. Neither, in the end, will the King -
@@ -101,20 +108,25 @@ What that means in practice:
 
 ## The world
 
-2600 x 460 tiles at 8px, generated fresh from a seed and rebuildable from it.
+4710 x 700 tiles at 8px, generated fresh from a seed and rebuildable from it.
+It has been widened twice and deepened once, both times for the same reason:
+once swimming had real momentum you could cross the map in a couple of minutes
+and touch the floor of it in thirty seconds. The Drop is meant to be somewhere
+you are frightened of running out of air, and at 460 tiles you could see the
+bottom of it from the top.
 It runs **west to east**, not just down: eight named zones, each with its own
 rock, ore density, cave density, light level and spawn table.
 
 | Zone | Tiles | What is there |
 |---|---|---|
-| The Old Mine | 0–420 | where the village digs. Ore, crawlers, bandits, and you can build in it |
-| Fruitfall | 420–760 | twelve hollowed giant fruit on three terraces, and everyone you owe money to |
-| The Sea Gate | 760–830 | shut until you are light enough to be let through |
-| Shallow Reef | 830–1240 | warm, loud with clownfish and parrotfish, and mantis shrimp that punch |
-| The Kelp Forest | 1240–1620 | you cannot see far in here. Morays lunge, cuttlefish spit |
-| The Sunken City | 1620–2000 | somebody built all this. Sentinels, lionfish, barracuda |
-| The Open Blue | 2000–2320 | no floor for a long way. Manta rays pass through |
-| The Drop | 2320–2600 | down. Just down. And the throne room at the bottom |
+| The Old Mine | 0–750 | where the village digs. Ore, crawlers, bandits, and you can build in it |
+| Fruitfall | 750–1300 | twelve hollowed giant fruit on three terraces, and everyone you owe money to |
+| The Sea Gate | 1300–1420 | shut until you are light enough to be let through |
+| Shallow Reef | 1420–2150 | warm, loud with clownfish and parrotfish, and mantis shrimp that punch |
+| The Kelp Forest | 2150–2830 | you cannot see far in here. Morays lunge, cuttlefish spit |
+| The Sunken City | 2830–3510 | somebody built all this. Sentinels, lionfish, barracuda |
+| The Open Blue | 3510–4100 | no floor for a long way. Manta rays pass through |
+| The Drop | 4100–4710 | down. Just down. And the throne room at the bottom |
 
 **Fruitfall** is laid out procedurally on three terraces, and each fruit is
 carved from **its own sprite's pixel mask** - the collision is the silhouette,

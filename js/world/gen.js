@@ -6,22 +6,28 @@
 KD.Gen = (function () {
   const W = () => KD.World;
   /* depth bands, in tiles. The whole game's pacing lives here. */
+  /* Stretched with the world, which went from 460 tiles deep to 700. The
+     surface stays exactly where it was - everything below it got longer,
+     because the Drop is meant to be somewhere you are frightened of running
+     out of air and you could see the floor of it from the top. */
   const LAYERS = [
     { id: 'sky',      y0: 0,   y1: 40,  fill: 'air' },
-    { id: 'shallows', y0: 40,  y1: 90,  fill: 'sand' },
-    { id: 'reef',     y0: 90,  y1: 150, fill: 'stone' },
-    { id: 'ruins',    y0: 150, y1: 230, fill: 'stone' },
-    { id: 'trench',   y0: 230, y1: 330, fill: 'dark' },
-    { id: 'abyss',    y0: 330, y1: 420, fill: 'rot' }
+    { id: 'shallows', y0: 40,  y1: 120, fill: 'sand' },
+    { id: 'reef',     y0: 120, y1: 215, fill: 'stone' },
+    { id: 'ruins',    y0: 215, y1: 340, fill: 'stone' },
+    { id: 'trench',   y0: 340, y1: 500, fill: 'dark' },
+    { id: 'abyss',    y0: 500, y1: 690, fill: 'rot' }
   ];
   const layerAt = (y) => LAYERS.find((l) => y >= l.y0 && y < l.y1) || LAYERS[LAYERS.length - 1];
 
+  /* Bands and attempt counts both scale with the world, so a bigger ocean
+     is not a thinner one. */
   const ORES = [
-    { t: 'ore_copper',  y0: 60,  y1: 180, tries: 1400, size: 5,  rare: 1.0 },
-    { t: 'ore_bronze',  y0: 90,  y1: 230, tries: 1000, size: 5,  rare: 0.8 },
-    { t: 'ore_iron',    y0: 140, y1: 300, tries: 800,  size: 6,  rare: 0.7 },
-    { t: 'ore_gold',    y0: 220, y1: 380, tries: 520,  size: 5,  rare: 0.5 },
-    { t: 'ore_abyssal', y0: 320, y1: 420, tries: 340,  size: 4,  rare: 0.4 }
+    { t: 'ore_copper',  y0: 80,  y1: 260, tries: 3000, size: 5,  rare: 1.0 },
+    { t: 'ore_bronze',  y0: 130, y1: 340, tries: 2200, size: 5,  rare: 0.8 },
+    { t: 'ore_iron',    y0: 210, y1: 440, tries: 1750, size: 6,  rare: 0.7 },
+    { t: 'ore_gold',    y0: 330, y1: 560, tries: 1150, size: 5,  rare: 0.5 },
+    { t: 'ore_abyssal', y0: 480, y1: 690, tries: 750,  size: 4,  rare: 0.4 }
   ];
 
   let surface = null;                 // surface[x] = first solid y
