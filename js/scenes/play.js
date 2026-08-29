@@ -303,10 +303,21 @@ KD.Scenes.play = (function () {
     KD.UI.touchPad(BTNS);
     KD.Panels.draw(S);
     KD.UI.tooltips();
+    /* The controls, for the first fourteen seconds. It used to be a bare
+       line of BONE.0 laid straight over the sea floor, which is a shadow
+       under every letter and still unreadable; on a strip it is legible and
+       it goes away on its own. */
     if (!KD.Panels.isOpen() && S.S.playtime < 14) {
-      KD.Text.draw(KD.touch ? 'pad to move  -  DIG  -  BODY  -  BAG'
-                            : 'WASD move  -  click to dig  -  F swing  -  E use  -  C body  -  Q tasks  -  V skills  -  I bag',
-        KD.W / 2, KD.H - 34, 'BONE.0', { tiny: true, align: 'center', shadow: 'INK.0' });
+      const txt = KD.touch ? 'pad to move   -   DIG   -   BODY   -   BAG'
+                           : 'WASD move  -  click to dig  -  F swing  -  E use  -  C body  -  Q tasks  -  V skills  -  I bag';
+      const tw = KD.Text.width(txt, { tiny: true }) + 16;
+      const tx = Math.round((KD.W - tw) / 2), ty = KD.H - 38;
+      const fade = Math.min(1, (14 - S.S.playtime) / 1.5);
+      KD.Screen.rect(tx, ty, tw, 12, 'INK.0');
+      KD.Screen.rect(tx, ty, tw, 1, 'INK.2');
+      KD.Screen.rect(tx, ty + 11, tw, 1, 'INK.0');
+      KD.Text.draw(txt, KD.W / 2, ty + 3, fade > 0.5 ? 'BONE.1' : 'BONE.0',
+                   { tiny: true, align: 'center' });
     }
   }
   return { enter, update, draw, snapCam };

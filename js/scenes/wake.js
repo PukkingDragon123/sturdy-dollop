@@ -372,7 +372,7 @@ KD.Scenes.wake = (function () {
     if (phase === 'after') {
       /* the same box the rest of the game talks in */
       const line = 'Six hundred years of kings, and not one of us ever solved the alarm clock.';
-      const L = KD.Convo.layout(0);
+      const L = KD.Convo.layout(0, line);
       KD.Convo.box({ portrait: 'po_king', name: 'You', tint: 'WATER.3' }, line,
                    { L: L, speaking: false });
     }

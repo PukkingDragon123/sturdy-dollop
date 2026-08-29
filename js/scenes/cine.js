@@ -255,7 +255,7 @@ KD.Scenes.cine = (function () {
       /* the same box the conversations use. The cutscenes had their own
          thinner panel and it read as a different game from the scene either
          side of it. */
-      const L = KD.Convo.layout(0);
+      const L = KD.Convo.layout(0, b.text || '');
       L.y = KD.H - L.h - bar - 6;
       const cast = KD.Convo.CAST;
       let tint = 'GOLD.3';

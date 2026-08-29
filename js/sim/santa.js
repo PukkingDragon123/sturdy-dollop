@@ -144,9 +144,16 @@ KD.Santa = (function () {
     if (mode === 'talk' && line) {
       KD.Talk.say(line, x, y + bob - s.h + 6, cam, KD.Game.t, { max: 180, maxLines: 3 });
     } else if (near()) {
-      const bx = Math.round(x - cam.x), by = Math.round(y + bob - cam.y) - s.h - 6;
-      KD.Text.draw(KD.touch ? 'USE talk  -  RIDE travel' : 'E talk   R ride',
-        bx, by, 'WATER.3', { tiny: true, align: 'center', shadow: 'INK.0' });
+      /* On a plate. Loose over open water this was two grey words you had to
+         hunt for, and it is the prompt that opens half the game. */
+      const bx = Math.round(x - cam.x), by = Math.round(y + bob - cam.y) - s.h - 8;
+      const lab = KD.touch ? 'USE  TALK   -   RIDE  TRAVEL' : 'E  TALK   -   R  RIDE';
+      const lw = KD.Text.width(lab, { tiny: true }) + 12;
+      const lx = bx - (lw >> 1);
+      KD.Screen.rect(lx, by - 2, lw, 12, 'INK.0');
+      KD.Screen.frame(lx, by - 2, lw, 12, 'KELP.1');
+      KD.Screen.rect(lx + 1, by - 1, lw - 2, 1, 'KELP.0');
+      KD.Text.draw(lab, bx, by + 1, 'KELP.3', { tiny: true, align: 'center' });
     }
     if (mode === 'travel') travelPanel();
   }

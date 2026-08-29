@@ -38,6 +38,7 @@ KD.Convo = (function () {
   let sel = 0, hold = 0, t = 0, shown = '';
   /* punctuation gets an extra beat, which is most of what makes a
      typewriter read like speech rather than like a printer */
+  let popT = 0, popWho = '';          // the portrait bounces on a new speaker
   const SPEED = 46, PAUSE = { '.': 0.16, ',': 0.09, '!': 0.18, '?': 0.18, '-': 0.07 };
   let pause = 0;
 
@@ -83,16 +84,27 @@ KD.Convo = (function () {
      a phone could only ever pick the first line - which, in a scene whose
      only mechanic is what he chooses to say, meant no choice at all. */
   const PW = 36, PH = 40;
-  function layout(nRows) {
-    /* the right-hand column belongs to the touch buttons; at 390 wide the
-       panel ran underneath JUMP/HIT/TALK and cut the last word off */
+  const LH = 10;                       // one line of tiny text plus leading
+
+  /* `full` is the whole line this box has to hold, not the part typed so
+     far - the box was a fixed 54 pixels tall with maxLines: 3, and on a
+     390-wide phone (where the panel gives up 96 columns to the buttons) a
+     long line simply lost its last third with no indication that it had. */
+  function layout(nRows, full) {
     const gap = KD.touch ? 96 : 0;
     const w = Math.min(KD.W - 12 - gap, 352);
-    const h = Math.max(nRows ? 20 + nRows * 13 : 54, PH + 16);
     const x = Math.round((KD.W - gap - w) / 2);
-    const y = KD.H - h - 12;
     const tx = x + 7 + PW + 10;
-    return { w: w, h: h, x: x, y: y, tx: tx, tw: x + w - tx - 8 };
+    const tw = x + w - tx - 8;
+    let body = 54;
+    if (nRows) {
+      body = 20 + nRows * 13;
+    } else if (full) {
+      const n = KD.Text.wrap(full, tw, { tiny: true }).length;
+      body = 14 + Math.max(3, n) * LH;
+    }
+    const h = Math.max(body, PH + 16);
+    return { w: w, h: h, x: x, y: KD.H - h - 12, tx: tx, tw: tw };
   }
   const rowY = (L, k) => L.y + 20 + k * 13;
   function rowAt(L, n) {
@@ -107,6 +119,7 @@ KD.Convo = (function () {
 
   /* ---- update ------------------------------------------------------- */
   function update(dt) {
+    if (popT > 0) popT -= dt;
     if (!script) return false;
     t += dt;
     if (hold > 0) { hold -= dt; return true; }
@@ -117,7 +130,7 @@ KD.Convo = (function () {
       const list = n.choose.filter((c) => !c.when || c.when(bag));
       if (KD.In.isHit('ArrowDown', 'KeyS')) { sel = (sel + 1) % list.length; click(); }
       if (KD.In.isHit('ArrowUp', 'KeyW')) { sel = (sel + list.length - 1) % list.length; click(); }
-      const L = layout(list.length);
+      const L = layout(list.length, null);
       /* a mouse hover moves the selection, so what is lit is what Enter
          takes. On touch there is no hover - mouse.x/y is just where the
          last tap landed - so the selection is left alone there. */
@@ -174,7 +187,7 @@ KD.Convo = (function () {
      ------------------------------------------------------------------ */
   function box(who, shownText, o) {
     o = o || {};
-    const L = o.L || layout(0);
+    const L = o.L || layout(0, shownText || '');
     const w = L.w, h = L.h, x = L.x, y = L.y;
     /* two frames and a lit inner edge */
     R(x - 2, y - 2, w + 4, h + 4, 'INK.0');
@@ -189,8 +202,12 @@ KD.Convo = (function () {
       R(cx2, cy2, sx * 2, sy * 5, 'GOLD.2');
       R(cx2 + sx, cy2 + sy, sx * 2, sy * 2, 'GOLD.3');
     }
-    /* the portrait, in its own frame, bobbing while its owner is speaking */
-    const bob = o.speaking ? Math.round(Math.sin(t * 22) * 1.2) : 0;
+    /* The portrait, in its own frame. It bobs while its owner is speaking
+       and drops in when the speaker CHANGES, which is the cheapest way to
+       make a conversation feel like it has two people in it. */
+    if (who.portrait !== popWho) { popWho = who.portrait; popT = 0.22; }
+    const drop = popT > 0 ? Math.round(KD.Juice.outCubic(1 - popT / 0.22) * 6 - 6) : 0;
+    const bob = (o.speaking ? Math.round(Math.sin(t * 22) * 1.2) : 0) + drop;
     const px = x + 7, py = Math.round(y + (h - PH) / 2);
     R(px - 3, py - 3, PW + 6, PH + 6, 'INK.0');
     R(px - 2, py - 2, PW + 4, PH + 4, 'GOLD.0');
@@ -211,7 +228,7 @@ KD.Convo = (function () {
     }
     if (shownText !== null && shownText !== undefined) {
       KD.Text.block(shownText, L.tx, y + 10, 'BONE.2',
-                    { tiny: true, max: L.tw, maxLines: 3 });
+                    { tiny: true, max: L.tw });
     }
     return L;
   }
@@ -225,7 +242,7 @@ KD.Convo = (function () {
     const isChoice = !!n.choose;
     const list = isChoice ? n.choose.filter((c) => !c.when || c.when(bag)) : null;
 
-    const L = layout(isChoice ? list.length : 0);
+    const L = layout(isChoice ? list.length : 0, isChoice ? null : (n.text || ''));
     const w = L.w, h = L.h, x = L.x, y = L.y;
     const speaking = !isChoice && Math.floor(ch) < (n.text || '').length;
     box(who, isChoice ? null : shown, { L: L, speaking: speaking });
@@ -257,8 +274,14 @@ KD.Convo = (function () {
          is finished, so you know the difference between "still talking" and
          "waiting for you" */
       if (!speaking) {
-        const cxx = x + w - 12, cyy = y + h - 11 + (Math.sin(t * 5) > 0 ? 0 : 1);
+        /* a caret AND the word, because a four-pixel triangle in the corner
+           is not an affordance on a phone */
+        const cyy = y + h - 12 + (Math.sin(t * 5) > 0 ? 0 : 1);
+        const lab = KD.touch ? 'TAP' : 'SPACE';
+        const lw2 = KD.Text.width(lab, { tiny: true });
+        const cxx = x + w - 10 - lw2 - 8;
         for (let k = 0; k < 4; k++) R(cxx - k, cyy + k, 1 + k * 2, 1, 'GOLD.3');
+        KD.Text.draw(lab, x + w - 8, cyy + 1, 'GOLD.1', { tiny: true, align: 'right' });
       }
     }
     return { x, y, w, h };
