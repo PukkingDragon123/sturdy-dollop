@@ -32,6 +32,84 @@ KD.Scenes.cine = (function () {
   let flash = 0, pan = null, vig = 0;
   /* what the last `art` beat put on screen, so it can persist across says */
   let held = null;
+  /* A frozen copy of whatever was on screen when the cutscene started.
+     Every Act One beat is world:false, and world:false used to mean a black
+     rectangle - so the queen left him, the cook took the castle and the
+     manta found him all in the same empty void. A cutscene should happen
+     WHERE YOU WERE STANDING. The scene is snapshotted here rather than kept
+     live because the scene underneath has been swapped out by the time this
+     one is drawing, and because a still frame under a letterbox is what a
+     cutscene looks like anyway. */
+  let shot = null, shotCtx = null;
+
+  /* Darkening the snapshot with a full-screen dither wash turned the whole
+     frame into a checkerboard - the same lesson as the god rays and the
+     window light, at the largest possible scale. So the frozen frame is
+     POSTERIZED instead: every pixel in it is remapped to a darker colour
+     from the same 64-entry palette, once, when the cutscene starts. No
+     alpha, no pattern, and it comes out looking like the same picture
+     lit by less light, which is what a cutscene wants behind it. */
+  let dark = null;
+  function darkMap() {
+    if (dark) return dark;
+    const P = KD.PAL, n = P.LIST.length;
+    dark = new Uint8Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      const c = P.RGB[i];
+      const want = [c[0] * 0.42, c[1] * 0.44, c[2] * 0.52];   /* cool it, too */
+      let best = 0, bd = 1e9;
+      for (let k = 0; k < n; k++) {
+        const q = P.RGB[k];
+        const d = (q[0] - want[0]) * (q[0] - want[0])
+                + (q[1] - want[1]) * (q[1] - want[1])
+                + (q[2] - want[2]) * (q[2] - want[2]);
+        if (d < bd) { bd = d; best = k; }
+      }
+      dark[i * 3] = P.RGB[best][0];
+      dark[i * 3 + 1] = P.RGB[best][1];
+      dark[i * 3 + 2] = P.RGB[best][2];
+    }
+    return dark;
+  }
+
+  function snapshot() {
+    const b = KD.Screen.buf;
+    if (!b || !b.width) { shot = null; return; }
+    if (!shot || shot.width !== b.width || shot.height !== b.height) {
+      shot = document.createElement('canvas');
+      shot.width = b.width; shot.height = b.height;
+      shotCtx = shot.getContext('2d');
+      shotCtx.imageSmoothingEnabled = false;
+    }
+    shotCtx.clearRect(0, 0, shot.width, shot.height);
+    shotCtx.drawImage(b, 0, 0);
+    /* remap it down the palette, once */
+    try {
+      const D = darkMap(), P = KD.PAL, n = P.LIST.length;
+      const img = shotCtx.getImageData(0, 0, shot.width, shot.height);
+      const d = img.data;
+      const key = new Map();
+      for (let k = 0; k < n; k++) {
+        const q = P.RGB[k];
+        key.set((q[0] << 16) | (q[1] << 8) | q[2], k);
+      }
+      for (let i = 0; i < d.length; i += 4) {
+        const h = (d[i] << 16) | (d[i + 1] << 8) | d[i + 2];
+        const k = key.get(h);
+        if (k === undefined) {            /* not a palette colour: just halve it */
+          d[i] = d[i] * 0.42; d[i + 1] = d[i + 1] * 0.44; d[i + 2] = d[i + 2] * 0.52;
+        } else {
+          d[i] = D[k * 3]; d[i + 1] = D[k * 3 + 1]; d[i + 2] = D[k * 3 + 2];
+        }
+      }
+      shotCtx.putImageData(img, 0, 0);
+    } catch (e) {
+      /* Only a tainted or zero-size buffer should land here. It hid a typo
+         once - KD.Pal for KD.PAL - and the cutscene just quietly stopped
+         dimming, so it says something now. */
+      if (window.console) console.warn('cine: could not posterize the frame', e);
+    }
+  }
 
   function enter(args) {
     const sc = (args && args.scene) || null;
@@ -40,6 +118,7 @@ KD.Scenes.cine = (function () {
     name = (sc && sc.id) || '';
     i = 0; bt = 0; fade = 1; fadeTo = 0; letter = 0; skipHold = 0; held = null;
     flash = 0; pan = null; vig = 0;
+    snapshot();
     if (!beats.length) { finish(); return; }
     start();
   }
@@ -107,7 +186,10 @@ KD.Scenes.cine = (function () {
   function draw(ctx) {
     KD.Screen.clear('INK.0');
     const b = beats[i] || {};
-    /* the world behind, if this scene is playing over it */
+    /* the room he is standing in, held under the whole cutscene and pushed
+       back a step so the words stay on top of it */
+    if (shot) ctx.drawImage(shot, 0, 0);
+    /* the world behind, if this scene is playing live over it */
     if (b.world !== false && KD.Gen && KD.Gen.meta && KD.Gen.meta.village) {
       const sh = KD.Fx.shakeOffset();
       const cam = { x: Math.round(KD.Cam.x + sh.x), y: Math.round(KD.Cam.y + sh.y) };

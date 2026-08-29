@@ -26,25 +26,33 @@ KD.Scenes.dinner = (function () {
   let t = 0, phase = 'in', pt = 0;
   let course = 0, bite = 0, full = 0, warm = 0.5;
   let chew = 0, toastT = 0, said = '', saidT = 0, sipped = false;
-  let buffered = false;               // a press made while a course was landing
+  let talking = false;                // a conversation is up between courses
+  const bag = {};                     // what he said over dinner
   const crumbs = [];
   let baked = null, bw = 0, bh = 0;
   const KSEAT = 96, QSEAT = 204;      // where the two of them sit, baked space
-  const BTNS = [];
   /* Table top in baked space. Everything else is measured off it: the two
      of them sit so their waist lands just under the cloth, the chairs stand
      directly behind them, and the plates sit a fixed offset either side.
      The first pass had them a hundred pixels apart with a grey band between
      and it read as two people at a bus stop. */
   const TABLE = 96;
-  /* Two bites a course, not three. Nine presses to clear a dinner made it a
-     minigame; six makes it a scene with a rhythm. */
-  const BITES = 2;
+  /* He eats it himself. This used to be EAT and TOAST pressed six times to
+     get through three courses, which is a minigame wearing a dinner jacket:
+     the presses did not change anything and the same six taps happened
+     whatever kind of evening it was. The eating is animated now and the
+     evening happens in what he SAYS between the courses - three questions
+     from her, one a course, and the answers are what she remembers on the
+     night she leaves. */
+  const BITES = 3;                    // three mouthfuls a course, on a timer
+  const BITE_T = 0.62;                // seconds between them
+  const SERVE_T = 0.9, CLEAR_T = 0.7;
 
   function enter() {
     t = 0; phase = 'in'; pt = 0;
     course = 0; bite = 0; full = 0; warm = 0.5;
-    chew = 0; toastT = 0; said = ''; saidT = 0; sipped = false; buffered = false;
+    chew = 0; toastT = 0; said = ''; saidT = 0; sipped = false; talking = false;
+    for (const k in bag) delete bag[k];
     crumbs.length = 0;
     if (!baked) bake();
   }
@@ -126,37 +134,37 @@ KD.Scenes.dinner = (function () {
     if (chew > 0) chew -= dt;
     if (toastT > 0) toastT -= dt;
     if (saidT > 0) saidT -= dt;
-    for (const c of crumbs) {
-      c.t -= dt; c.x += c.vx * dt; c.vy += 380 * dt; c.y += c.vy * dt;
+    for (let i = crumbs.length - 1; i >= 0; i--) {
+      const c = crumbs[i];
+      c.t -= dt; c.x += c.vx * dt; c.y += c.vy * dt; c.vy += 260 * dt;
+      if (c.t <= 0) crumbs.splice(i, 1);
     }
-    for (let i = crumbs.length - 1; i >= 0; i--) if (crumbs[i].t <= 0) crumbs.splice(i, 1);
+    /* while she is asking him something, nothing else moves */
+    if (talking) { KD.Convo.update(dt); return; }
 
     if (phase === 'in') {
       if (pt > 1.1) { phase = 'serve'; pt = 0; }
       return;
     }
     if (phase === 'serve') {
-      /* A press while the plate is still coming in used to be dropped on the
-         floor, which feels like the button is broken. Hold it and spend it
-         the moment eating opens. */
-      if (eatPress()) buffered = true;
-      if (pt > 0.75) {
+      if (pt > SERVE_T) {
         phase = 'eat'; pt = 0; bite = 0; sipped = false;
-        say(COURSES[course].lines[0]);
-        if (buffered) { buffered = false; takeBite(); }
+        const L = COURSES[course].lines;
+        if (L && L[0]) say(L[0]);
       }
       return;
     }
     if (phase === 'eat') {
-      /* attention drifts if he only ever eats */
-      warm = Math.max(0, warm - dt * 0.035);
-      if (eatPress()) takeBite();
-      else if (toastPress()) toast();
+      /* he works through it on his own */
+      while (bite < BITES && pt >= (bite + 1) * BITE_T) takeBite();
+      if (bite >= BITES && pt > BITES * BITE_T + 0.35) {
+        phase = 'talk'; pt = 0;
+        startCourseTalk();
+      }
       return;
     }
     if (phase === 'clear') {
-      if (eatPress()) buffered = true;
-      if (pt > 0.85) {
+      if (pt > CLEAR_T) {
         course++;
         if (course >= COURSES.length) { phase = 'out'; pt = 0; }
         else { phase = 'serve'; pt = 0; }
@@ -164,24 +172,33 @@ KD.Scenes.dinner = (function () {
       return;
     }
     if (phase === 'out') {
-      if (pt > 3.6 || eatPress() || toastPress()) finish();
+      if (pt > 1.6) finish();
     }
   }
 
-  function tapped() {
-    const hit = KD.In.mouse.click && !KD.UI.blocked();
-    if (hit) KD.In.consumedClick();
-    return hit;
+  /* her question for this course, and his answer */
+  function startCourseTalk() {
+    const sc = KD.Talks['dinner' + (course + 1)];
+    if (!sc) { phase = 'clear'; pt = 0; return; }
+    talking = true;
+    KD.Convo.start(sc, {
+      bag: bag,
+      after: (b) => {
+        talking = false;
+        /* warmth is what he said, not how many times he chewed */
+        if (b.warm) { warm = Math.min(1, warm + 0.22); delete b.warm; }
+        if (b.cruel) { warm = Math.max(0, warm - 0.16); }
+        phase = 'clear'; pt = 0;
+        say(warm > 0.55 ? 'You are still here. Good.'
+                        : 'You have not looked up once.');
+      }
+    });
   }
-  function eatPress() {
-    return KD.In.actHit('use', 'KeyE') || KD.In.isHit('Space', 'Enter') || tapped();
-  }
-  const toastPress = () => KD.In.actHit('hit', 'KeyF');
 
   function takeBite() {
     bite++;
     chew = 0.3;
-    full = Math.min(1, full + 0.115);
+    full = Math.min(1, full + 0.112);
     if (KD.Act1) KD.Act1.gain(1);
     if (KD.Juice) KD.Juice.pop('bite', 0.18);
     if (KD.Sfx) KD.Sfx.play('step');
@@ -191,23 +208,10 @@ KD.Scenes.dinner = (function () {
                     vy: Math.sin(a) * 60 - 30, t: 0.5 + (i % 3) * 0.12,
                     col: i % 2 ? 'CORAL.1' : 'SAND.2' });
     }
-    if (bite >= BITES) {
-      phase = 'clear'; pt = 0;
-      say(warm > 0.55 ? 'You are still here. Good.'
-                      : 'You have not looked up once.');
-    } else {
+    if (bite === 2) {
       const L = COURSES[course].lines;
       if (L[1]) say(L[1]);
     }
-  }
-
-  function toast() {
-    toastT = 0.9;
-    sipped = true;
-    warm = Math.min(1, warm + 0.28);
-    if (KD.Sfx) KD.Sfx.play('click');
-    say(['To the trench.', 'To you, then.', 'You remembered the wine.'][
-      Math.min(2, course)]);
   }
 
   function say(s) { said = s; saidT = 3.2; }
@@ -301,10 +305,12 @@ KD.Scenes.dinner = (function () {
     } else {
       hud();
     }
-    if (saidT > 0 && phase !== 'in') {
-      KD.Talk.panel({ name: 'Coralene', portrait: 'po_queen' }, said, { bottom: 6 });
+    if (saidT > 0 && phase !== 'in' && !talking) {
+      KD.Convo.box({ portrait: 'po_queen', name: 'Coralene', tint: 'CORAL.3' }, said,
+                   { speaking: false });
     }
-    if (KD.touch) { layout(); KD.In.buttons(BTNS); KD.UI.touchPad(BTNS, { noStick: true }); }
+    /* the conversation, on top of the room it is happening in */
+    if (talking) KD.Convo.draw();
   }
 
   function plate(x, y, mine) {
@@ -358,19 +364,6 @@ KD.Scenes.dinner = (function () {
     meter(KD.W - 84, 8, 'FULL', full, 'BLOOD.2', 'BLOOD.3');
     meter(KD.W - 84, 21, 'HER', warm, 'CORAL.1', 'CORAL.3');
 
-    /* what the two buttons do */
-    if (!KD.touch) {
-      const y = KD.H - 22;
-      key('E', 'EAT', KD.W / 2 - 62, y, 'BLOOD.3');
-      key('F', 'TOAST HER', KD.W / 2 + 6, y, 'CORAL.3');
-    }
-    if (!sipped && bite >= 1) {
-      /* a nudge, once, because nobody presses the second button unprompted */
-      const p = Math.abs(Math.sin(t * 3));
-      KD.Text.draw('SHE IS RIGHT THERE', KD.W / 2, KD.H - 36,
-                   p > 0.5 ? 'CORAL.3' : 'CORAL.1',
-                   { align: 'center', tiny: true, shadow: 'INK.0' });
-    }
   }
 
   function meter(x, y, lab, v, low, high) {
@@ -384,21 +377,6 @@ KD.Scenes.dinner = (function () {
     for (let k = 1; k < 4; k++) R(bx + Math.round(bw2 * k / 4), y, 1, 7, 'INK.1');
   }
 
-  function key(k, lab, x, y, col) {
-    R(x, y, 13, 13, 'INK.0');
-    KD.Screen.frame(x, y, 13, 13, col);
-    KD.Text.draw(k, x + 6, y + 3, col, { align: 'center' });
-    KD.Text.draw(lab, x + 17, y + 4, 'BONE.1', { tiny: true });
-  }
-
-  function layout() {
-    BTNS.length = 0;
-    const r = 24, pad = 12;
-    BTNS.push({ id: 'use', name: 'use', big: true, x: KD.W - 40,
-                y: KD.H - pad - r, r: r, label: 'EAT' });
-    BTNS.push({ id: 'hit', name: 'hit', x: KD.W - 40 - r - 22,
-                y: KD.H - pad - r + 2, r: 19, label: 'TOAST' });
-  }
 
   return { enter, update, draw };
 })();

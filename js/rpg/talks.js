@@ -118,6 +118,55 @@ KD.Talks = (function () {
     { who: 'keg',   text: 'Look at that. Four hundred years of kings and all it took was asking.' }
   ];
 
+  /* ---- the long table, one conversation a course -----------------
+     The dinner was EAT and TOAST pressed six times. The eating happens on
+     its own now and this is what is left of it, which is the part that was
+     ever worth playing: three chances to say something to her while the
+     plates come and go. Each choice moves `warm`, and `warm` is what she
+     is remembering in the scene where she leaves.
+     -------------------------------------------------------------- */
+  const dinner1 = [
+    { who: 'queen', text: 'You came. You actually came, and you sat down, and you have not looked at the door once.' },
+    { choose: [
+        { label: 'I said I would.', set: { warm: 1 }, goto: 'end1' },
+        { label: 'The cook does this one well.', goto: 'end1' },
+        { label: 'Eat. Say nothing.', goto: 'cold1' }
+      ], text: 'SAY:' },
+    { label: 'end1' },
+    { who: 'queen', text: 'Then eat it while it is hot. I have watched a lot of fish go cold in this room.' },
+    { end: true },
+    { label: 'cold1' },
+    { who: 'queen', text: 'Right. Well. The fish is good.' }
+  ];
+
+  const dinner2 = [
+    { who: 'queen', text: 'The cook sent this one up himself. He does not do that. He must like one of us.' },
+    { choose: [
+        { label: 'It is not me.', goto: 'end2' },
+        { label: 'Then we should tell him so.', set: { warm: 1 }, goto: 'end2' },
+        { label: 'He is a cook. It is his job.', set: { cruel: 1 }, goto: 'cold2' }
+      ], text: 'SAY:' },
+    { label: 'end2' },
+    { who: 'queen', text: 'Hm. Do you know, you have been almost good company for a whole course.' },
+    { end: true },
+    { label: 'cold2' },
+    { who: 'queen', text: 'It is his job to feed a hundred people and he came up four flights for you. But yes. His job.' }
+  ];
+
+  const dinner3 = [
+    { who: 'queen', text: 'Stay a while after. The candles have hours in them yet, and nothing is going to come up the drain tonight.' },
+    { choose: [
+        { label: 'I will stay.', set: { warm: 1 }, goto: 'end3' },
+        { label: 'One hour. Then the trench.', goto: 'end3' },
+        { label: 'Something is always coming up the drain.', goto: 'cold3' }
+      ], text: 'SAY:' },
+    { label: 'end3' },
+    { who: 'queen', text: 'Good. Sit there and be a person for an evening. It suits you better than the other thing.' },
+    { end: true },
+    { label: 'cold3' },
+    { who: 'queen', text: 'Yes. There always is. I have started keeping a list.' }
+  ];
+
   /* ---- 5. the neighbours, once he is in the village -------------- */
   const village = [
     { who: 'santa', text: 'Easy, big fella. You have been face down in that sand for two tides and I have been waiting to see if you floated.' },
@@ -126,5 +175,5 @@ KD.Talks = (function () {
     { who: 'santa', text: 'Which is the good news, if you think about it. A shut gate is a thing you can do something about.' }
   ];
 
-  return { wake, sharks, bully, keg, village };
+  return { wake, sharks, bully, keg, village, dinner1, dinner2, dinner3 };
 })();

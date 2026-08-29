@@ -17,7 +17,12 @@ KD.Scenes.wake = (function () {
   const R = KD.Screen.rect;
 
   let t = 0, phase = 'card', pt = 0;
-  let sweep = 0, dir = 1, speed = 1.15, tries = 0;
+  /* This was a sweeping needle over a target band: land it in the green or
+     throw again, three tries. It is one press now. The good part of the beat
+     was always the trident going end over end and the clock coming apart -
+     the timing bar in front of it was a gate between you and the animation,
+     on the first screen of the game, before anybody had agreed to play. */
+  let thrown = false;
   let hit = -1, msg = '', shock = 0, smashed = false, sat = 0;
   /* the throw is its own little timeline: wind up, fly, land, sit there */
   const WIND = 0.22, FLY = 0.34, LAND = 0.12, HOLD = 0.5;
@@ -28,11 +33,10 @@ KD.Scenes.wake = (function () {
   const BTNS = [];
 
   /* the green band you are aiming for, and the sliver inside it */
-  const BAND = 0.16, PERFECT = 0.05, TARGET = 0.5;
 
   function enter() {
     t = 0; phase = 'card'; pt = 0;
-    sweep = 0; dir = 1; speed = 1.15; tries = 0;
+    thrown = false;
     hit = -1; msg = ''; shock = 0; smashed = false; sat = 0;
     shards.length = 0; spin = 0;
     if (!baked) bake();
@@ -130,9 +134,6 @@ KD.Scenes.wake = (function () {
       return;
     }
     if (phase === 'check') {
-      sweep += dir * speed * dt;
-      if (sweep > 1) { sweep = 1; dir = -1; }
-      if (sweep < 0) { sweep = 0; dir = 1; }
       if (press()) strike();
       return;
     }
@@ -159,8 +160,7 @@ KD.Scenes.wake = (function () {
       }
       for (let i = shards.length - 1; i >= 0; i--) if (shards[i].t <= 0) shards.splice(i, 1);
       if (pt > THROW) {
-        if (smashed) { phase = 'after'; pt = 0; }
-        else { phase = 'check'; pt = 0; sat = 0; }
+        phase = 'after'; pt = 0;
       }
       return;
     }
@@ -182,25 +182,13 @@ KD.Scenes.wake = (function () {
   }
 
   function strike() {
-    const d = Math.abs(sweep - TARGET);
-    tries++;
-    hit = sweep;
+    if (thrown) return;
+    thrown = true;
+    hit = 1;
     pt = 0; sat = 0; landed = false; spin = 0; shards.length = 0;
-    if (d < PERFECT) {
-      msg = 'STRAIGHT THROUGH IT'; smashed = true; shock = 0.5;
-      if (KD.Juice) KD.Juice.hit(0.28);
-    } else if (d < BAND) {
-      msg = 'GOT IT'; smashed = true; shock = 0.4;
-      if (KD.Juice) KD.Juice.hit(0.2);
-    } else if (tries >= 3) {
-      /* nobody is getting stuck on the first screen of the game */
-      msg = 'CLOSE ENOUGH'; smashed = true; shock = 0.3;
-    } else {
-      msg = ['MISSED. IT IS LAUGHING AT YOU.', 'AGAIN. IT IS GETTING LOUDER.'][tries - 1] || 'AGAIN.';
-      smashed = false;
-      speed += 0.34;                                 // it gets ruder
-      if (KD.Sfx) KD.Sfx.play('hurt');
-    }
+    msg = 'STRAIGHT THROUGH IT';
+    smashed = true; shock = 0.5;
+    if (KD.Juice) KD.Juice.hit(0.3);
     if (KD.Sfx) KD.Sfx.play('swing');
     phase = 'strike';
   }
@@ -382,9 +370,11 @@ KD.Scenes.wake = (function () {
     if (phase === 'check' || phase === 'strike') gauge();
 
     if (phase === 'after') {
-      const line = tries === 1 ? 'Six hundred years of kings and not one alarm clock.'
-                 : 'It will be back tomorrow. They always come back.';
-      KD.Talk.panel({ name: 'You', portrait: 'po_king' }, line, {});
+      /* the same box the rest of the game talks in */
+      const line = 'Six hundred years of kings, and not one of us ever solved the alarm clock.';
+      const L = KD.Convo.layout(0);
+      KD.Convo.box({ portrait: 'po_king', name: 'You', tint: 'WATER.3' }, line,
+                   { L: L, speaking: false });
     }
     if (KD.touch) {
       layout();
@@ -444,35 +434,21 @@ KD.Scenes.wake = (function () {
     }
   }
 
-  /* the timing check: a sweeping needle over a band */
+  /* what to press, on a plate, where the timing bar used to be */
   function gauge() {
-    const w = Math.min(220, KD.W - 40), h = 16;
+    const label = phase === 'strike' ? msg
+      : (KD.touch ? 'TAP TO THROW THE TRIDENT' : 'PRESS E TO THROW THE TRIDENT');
+    const w = KD.Text.width(label) + 20, h = 16;
     const x = Math.round((KD.W - w) / 2), y = KD.H - 46;
     R(x - 3, y - 3, w + 6, h + 6, 'INK.0');
     KD.Screen.frame(x - 3, y - 3, w + 6, h + 6, 'GOLD.0');
     R(x, y, w, h, 'DEEP.0');
-    /* the band, and the sliver inside it */
-    R(x + Math.round((TARGET - BAND) * w), y, Math.round(BAND * 2 * w), h, 'KELP.0');
-    R(x + Math.round((TARGET - PERFECT) * w), y, Math.round(PERFECT * 2 * w), h, 'KELP.2');
-    /* ticks, so the bar has a scale */
-    for (let k = 0; k <= 10; k++) R(x + Math.round(k * w / 10), y, 1, 3, 'INK.3');
-    /* the needle */
-    const nx = x + Math.round(sweep * w);
-    R(nx - 1, y - 4, 3, h + 8, 'WHITE');
-    R(nx, y - 4, 1, h + 8, 'GOLD.3');
-    /* where you struck last time */
-    if (hit >= 0) {
-      const hx = x + Math.round(hit * w);
-      R(hx, y - 7, 1, 4, smashed ? 'KELP.3' : 'BLOOD.2');
-    }
-    const label = phase === 'strike' ? msg : 'PRESS E WHEN THE NEEDLE IS IN THE GREEN';
-    KD.Text.draw(label, KD.W / 2, y + h + 6, phase === 'strike'
-                 ? (smashed ? 'KELP.3' : 'BLOOD.3') : 'BONE.2',
-                 { align: 'center', tiny: true, shadow: 'INK.0' });
-    if (tries > 0 && phase === 'check') {
-      KD.Text.draw('TRY ' + (tries + 1) + ' OF 3', KD.W / 2, y - 14, 'GOLD.2',
-                   { align: 'center', tiny: true, shadow: 'INK.0' });
-    }
+    R(x, y, w, 1, 'DEEP.2');
+    /* it pulses while it is waiting for you and holds still afterwards */
+    const on = phase === 'strike' || Math.sin(t * 4) > -0.3;
+    KD.Text.draw(label, KD.W / 2, y + 4,
+                 phase === 'strike' ? 'KELP.3' : (on ? 'GOLD.3' : 'GOLD.1'),
+                 { align: 'center', shadow: 'INK.0' });
   }
 
   function layout() {
@@ -482,6 +458,6 @@ KD.Scenes.wake = (function () {
   }
 
   return { enter, update, draw,
-           /* a seam for the smoke harness: land the needle dead centre */
-           _forceHit: () => { sweep = TARGET; phase = 'check'; strike(); } };
+           /* a seam for the smoke harness: throw it now */
+           _forceHit: () => { phase = 'check'; strike(); } };
 })();

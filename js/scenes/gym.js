@@ -1,140 +1,89 @@
 /* ============================================================
-   scenes/gym.js - Brine's Gym. Training is a timing game: a
-   marker sweeps a bar, you hit it inside the window, the window
-   shrinks as the set goes on. Reps become discipline levels and
-   the weight comes off. One button, works on a thumb.
+   scenes/gym.js - Brine's Gym. A set is an ANIMATED SET: you
+   pick the exercise, he does the twelve reps, and the weight
+   comes off. There is no timing check in it.
+
+   It used to be three separate timing games - a sweeping bar,
+   an alternating rhythm, and a charge-and-release column. Three
+   of them, in the one room you have to keep coming back to for
+   the whole game, each one a wall between you and the thing you
+   came here for. The exercise you pick still decides which
+   discipline goes up, which is the only choice that was ever
+   doing any work; the rest of it is the king lifting, sweating,
+   and getting lighter, which is what you came to watch.
    ============================================================ */
 KD.Scenes.gym = (function () {
   const S = KD.State;
   let disc = 'strength';
-  /* Three exercises, and each one is a DIFFERENT game rather than the same
-     bar with a different label:
-       press  a marker sweeps, hit it inside a shrinking window
-       sprint alternate two keys in rhythm without breaking tempo
-       hold   charge to a target band and release inside it
-     Each favours a discipline, and each burns weight its own way. */
+  /* Three exercises. The one you pick decides which discipline goes up and
+     nothing else - which was always the only choice in this room that was
+     doing any work. */
   const EXERCISES = [
     { id: 'press',  name: 'Bench Press', disc: 'strength',
-      blurb: 'Time the bar. The window shrinks every rep.' },
+      blurb: 'Twelve on the bar. It is the shoulders that go first.' },
     { id: 'sprint', name: 'Swim Sprint', disc: 'wind',
-      blurb: 'Alternate left and right. Keep the tempo.' },
+      blurb: 'Twelve lengths. He hates every one of them.' },
     { id: 'hold',   name: 'Stone Hold',  disc: 'grit',
-      blurb: 'Charge into the band and let go inside it.' }
+      blurb: 'Hold the stone until his arms give out. Twelve times.' }
   ];
   let ex = EXERCISES[0];
   let phase = 'pick';            // pick | set | done
-  let pos = 0, dir = 1, speed = 1.1, win = 0.20, target = 0.5;
-  let reps = 0, hits = 0, combo = 0, best = 0, score = 0, t = 0, flash = 0, flashCol = 'WHITE';
+  let reps = 0, t = 0, setT = 0, flash = 0, flashCol = 'WHITE';
+  let score = 0, lastResult = {};
   const REPS = 12;
-  /* sprint: which side is expected next, and how long since the last one */
-  let side = 0, beat = 0, tempo = 0.44, lastBeat = 0;
-  /* hold: the charge and the band it has to land in */
-  let charge = 0, rising = true, bandLo = 0.5, bandHi = 0.7;
+  const REP_T = 0.34;            // one rep, in seconds
+  const sweat = [];
   const BTNS = [];
 
   function enter(args) {
-    phase = 'pick'; t = 0; score = 0; reps = 0; hits = 0; combo = 0; best = 0;
+    phase = 'pick'; t = 0; setT = 0; score = 0; reps = 0; sweat.length = 0;
     if (args && args.disc) disc = args.disc;
     KD.UI.guard(0.2);
   }
   function begin() {
     phase = 'set';
     disc = ex.disc;
-    pos = 0; dir = 1; speed = 1.05; win = 0.22;
-    target = 0.5; reps = 0; hits = 0; combo = 0; best = 0; score = 0;
-    side = 0; beat = 0; tempo = 0.44; lastBeat = 0;
-    charge = 0; rising = true;
+    reps = 0; setT = 0; score = 0; sweat.length = 0;
     KD.Sfx.play('open');
-    newRep();
   }
-  function newRep() {
+
+  /* one rep lands: a grunt, some sweat, and points. The payout scales with
+     the level you already have, so a set is worth more the fitter he is -
+     that is the progression the timing check used to be standing in for. */
+  function rep() {
     reps++;
-    if (reps > REPS) { finish(); return; }
-    /* every exercise gets harder the same way: less room, less time */
-    speed = 1.05 + reps * 0.13;
-    win = Math.max(0.055, 0.22 - reps * 0.013);
-    target = 0.18 + Math.random() * 0.64;
-    pos = 0; dir = 1;
-    tempo = Math.max(0.16, 0.44 - reps * 0.022);
-    lastBeat = 0;
-    const w = Math.max(0.09, 0.26 - reps * 0.014);
-    bandLo = 0.25 + Math.random() * (0.7 - w);
-    bandHi = bandLo + w;
-    charge = 0; rising = true;
+    const lvl = S.S.train[disc] || 0;
+    const pts = 7 + lvl * 1.4;
+    score += pts;
+    flash = 0.16; flashCol = 'KELP.2';
+    for (let i = 0; i < 4; i++) {
+      sweat.push({ x: (Math.random() - 0.5) * 22, y: -20 - Math.random() * 14,
+                   vx: (Math.random() - 0.5) * 50, vy: -30 - Math.random() * 40,
+                   t: 0.5 + Math.random() * 0.3 });
+    }
+    KD.Fx.num(KD.W / 2 + (Math.random() - 0.5) * 44, KD.H * 0.44,
+              '+' + Math.round(pts), reps === REPS ? 'GOLD.3' : 'KELP.2');
+    KD.Sfx.play(reps === REPS ? 'craft' : 'step');
+    if (reps >= REPS) finish();
   }
+
   function finish() {
     phase = 'done';
     const r = KD.Goal.train(S.S, disc, score);
-    /* a real set costs real weight */
     S.burnFat(1.2 + score * 0.02);
     S.addXp(6 + Math.round(score * 0.25));
     S.recalc();
     S.save();
     lastResult = r || {};
-    KD.Sfx.play(hits > REPS * 0.6 ? 'levelup' : 'click');
+    KD.Sfx.play('levelup');
   }
-  let lastResult = {};
-
-  /* one scorer, so all three exercises pay out on the same curve */
-  function land(quality) {
-    const pts = Math.round(4 + quality * 8) * (1 + Math.min(6, combo) * 0.16);
-    score += pts; hits++; combo++;
-    best = Math.max(best, combo);
-    flash = 0.22; flashCol = quality > 0.75 ? 'GOLD.3' : 'KELP.2';
-    KD.Fx.num(KD.W / 2 + (Math.random() - 0.5) * 40, KD.H * 0.42, '+' + Math.round(pts),
-      quality > 0.75 ? 'GOLD.3' : 'KELP.2');
-    KD.Sfx.play(quality > 0.75 ? 'craft' : 'pickup');
-  }
-  function miss() {
-    combo = 0;
-    flash = 0.22; flashCol = 'BLOOD.2';
-    KD.Sfx.play('deny');
-  }
-
-  function press() {
-    if (phase !== 'set') return;
-    const off = Math.abs(pos - target);
-    if (off <= win) land(1 - off / win); else miss();
-    newRep();
-  }
-
-  /* SPRINT: alternate the two sides. Scored on how close each stroke lands
-     to the tempo, so it is a rhythm game and not a mash. */
-  function stroke(which) {
-    if (phase !== 'set') return;
-    if (which !== side) { miss(); newRep(); return; }
-    const gap = beat - lastBeat;
-    if (lastBeat > 0) {
-      const err = Math.abs(gap - tempo) / tempo;
-      if (err > 0.85) { miss(); newRep(); return; }
-      land(Math.max(0, 1 - err));
-    } else land(0.6);
-    lastBeat = beat;
-    side = 1 - side;
-    if (hits + 1 >= reps * 2) newRep();
-  }
-
-  /* HOLD: charge climbs while the button is down. Let go inside the band. */
-  function release() {
-    if (phase !== 'set') return;
-    if (charge >= bandLo && charge <= bandHi) {
-      const mid = (bandLo + bandHi) / 2;
-      land(1 - Math.abs(charge - mid) / ((bandHi - bandLo) / 2 || 1));
-    } else miss();
-    newRep();
-  }
-
 
   function layout() {
     BTNS.length = 0;
     if (!KD.touch) { KD.In.buttons(BTNS); return; }
-    if (phase === 'set' && ex.id === 'sprint') {
-      BTNS.push({ name: 'left',  x: 46, y: KD.H - 44, r: 26, label: 'L', icon: 'ic_arrow_l', big: true });
-      BTNS.push({ name: 'right', x: KD.W - 46, y: KD.H - 44, r: 26, label: 'R', icon: 'ic_arrow_r', big: true });
-    } else {
+    if (phase !== 'set') {
       BTNS.push({ name: 'rep', x: KD.W - 40, y: KD.H - 44, r: 26,
-                  label: phase === 'set' ? (ex.id === 'hold' ? 'HOLD' : 'REP') : 'GO',
-                  icon: 'ic_star', big: true });
+                  label: 'GO', icon: 'ic_star', big: true });
     }
     KD.In.buttons(BTNS);
   }
@@ -145,28 +94,16 @@ KD.Scenes.gym = (function () {
     if (flash > 0) flash -= dt;
     KD.Fx.update(dt);
     KD.Belly.update(dt, S);
+    for (let i = sweat.length - 1; i >= 0; i--) {
+      const d = sweat[i];
+      d.t -= dt; d.x += d.vx * dt; d.y += d.vy * dt; d.vy += 190 * dt;
+      if (d.t <= 0) sweat.splice(i, 1);
+    }
     if (KD.In.isHit('Escape')) { KD.Game.go('play', {}); return; }
     if (phase === 'set') {
-      const go = KD.In.isHit('Space') || KD.In.isHit('KeyF') || KD.In.actHit('rep') || KD.In.mouse.click;
-      if (ex.id === 'press') {
-        pos += dir * speed * dt;
-        if (pos >= 1) { pos = 1; dir = -1; }
-        if (pos <= 0) { pos = 0; dir = 1; combo = 0; newRep(); }   // a whole sweep missed
-        if (go) press();
-      } else if (ex.id === 'sprint') {
-        beat += dt;
-        /* let the tempo slip too far and the rep is gone */
-        if (lastBeat > 0 && beat - lastBeat > tempo * 2.1) { miss(); newRep(); }
-        if (KD.In.isHit('KeyA', 'ArrowLeft') || KD.In.actHit('left')) stroke(0);
-        if (KD.In.isHit('KeyD', 'ArrowRight') || KD.In.actHit('right')) stroke(1);
-      } else {
-        /* hold: the charge runs up, and keeps going past the band if you
-           dither - overcharging is a miss, same as undercharging */
-        const held = KD.In.isDown('Space', 'KeyF') || KD.In.act('rep') || KD.In.mouse.down;
-        if (held) charge = Math.min(1.15, charge + dt * (0.55 + reps * 0.05));
-        else if (charge > 0.02) release();
-        if (charge >= 1.15) { miss(); newRep(); }
-      }
+      /* the set runs itself. Nothing to press, and nothing to lose. */
+      setT += dt;
+      while (reps < REPS && setT >= (reps + 1) * REP_T) rep();
     } else if (phase === 'done') {
       if (KD.In.isHit('Space') || KD.In.isHit('Enter') || KD.In.actHit('rep')) { phase = 'pick'; }
     }
@@ -178,31 +115,57 @@ KD.Scenes.gym = (function () {
     /* in_wall_panel never existed, so this room had been a flat navy void.
        It is a room inside an apple - use the same flesh wall and plank
        wainscot the other interiors are built from. */
+    /* The wall used to be the raw fruit-flesh tile at shade 1, which across
+       a whole screen came out bright pink with speckles in it - salami, not
+       a gym. Three steps down the ramp it is a dim room with a texture in
+       it, which is what the inside of a hollowed fruit should look like. */
     for (let y = 0; y < KD.H; y += 8) {
       for (let x = 0; x < KD.W; x += 8) {
         const alt = (((x / 8) | 0) * 3 + ((y / 8) | 0) * 5) % 7 < 3;
         if (KD.PX.has('in_wall')) {
-          KD.PX.blit(ctx, alt ? 'in_wall2' : 'in_wall', x, y, { anchor: false, shade: 1 });
+          KD.PX.blit(ctx, alt ? 'in_wall2' : 'in_wall', x, y, { anchor: false, shade: 3 });
         }
       }
     }
     const floorY = Math.round(KD.H * 0.78);
+    /* a lamp. It had a cone of light under it, five solid bands widening
+       down the wall, and they read as three purple stripes hanging in the
+       air - the same lesson as the god rays, one room smaller. The fixture
+       stays; the cone does not. */
+    const lx = Math.round(KD.W / 2);
+    KD.Screen.rect(lx - 8, 22, 16, 4, 'INK.0');
+    KD.Screen.rect(lx - 6, 24, 12, 3, 'GOLD.2');
+    KD.Screen.rect(lx - 4, 26, 8, 2, 'GOLD.3');
+    KD.Screen.rect(lx - 1, 12, 2, 11, 'INK.2');
     for (let x = 0; x < KD.W; x += 8) {
       KD.PX.blit(ctx, 'in_wainscot', x, floorY - 5, { anchor: false, clip: { w: 8, h: 5 } });
       for (let y = floorY; y < KD.H; y += 8) {
-        KD.PX.blit(ctx, ((x / 8 | 0) + (y / 8 | 0)) & 1 ? 'in_floor2' : 'in_floor', x, y, { anchor: false });
+        KD.PX.blit(ctx, ((x / 8 | 0) + (y / 8 | 0)) & 1 ? 'in_floor2' : 'in_floor', x, y,
+                   { anchor: false, shade: 2 });
       }
     }
     KD.Screen.rect(0, floorY - 1, KD.W, 1, 'INK.0');
+    /* a rubber mat he stands on, so the room has a middle */
+    KD.Screen.rect(lx - 46, floorY, 92, 6, 'INK.1');
+    KD.Screen.rect(lx - 46, floorY, 92, 1, 'INK.2');
+    for (let k = 0; k < 9; k++) KD.Screen.rect(lx - 42 + k * 10, floorY + 2, 5, 2, 'INK.0');
+    /* a rack of plates on the left, a bench on the right */
+    rack(20, floorY);
+    bench(KD.W - 62, floorY);
     const pre = KD.PX.hasAny('pk_idle') ? 'pk_' : 'king_';
     if (KD.PX.hasAny(pre + 'idle')) {
       const kx = Math.round(KD.W * 0.5);
-      KD.PX.blit(ctx, KD.PX.frameOf(phase === 'set' ? pre + 'mine' : pre + 'idle', t * 2), kx, floorY + 2);
+      /* he works through it: the mine cycle at rep speed, idling otherwise */
+      const cyc = phase === 'set' ? (setT / REP_T) * 0.5 : t * 0.4;
+      KD.PX.blit(ctx, KD.PX.frameOf(phase === 'set' ? pre + 'mine' : pre + 'idle', cyc), kx, floorY + 2);
       /* his belly bounces while he works, which is the whole point of this room */
       if (pre === 'pk_') KD.Belly.draw(ctx, kx, floorY + 2, 1, S);
+      /* sweat, thrown off him on every rep */
+      for (const d of sweat) {
+        KD.Screen.rect(Math.round(kx + d.x), Math.round(floorY + 2 + d.y), 2, 2,
+                       d.t > 0.25 ? 'WATER.3' : 'WATER.2');
+      }
     }
-    if (KD.PX.has('td_dumbbell')) KD.PX.blit(ctx, 'td_dumbbell', 20, floorY - 8, { anchor: false });
-    if (KD.PX.has('td_scales')) KD.PX.blit(ctx, 'td_scales', KD.W - 30, floorY - 8, { anchor: false });
 
     const cx = KD.W / 2;
     KD.Text.draw("BRINE'S GYM", cx, 8, 'GOLD.3', { align: 'center', space: 1, shadow: 'INK.0' });
@@ -216,6 +179,34 @@ KD.Scenes.gym = (function () {
     if (flash > 0) KD.Dither.fill(ctx, 0, 0, KD.W, KD.H, flashCol, flash * 1.1);
     KD.UI.touchPad(BTNS);
     if (KD.UI.button(4, KD.H - 15, 44, 12, 'LEAVE', { key: 'Escape' })) KD.Game.go('play', {});
+  }
+
+  /* a weight rack: two uprights, three bars, and plates on them */
+  function rack(x, fy) {
+    const R = KD.Screen.rect;
+    R(x, fy - 40, 3, 40, 'INK.2'); R(x + 26, fy - 40, 3, 40, 'INK.2');
+    R(x, fy - 40, 3, 40, 'INK.2'); R(x + 1, fy - 40, 1, 40, 'INK.3');
+    R(x - 2, fy - 2, 33, 3, 'INK.1');
+    for (let k = 0; k < 3; k++) {
+      const y = fy - 34 + k * 11;
+      R(x + 2, y, 25, 2, 'STONE.1');
+      R(x + 2, y, 25, 1, 'STONE.3');
+      const w = 5 - k;                       /* heaviest at the bottom */
+      R(x + 1, y - w, 4, w * 2 + 2, 'STONE.0');
+      R(x + 1, y - w, 4, 1, 'STONE.2');
+      R(x + 24, y - w, 4, w * 2 + 2, 'STONE.0');
+      R(x + 24, y - w, 4, 1, 'STONE.2');
+    }
+  }
+
+  /* a bench, seen from the side */
+  function bench(x, fy) {
+    const R = KD.Screen.rect;
+    R(x, fy - 16, 42, 5, 'BLOOD.0');
+    R(x, fy - 16, 42, 1, 'BLOOD.2');
+    R(x + 3, fy - 11, 4, 11, 'INK.2');
+    R(x + 35, fy - 11, 4, 11, 'INK.2');
+    R(x + 1, fy - 1, 40, 2, 'INK.1');
   }
 
   function pick(ctx, cx) {
@@ -241,68 +232,27 @@ KD.Scenes.gym = (function () {
       'WATER.2', { tiny: true, align: 'center' });
   }
 
+  /* What a set looks like now: who is training, which rep he is on, and
+     twelve pips filling in. No target, no window, nothing to hit. */
   function set(ctx, cx) {
     const d = KD.Goal.DISCIPLINES.find((x) => x.id === disc);
-    KD.Text.draw(ex.name + '   REP ' + Math.min(reps, REPS) + '/' + REPS, cx, 34,
-      d.col, { align: 'center', shadow: 'INK.0' });
-    const bw = Math.min(280, KD.W - 60), bx = cx - bw / 2, by = 52;
-
-    if (ex.id === 'press') {
-      KD.Screen.rect(bx - 2, by - 2, bw + 4, 18, 'INK.0');
-      KD.Screen.rect(bx, by, bw, 14, 'DEEP.0');
-      const tw = Math.max(6, Math.round(bw * win * 2));
-      const tx = Math.round(bx + bw * target - tw / 2);
-      KD.Screen.rect(tx, by, tw, 14, 'KELP.0');
-      KD.Screen.rect(tx + (tw >> 1) - 1, by, 2, 14, 'GOLD.3');
-      KD.Screen.frame(tx, by, tw, 14, 'KELP.2');
-      const mx = Math.round(bx + bw * pos);
-      KD.Screen.rect(mx - 1, by - 4, 3, 22, 'BONE.2');
-      KD.Screen.rect(mx, by - 6, 1, 4, 'WHITE');
-
-    } else if (ex.id === 'sprint') {
-      /* Two pads. The lit one is the stroke you owe, and the ring round it
-         closes as the beat runs out, so the tempo is something you SEE. */
-      const r = 22;
-      [0, 1].forEach((k) => {
-        const x = Math.round(cx + (k ? 46 : -46)), y = by + 12;
-        const on = side === k;
-        KD.Screen.rect(x - r, y - 12, r * 2, 24, on ? 'KELP.0' : 'DEEP.0');
-        KD.Screen.frame(x - r, y - 12, r * 2, 24, on ? 'KELP.2' : 'INK.2');
-        KD.Text.draw(k ? 'RIGHT' : 'LEFT', x, y - 4, on ? 'WHITE' : 'INK.3',
-          { tiny: true, align: 'center' });
-        if (on && lastBeat > 0) {
-          const f = Math.max(0, 1 - (beat - lastBeat) / (tempo * 2.1));
-          KD.Screen.rect(x - r, y + 12, Math.round(r * 2 * f), 3, 'GOLD.2');
-        }
-      });
-      KD.Text.draw('TEMPO ' + (1 / tempo).toFixed(1) + '/s', cx, by + 32, 'WATER.2',
-        { tiny: true, align: 'center' });
-
-    } else {
-      /* A vertical column: charge climbs it, the band is the target, and
-         over the top counts as a miss too. */
-      const ch = 88, cwid = 28;
-      const bxx = Math.round(cx - cwid / 2), byy = by - 6;
-      KD.Screen.rect(bxx - 2, byy - 2, cwid + 4, ch + 4, 'INK.0');
-      KD.Screen.rect(bxx, byy, cwid, ch, 'DEEP.0');
-      const y0 = Math.round(byy + ch - bandHi * ch);
-      const y1 = Math.round(byy + ch - bandLo * ch);
-      KD.Screen.rect(bxx, y0, cwid, y1 - y0, 'KELP.0');
-      KD.Screen.frame(bxx, y0, cwid, y1 - y0, 'KELP.2');
-      const h = Math.round(Math.min(1, charge) * ch);
-      KD.Screen.rect(bxx + 3, byy + ch - h, cwid - 6, h, charge > 1 ? 'BLOOD.2' : 'GOLD.2');
-      KD.Screen.rect(bxx + 3, byy + ch - h, cwid - 6, 1, 'WHITE');
-      KD.Text.draw(charge > 1 ? 'TOO FAR' : 'HOLD', cx, byy + ch + 5,
-        charge > 1 ? 'BLOOD.3' : 'BONE.1', { tiny: true, align: 'center' });
+    KD.Text.draw(ex.name, cx, 34, d.col, { align: 'center', shadow: 'INK.0' });
+    const bw = Math.min(200, KD.W - 60), bx = Math.round(cx - bw / 2), by = 50;
+    KD.Screen.rect(bx - 3, by - 3, bw + 6, 18, 'INK.0');
+    KD.Screen.frame(bx - 3, by - 3, bw + 6, 18, 'GOLD.0');
+    KD.Screen.rect(bx, by, bw, 12, 'DEEP.0');
+    const done = Math.min(1, setT / (REPS * REP_T));
+    KD.Screen.rect(bx, by, Math.round(bw * done), 12, d.col);
+    KD.Screen.rect(bx, by, Math.round(bw * done), 1, 'WHITE');
+    /* twelve pips, so a rep is a thing that visibly happened */
+    for (let k = 0; k < REPS; k++) {
+      const px = bx + 3 + Math.round(k * (bw - 8) / REPS);
+      KD.Screen.rect(px, by + 15, 4, 4, k < reps ? 'GOLD.3' : 'INK.2');
     }
-
-    KD.Text.draw('COMBO x' + combo + (best ? '   BEST x' + best : ''), cx, KD.H - 52,
-      combo > 2 ? 'GOLD.3' : 'BONE.1', { tiny: true, align: 'center' });
-    KD.Text.draw('SCORE ' + Math.round(score), cx, KD.H - 42, 'BONE.2', { align: 'center' });
-    const tip = ex.id === 'press' ? (KD.touch ? 'tap REP in the green' : 'SPACE in the green')
-              : ex.id === 'sprint' ? (KD.touch ? 'tap the lit pad, in time' : 'A and D, alternating, in time')
-              : (KD.touch ? 'hold, release in the green' : 'hold SPACE, release in the green');
-    KD.Text.draw(tip, cx, KD.H - 30, 'INK.3', { tiny: true, align: 'center' });
+    KD.Text.draw('REP ' + Math.min(reps, REPS) + ' / ' + REPS, cx, by + 23,
+                 'BONE.2', { align: 'center', tiny: true, shadow: 'INK.0' });
+    KD.Text.draw(String(Math.round(score)), cx, KD.H - 44, 'GOLD.3',
+                 { align: 'center', shadow: 'INK.0' });
   }
 
   function results(ctx, cx) {
@@ -311,8 +261,7 @@ KD.Scenes.gym = (function () {
     const rows = [
       ['Exercise', ex.name],
       ['Discipline', d.name],
-      ['Clean reps', hits + ' / ' + REPS],
-      ['Best combo', 'x' + best],
+      ['Reps', REPS + ' / ' + REPS],
       ['Score', String(Math.round(score))],
       ['Levels gained', String(lastResult.gained || 0)],
       ['Weight now', Math.round(S.S.weight) + ' kg']
