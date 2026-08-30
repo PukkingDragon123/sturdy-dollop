@@ -64,9 +64,17 @@ KD.Light = (function () {
         const i = y * W + x;
         if (v > 0) push(i, v);
         v -= sunCost(fg[i]);
-        /* open water dims slowly: full daylight in the shallows, gone by the
-           bottom of the reef. Below that you bring your own light. */
-        if (y > 34 && y % 5 === 0) v--;
+        /* Open water dims slowly: full daylight in the shallows, gone by the
+           bottom of the reef, and below that you bring your own light.
+
+           These numbers are TIED TO THE LAYER TABLE in world/gen.js and were
+           left behind when the world went from 460 tiles deep to 700. At one
+           level lost every five tiles from y=34 the sun hit zero at 109 - and
+           the reef now starts at 120, so the reef, the ruins and everything
+           under them went pitch black and the game read as a cave. One level
+           every eleven tiles from 60 puts the last of the daylight at 225,
+           which is the bottom of the reef, which is where it belongs. */
+        if (y > 60 && y % 11 === 0) v--;
         if (v <= 0) { v = 0; break; }
       }
     }
@@ -80,7 +88,11 @@ KD.Light = (function () {
        Written straight into the buffer, NOT queued - these need no spreading
        and half a million queue entries is what overran the ring. */
     for (let y = 0; y < H; y++) {
-      const amb = y < 60 ? 5 : y < 100 ? 4 : y < 140 ? 2 : 0;
+      /* Scaled with the layers, and raised: this is a bright, warm ocean
+         down to the ruins and only then a dark one. The old floor gave out
+         at 140, which under the new layer table is halfway through the
+         reef. */
+      const amb = y < 130 ? 7 : y < 215 ? 5 : y < 280 ? 3 : y < 340 ? 2 : 0;
       if (!amb) continue;
       for (let x = 0; x < W; x++) {
         const i = y * W + x;

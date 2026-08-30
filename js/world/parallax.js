@@ -97,10 +97,17 @@ KD.Parallax = (function () {
      the water starts going anywhere. Without them the sea was one flat
      turquoise field from the waves to the sand, which is what "too small"
      looked like - no depth to read. */
+  /* One colour per depth, and the depths are TIED TO THE LAYER TABLE in
+     world/gen.js. These were left behind when the world went from 460 tiles
+     deep to 700: DEEP.2 started at 116 and the reef now starts at 120, so
+     the reef - the warm, loud, bright part of the ocean - was being painted
+     in the same navy as the trench, and the whole game read as a cave with
+     fish in it. Everything below the shallows moved down, and the bright
+     end of the ramp holds for twice as long. */
   const BANDS = [
-    [34, 'WATER.3'], [38, 'WATER.2'], [56, 'WATER.1'], [84, 'WATER.0'],
-    [116, 'DEEP.2'], [152, 'DEEP.1'], [214, 'DEEP.0'], [300, 'ROT.0'],
-    [380, 'INK.1']
+    [34, 'WATER.3'], [46, 'WATER.2'], [78, 'WATER.1'], [126, 'WATER.0'],
+    [186, 'DEEP.2'], [242, 'DEEP.1'], [340, 'DEEP.0'], [480, 'ROT.0'],
+    [600, 'INK.1']
   ];
 
   /* ---- the sky above the waterline -------------------------------- */

@@ -75,18 +75,52 @@ KD.Gen = (function () {
     const Zn = KD.Zones;
     const vill = Zn.byId.village;
     const shelfX = ((vill.x0 + vill.x1) / 2) | 0;
+    /* THE SHELF.
+
+       Until now the seabed sat at 44-76 across the whole map and everything
+       under it was solid rock, so a world seven hundred tiles deep had about
+       fifteen tiles of water in it and the other six hundred and fifty were
+       something you dug through. That is a mine with a puddle on top, and it
+       is why the ocean read as small however wide it got: the number that
+       matters is not how far you can travel, it is how much water there is
+       to be in.
+
+       The seabed falls away eastward now, from a shelf you can stand on at
+       the village to six hundred and forty tiles down at the Drop. Swimming
+       east IS descending. The swimmable volume goes up about seventeen times
+       and the shape of it - shallows, shelf, slope, abyss - is the shape of
+       a real ocean, which is the thing that was missing.
+
+       Control points in (tile x, seabed y); everything between is a
+       smoothstep, so there are no cliffs where two zones meet. */
+    const SHELF = [[0, 48], [750, 52], [1050, 56], [1420, 60], [1700, 96],
+                   [2150, 150], [2500, 196], [2830, 240], [3200, 286],
+                   [3510, 330], [3800, 392], [4100, 442], [4400, 560],
+                   [99999, 650]];
+    function shelfAt(x) {
+      for (let k = 0; k < SHELF.length - 1; k++) {
+        const a = SHELF[k], b = SHELF[k + 1];
+        if (x < b[0]) {
+          const u = (x - a[0]) / (b[0] - a[0]);
+          const e = u * u * (3 - 2 * u);            // smoothstep
+          return a[1] + (b[1] - a[1]) * e;
+        }
+      }
+      return SHELF[SHELF.length - 1][1];
+    }
     for (let x = 0; x < w; x++) {
       const z = Zn.at(x);
-      /* two octaves of hills, flattened right across the village so a town
-         can actually be built on it */
-      let s = 44 + Wd.fbm(x * 0.012, 0.5, 4) * 26 + Wd.fbm(x * 0.05, 9.5, 2) * 6;
+      const base = shelfAt(x);
+      /* the deeper it is the more broken it gets, so the shelf is smooth and
+         the abyss floor is ragged */
+      const rough = 5 + base * 0.10;
+      let s = base + (Wd.fbm(x * 0.012, 0.5, 4) - 0.5) * rough * 2
+                   + (Wd.fbm(x * 0.05, 9.5, 2) - 0.5) * 6;
       if (z.id === 'village' || z.id === 'gate') {
         const d = Math.min(1, Math.abs(x - shelfX) / 190);
         s = s * d + 56 * (1 - d);
-      } else if (z.open) {
-        s = 30 + Wd.fbm(x * 0.008, 4.5, 3) * 8;   // the Open Blue has almost no floor up here
       }
-      surface[x] = Math.round(s);
+      surface[x] = Math.max(40, Math.round(s));
       for (let y = 0; y < h; y++) {
         const i = y * w + x;
         if (y < surface[x]) { Wd.fg[i] = T.AIR; continue; }
