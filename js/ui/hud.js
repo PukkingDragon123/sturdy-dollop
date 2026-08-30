@@ -98,6 +98,62 @@ KD.Hud = (function () {
     const d = (KD.Player.P.y / 8) | 0;
     const L = KD.Gen.layerAt(d);
     KD.Text.draw(L.id.toUpperCase() + '  ' + d + 'm', KD.W / 2, KD.H - 27, 'BONE.0', { tiny: true, align: 'center', shadow: 'INK.0' });
+    gauge(S, d);
+  }
+
+  /* ---- the depth gauge ----------------------------------------------
+     The ocean is nine hundred tiles deep and going down it is the whole
+     game, and until now the only thing telling you how far you had got was
+     a number in the corner - and the crush depth, which is the thing that
+     kills you, was not shown at all. You simply started taking damage.
+
+     A column down the right edge: the whole ocean top to bottom, the layer
+     bands in their own water colours, your bead on it, and a hard red line
+     at the depth your gear can survive. Going deeper is the loop, so the
+     loop gets a dial.
+     ------------------------------------------------------------------ */
+  function gauge(S, depth) {
+    const D = KD.Zones.D;
+    const R = KD.Screen.rect;
+    const h = Math.min(150, KD.H - 76);
+    const x = KD.W - 13, y = 30;
+    const at = (tile) => y + Math.round(h * Math.max(0, Math.min(1, tile / D.floor)));
+    /* the water column, in the same colours the water actually is */
+    const BAND = [[0, 'WATER.3'], [D.sea, 'WATER.2'], [D.shallows, 'WATER.1'],
+                  [D.reef, 'WATER.0'], [D.ruins, 'DEEP.1'], [D.trench, 'DEEP.0'],
+                  [D.abyss, 'ROT.0']];
+    R(x - 2, y - 2, 10, h + 4, 'INK.0');
+    for (let i = 0; i < BAND.length; i++) {
+      const a = at(BAND[i][0]);
+      const b = i + 1 < BAND.length ? at(BAND[i + 1][0]) : y + h;
+      R(x, a, 6, Math.max(1, b - a), BAND[i][1]);
+    }
+    KD.Screen.frame(x - 2, y - 2, 10, h + 4, 'INK.2');
+    /* the crush line: how deep this gear will let you go */
+    const crush = KD.Player.P.crushAt;
+    if (crush !== undefined && crush < D.floor) {
+      const cy = at(crush);
+      R(x - 4, cy, 14, 1, 'BLOOD.3');
+      R(x - 4, cy + 1, 14, 1, 'BLOOD.0');
+    }
+    /* and you */
+    const py = at(depth);
+    R(x - 4, py - 1, 14, 3, 'INK.0');
+    R(x - 3, py, 12, 1, 'GOLD.3');
+    R(x - 5, py - 2, 3, 5, 'GOLD.3');
+    R(x + 8, py - 2, 3, 5, 'GOLD.3');
+    /* the warning, once you are inside twenty tiles of the crush */
+    if (crush !== undefined && depth > crush - 20) {
+      const over = depth > crush;
+      const lab = over ? 'PRESSURE' : 'DEEP';
+      if (over || Math.sin(KD.Game.t * 5) > 0) {
+        const lw = KD.Text.width(lab, { tiny: true }) + 8;
+        R(x - lw - 6, py - 5, lw, 11, 'INK.0');
+        KD.Screen.frame(x - lw - 6, py - 5, lw, 11, over ? 'BLOOD.3' : 'GOLD.2');
+        KD.Text.draw(lab, x - 6 - (lw >> 1), py - 3, over ? 'BLOOD.3' : 'GOLD.3',
+                     { tiny: true, align: 'center' });
+      }
+    }
   }
   function message(S) {
     if (S.S.msgT <= 0 || !S.S.msg) return;

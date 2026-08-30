@@ -52,6 +52,13 @@ flippers - with the crown still on top of the mask, because he has not stopped
 being the king about it. Crown plus goggles is a silhouette you can pick out at
 twenty-four pixels wide, which is all he gets.
 
+**The gauge on the right is the loop.** The ocean is nine hundred tiles deep
+and going down it is the game, so there is a column down the right edge with
+the whole thing on it: the layer bands in the colours the water actually is,
+your bead, and a hard red line at the depth your current gear will survive. It
+used to be a number in the corner, and the crush depth - the thing that kills
+you - was not shown at all. You simply started taking damage.
+
 **The goal is the scales.** You start at 100kg and the world is gated on what
 you weigh and how much you have trained. The Sea Gate will not open for you at
 a hundred kilos. Neither will the Drop. Neither, in the end, will the King -
