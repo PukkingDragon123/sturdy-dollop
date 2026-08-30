@@ -109,25 +109,47 @@ What that means in practice:
 
 ## The world
 
-4710 x 700 tiles at 8px, generated fresh from a seed and rebuildable from it.
-It has been widened twice and deepened once, both times for the same reason:
-once swimming had real momentum you could cross the map in a couple of minutes
-and touch the floor of it in thirty seconds. The Drop is meant to be somewhere
-you are frightened of running out of air, and at 460 tiles you could see the
-bottom of it from the top.
+7000 x 900 tiles at 8px, generated fresh from a seed in about four seconds
+and rebuildable from it. About **forty per cent of it is open water** - two
+and a half million swimmable tiles - because the seabed is a SHELF that falls
+away eastward, from something you can stand on at the village to six hundred
+and forty tiles down at the Drop.
+
+That shelf is the whole difference. Before it the seabed sat at 44-76 across
+the entire map and everything under it was solid rock, so a world seven
+hundred tiles deep had about fifteen tiles of water in it and the other six
+hundred and fifty were something you dug through - a mine with a puddle on
+top. The ocean read as small however wide it got, because the number that
+matters is not how far you can travel, it is how much water there is to be in.
+Swimming east IS descending now.
+
+**Every depth in the game comes from one table**, `KD.Zones.D`. It used to be
+copied by hand into five files - the layer table and the ore bands in the
+generator, the sunlight falloff and the ambient floor in the light, the water
+colour bands in the parallax, and every mob's spawn range - and twice the
+ocean was made deeper while only some of the copies moved. Both times the same
+bug came out wearing a different hat: the reef ended up below the last of the
+daylight and painted in trench navy, and the whole game read as a cave.
+
 It runs **west to east**, not just down: eight named zones, each with its own
 rock, ore density, cave density, light level and spawn table.
 
 | Zone | Tiles | What is there |
 |---|---|---|
-| The Old Mine | 0–750 | where the village digs. Ore, crawlers, bandits, and you can build in it |
-| Fruitfall | 750–1300 | twelve hollowed giant fruit on three terraces, and everyone you owe money to |
-| The Sea Gate | 1300–1420 | shut until you are light enough to be let through |
-| Shallow Reef | 1420–2150 | warm, loud with clownfish and parrotfish, and mantis shrimp that punch |
-| The Kelp Forest | 2150–2830 | you cannot see far in here. Morays lunge, cuttlefish spit |
-| The Sunken City | 2830–3510 | somebody built all this. Sentinels, lionfish, barracuda |
-| The Open Blue | 3510–4100 | no floor for a long way. Manta rays pass through |
-| The Drop | 4100–4710 | down. Just down. And the throne room at the bottom |
+| The Old Mine | 0–1110 | where the village digs. Ore, crawlers, bandits, and you can build in it |
+| Fruitfall | 1110–1930 | twelve hollowed giant fruit on three terraces, and everyone you owe money to |
+| The Sea Gate | 1930–2110 | shut until you are light enough to be let through |
+| Shallow Reef | 2110–3200 | warm, loud with clownfish and parrotfish, and mantis shrimp that punch |
+| The Kelp Forest | 3200–4210 | you cannot see far in here. Morays lunge, cuttlefish spit |
+| The Sunken City | 4210–5220 | somebody built all this. Sentinels, lionfish, barracuda |
+| The Open Blue | 5220–6090 | no floor for a long way. Manta rays pass through |
+| The Drop | 6090–7000 | down. Just down. And the throne room at the bottom |
+
+Scattered through the open water: **shipwrecks** with lanterns still lit and
+chests in the hold, **whale falls** on the deep shelf, **thermal vents** that
+glow all the way up their chimneys because they are the only thing burning in
+the trench and they are what you steer by, and **rock spires** so the column
+has something in it to swim around.
 
 **Fruitfall** is laid out procedurally on three terraces, and each fruit is
 carved from **its own sprite's pixel mask** - the collision is the silhouette,

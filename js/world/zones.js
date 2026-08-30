@@ -6,35 +6,35 @@
 KD.Zones = (function () {
   /* x is in tiles. The whole world is 2600 wide. */
   const Z = [
-    { id: 'mine',    name: 'The Old Mine',      x0: 0,   x1: 750,
+    { id: 'mine',    name: 'The Old Mine',      x0: 0, x1: 1110,
       blurb: 'Where the village digs. Nobody has been to the bottom.',
       rock: 'stone', deep: 'dark', ore: 1.6, caves: 1.25, build: true,
       mobs: ['crawler', 'snapper', 'urchin', 'bandit'], music: 'mine' },
-    { id: 'village', name: 'Fruitfall',         x0: 750, x1: 1300,
+    { id: 'village', name: 'Fruitfall',         x0: 1110, x1: 1930,
       blurb: 'Twelve hollowed fruit and everyone you owe money to.',
       rock: 'sand', deep: 'stone', ore: 0.2, caves: 0.35, safe: true,
       mobs: [], music: 'town' },
-    { id: 'gate',    name: 'The Sea Gate',      x0: 1300, x1: 1420,
+    { id: 'gate',    name: 'The Sea Gate',      x0: 1930, x1: 2110,
       blurb: 'Shut since the new king took the throne.',
       rock: 'masonry', deep: 'stone', ore: 0.1, caves: 0.2, gate: true,
       mobs: ['crawler'], music: 'town' },
-    { id: 'reef',    name: 'Shallow Reef',      x0: 1420, x1: 2150,
+    { id: 'reef',    name: 'Shallow Reef',      x0: 2110, x1: 3200,
       blurb: 'Warm, loud with fish, and full of things that bite.',
       rock: 'sand', deep: 'stone', ore: 0.7, caves: 0.9, reef: 2.2,
       mobs: ['clown', 'parrot', 'mantis', 'urchin', 'snapper', 'jelly'], music: 'reef' },
-    { id: 'kelp',    name: 'The Kelp Forest',   x0: 2150, x1: 2830,
+    { id: 'kelp',    name: 'The Kelp Forest',   x0: 3200, x1: 4210,
       blurb: 'You cannot see far in here. Neither can they.',
       rock: 'mud', deep: 'stone', ore: 0.8, caves: 1.1, kelp: 3.0, dim: 3,
       mobs: ['moray', 'cuttle', 'jelly', 'shark', 'parrot'], music: 'kelp' },
-    { id: 'ruins',   name: 'The Sunken City',   x0: 2830, x1: 3510,
+    { id: 'ruins',   name: 'The Sunken City',   x0: 4210, x1: 5220,
       blurb: 'Somebody built all this. Nobody says who.',
       rock: 'masonry', deep: 'stone', ore: 1.0, caves: 0.8, ruins: 2.4,
       mobs: ['sentinel', 'bandit', 'lion', 'cuda', 'urchin'], music: 'ruins' },
-    { id: 'blue',    name: 'The Open Blue',     x0: 3510, x1: 4100,
+    { id: 'blue',    name: 'The Open Blue',     x0: 5220, x1: 6090,
       blurb: 'No floor for a long way. Big things pass through.',
       rock: 'dark', deep: 'dark', ore: 0.9, caves: 1.6, open: true, big: true,
       mobs: ['manta', 'cuda', 'shark', 'jelly', 'horror'], music: 'blue' },
-    { id: 'drop',    name: 'The Drop',          x0: 4100, x1: 4710,
+    { id: 'drop',    name: 'The Drop',          x0: 6090, x1: 7000,
       blurb: 'Down. Just down.',
       rock: 'rot', deep: 'rot', ore: 1.3, caves: 1.4, dim: 6, boss: 'king2',
       mobs: ['horror', 'manta', 'cuda', 'sentinel'], music: 'deep' }
@@ -52,12 +52,38 @@ KD.Zones = (function () {
     const z = at(tx);
     return (tx - z.x0) / (z.x1 - z.x0);
   };
-  /* 2600 -> 3250 -> 4710 wide, and 460 -> 700 deep. Once swimming had real
-     momentum you could cross the old map in a couple of minutes and touch
-     the floor of it in thirty seconds, which is what "too small" meant both
-     times. The depth matters as much as the width: the Drop is supposed to
-     be a place you are frightened of running out of air in, and at 460
-     tiles you could see the bottom of it from the top. */
-  const WORLD_W = 4710, WORLD_H = 700;
-  return { Z, byId, at, atPx, progress, WORLD_W, WORLD_H };
+  /* 2600 -> 3250 -> 4710 -> 7000 wide, and 460 -> 700 -> 900 deep. */
+  const WORLD_W = 7000, WORLD_H = 900;
+
+  /* ================================================================
+     THE DEPTH TABLE, and it is the ONLY one.
+
+     These numbers were copied by hand into five files - the layer
+     table and the ore bands in world/gen.js, the sunlight falloff and
+     the ambient floor in world/light.js, the water colour bands in
+     world/parallax.js, and every mob's spawn range in sim/mobs.js.
+     Twice now the world has been made deeper and only some of those
+     copies moved, and both times the result was the same bug wearing
+     a different hat: the reef ended up below the last of the daylight
+     and painted in trench navy, and the whole game read as a cave.
+
+     Everything derives from here now. If the ocean gets deeper again,
+     this is the only place that changes.
+
+     `d(u)` maps a fraction of the way down the ocean to a tile row, so
+     a caller can say "sixty per cent of the way to the floor" and not
+     care what the floor is this week.
+     ================================================================ */
+  const D = {
+    sea:      34,          // the waterline
+    shallows: 52,          // sand and light, where the village sits
+    reef:     155,         // warm, loud, and the last of the daylight
+    ruins:    280,         // somebody built here
+    trench:   450,         // and here is where you need a lamp
+    abyss:    660,         // and here is where you need the pressure gear
+    floor:    890          // the bottom
+  };
+  const d = (u) => Math.round(D.sea + (D.floor - D.sea) * u);
+
+  return { Z, byId, at, atPx, progress, WORLD_W, WORLD_H, D, d };
 })();

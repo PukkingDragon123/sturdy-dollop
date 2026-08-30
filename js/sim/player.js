@@ -73,7 +73,10 @@ KD.Player = (function () {
     P.breath = P.stam / (st.stamMax || 1);   // the HUD reads one 0..1 field
     /* pressure: the abyss crushes you unless you are geared for it */
     const depth = (P.y / TS) | 0;
-    if (depth > 300 + st.pressureDepth) {
+    /* the crush depth, off the one depth table, so it stays two thirds of
+       the way down whatever the ocean is doing */
+    P.crushAt = KD.Zones.d(0.62) + st.pressureDepth;
+    if (depth > P.crushAt) {
       P.pressT = (P.pressT || 0) + dt;
       if (P.pressT > 2.4) { P.pressT = 0; hurt(1, S, 'pressure'); }
     }

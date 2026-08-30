@@ -4,30 +4,35 @@
    Spawning is depth-driven and off-screen only.
    ============================================================ */
 KD.Mobs = (function () {
+  /* Spawn depths are fractions of the way down the ocean, resolved through
+     KD.Zones.d. They were absolute tile rows tuned against a 700-deep world,
+     and the last time the ocean got deeper every one of them stayed where it
+     was - which put the whole bestiary in the top half of it. */
+  const Zd = (u) => KD.Zones.d(u);
   const TS = 8;
   const list = [];
   const MAXN = 34;
 
   /* hp/dmg/speed are tuned against the player's 6 hearts and ~8 dps start */
   const KINDS = {
-    crawler:  { spr: 'crawler',  w: 10, h: 8,  hp: 10, dmg: 1, spd: 22, xp: 3,  swim: false, y0: 40,  y1: 360, drop: ['bone_i'] },
-    snapper:  { spr: 'snapper',  w: 14, h: 10, hp: 20, dmg: 1, spd: 30, xp: 5,  swim: false, y0: 60,  y1: 300, drop: ['shell_i', 'bone_i'], armour: 2 },
-    urchin:   { spr: 'urchin',   w: 8,  h: 8,  hp: 14, dmg: 1, spd: 0,  xp: 3,  swim: false, y0: 60,  y1: 640, drop: ['bone_i'], still: true },
-    jelly:    { spr: 'jelly',    w: 10, h: 14, hp: 16, dmg: 1, spd: 20, xp: 4,  swim: true,  y0: 40,  y1: 360, drop: ['cloth_i'], drift: true },
-    shark:    { spr: 'shark',    w: 28, h: 12, hp: 30, dmg: 2, spd: 62, xp: 9,  swim: true,  y0: 60,  y1: 390, drop: ['bone_i', 'fish2'] },
-    bandit:   { spr: 'bandit',   w: 10, h: 16, hp: 24, dmg: 1, spd: 44, xp: 8,  swim: false, y0: 300, y1: 510, drop: ['beer_lager', 'ore_iron'], steal: true },
-    sentinel: { spr: 'sentinel', w: 16, h: 22, hp: 52, dmg: 2, spd: 26, xp: 16, swim: false, y0: 225, y1: 360, drop: ['brick_i', 'ore_gold'], armour: 4 },
-    horror:   { spr: 'horror',   w: 20, h: 18, hp: 70, dmg: 2, spd: 34, xp: 24, swim: true,  y0: 420, y1: 640, drop: ['ore_abyssal', 'pearl'], spit: true },
+    crawler:  { spr: 'crawler',  w: 10, h: 8,  hp: 10, dmg: 1, spd: 22, xp: 3,  swim: false, y0: Zd(0.01), y1: Zd(0.49), drop: ['bone_i'] },
+    snapper:  { spr: 'snapper',  w: 14, h: 10, hp: 20, dmg: 1, spd: 30, xp: 5,  swim: false, y0: Zd(0.04), y1: Zd(0.40), drop: ['shell_i', 'bone_i'], armour: 2 },
+    urchin:   { spr: 'urchin',   w: 8,  h: 8,  hp: 14, dmg: 1, spd: 0,  xp: 3,  swim: false, y0: Zd(0.04), y1: Zd(0.91), drop: ['bone_i'], still: true },
+    jelly:    { spr: 'jelly',    w: 10, h: 14, hp: 16, dmg: 1, spd: 20, xp: 4,  swim: true,  y0: Zd(0.01), y1: Zd(0.49), drop: ['cloth_i'], drift: true },
+    shark:    { spr: 'shark',    w: 28, h: 12, hp: 30, dmg: 2, spd: 62, xp: 9,  swim: true,  y0: Zd(0.04), y1: Zd(0.53), drop: ['bone_i', 'fish2'] },
+    bandit:   { spr: 'bandit',   w: 10, h: 16, hp: 24, dmg: 1, spd: 44, xp: 8,  swim: false, y0: Zd(0.40), y1: Zd(0.71), drop: ['beer_lager', 'ore_iron'], steal: true },
+    sentinel: { spr: 'sentinel', w: 16, h: 22, hp: 52, dmg: 2, spd: 26, xp: 16, swim: false, y0: Zd(0.29), y1: Zd(0.49), drop: ['brick_i', 'ore_gold'], armour: 4 },
+    horror:   { spr: 'horror',   w: 20, h: 18, hp: 70, dmg: 2, spd: 34, xp: 24, swim: true,  y0: Zd(0.58), y1: Zd(0.91), drop: ['ore_abyssal', 'pearl'], spit: true },
     /* ---- the ocean past the Gate. One shape per zone, so where you are
        is legible from what is swimming at you. --------------------- */
-    clown:    { spr: 'an_clown',  w: 12, h: 9,  hp: 8,  dmg: 1, spd: 54, xp: 2,  swim: true,  y0: 34, y1: 225, drop: ['fish1'], shy: true },
-    parrot:   { spr: 'an_parrot', w: 18, h: 13, hp: 26, dmg: 1, spd: 34, xp: 6,  swim: true,  y0: 36, y1: 285, drop: ['coral', 'fish1'], armour: 3 },
-    mantis:   { spr: 'an_mantis', w: 20, h: 12, hp: 18, dmg: 2, spd: 40, xp: 8,  swim: false, y0: 40, y1: 315, drop: ['shell', 'flint'] },
-    moray:    { spr: 'an_moray',  w: 26, h: 11, hp: 34, dmg: 2, spd: 30, xp: 11, swim: true,  y0: 60, y1: 375, drop: ['bone', 'fish2'], dash: true },
-    cuttle:   { spr: 'an_cuttle', w: 15, h: 15, hp: 24, dmg: 1, spd: 26, xp: 9,  swim: true,  y0: 50, y1: 390, drop: ['cloth_i', 'pearl'], drift: true, spit: true },
-    cuda:     { spr: 'an_cuda',   w: 30, h: 10, hp: 30, dmg: 2, spd: 78, xp: 13, swim: true,  y0: 80, y1: 480, drop: ['bone', 'fish2'], dash: true },
-    lion:     { spr: 'an_lion',   w: 18, h: 17, hp: 40, dmg: 2, spd: 16, xp: 14, swim: true,  y0: 90, y1: 450, drop: ['urchin_spine', 'coral'], armour: 5 },
-    manta:    { spr: 'an_manta',  w: 42, h: 17, hp: 66, dmg: 2, spd: 44, xp: 22, swim: true,  y0: 120, y1: 600, drop: ['hide', 'pearl'], drift: true }
+    clown:    { spr: 'an_clown',  w: 12, h: 9,  hp: 8,  dmg: 1, spd: 54, xp: 2,  swim: true,  y0: Zd(0.00), y1: Zd(0.29), drop: ['fish1'], shy: true },
+    parrot:   { spr: 'an_parrot', w: 18, h: 13, hp: 26, dmg: 1, spd: 34, xp: 6,  swim: true,  y0: Zd(0.00), y1: Zd(0.38), drop: ['coral', 'fish1'], armour: 3 },
+    mantis:   { spr: 'an_mantis', w: 20, h: 12, hp: 18, dmg: 2, spd: 40, xp: 8,  swim: false, y0: Zd(0.01), y1: Zd(0.42), drop: ['shell', 'flint'] },
+    moray:    { spr: 'an_moray',  w: 26, h: 11, hp: 34, dmg: 2, spd: 30, xp: 11, swim: true,  y0: Zd(0.04), y1: Zd(0.51), drop: ['bone', 'fish2'], dash: true },
+    cuttle:   { spr: 'an_cuttle', w: 15, h: 15, hp: 24, dmg: 1, spd: 26, xp: 9,  swim: true,  y0: Zd(0.02), y1: Zd(0.53), drop: ['cloth_i', 'pearl'], drift: true, spit: true },
+    cuda:     { spr: 'an_cuda',   w: 30, h: 10, hp: 30, dmg: 2, spd: 78, xp: 13, swim: true,  y0: Zd(0.07), y1: Zd(0.67), drop: ['bone', 'fish2'], dash: true },
+    lion:     { spr: 'an_lion',   w: 18, h: 17, hp: 40, dmg: 2, spd: 16, xp: 14, swim: true,  y0: Zd(0.08), y1: Zd(0.62), drop: ['urchin_spine', 'coral'], armour: 5 },
+    manta:    { spr: 'an_manta',  w: 42, h: 17, hp: 66, dmg: 2, spd: 44, xp: 22, swim: true,  y0: Zd(0.13), y1: Zd(0.85), drop: ['hide', 'pearl'], drift: true }
   };
 
   function spawn(kind, tx, ty) {

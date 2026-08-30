@@ -7,6 +7,10 @@
 KD.Light = (function () {
   const MAX = 15;                     // levels; 0 is pitch black
   const SUN_TOP = 15;
+  /* where the sun starts to fade, and how many tiles it takes to lose a
+     level - set so the last of it lands exactly at the bottom of the reef */
+  const SUN_FROM = KD.Zones.D.shallows + 8;
+  const SUN_EVERY = Math.max(2, Math.round((KD.Zones.D.ruins - SUN_FROM) / SUN_TOP));
   let q = null, qh = 0, qt = 0;       // ring-buffer flood queue
   let pending = null;                 // tiles whose neighbourhood changed
   let W = 0, H = 0;
@@ -64,17 +68,15 @@ KD.Light = (function () {
         const i = y * W + x;
         if (v > 0) push(i, v);
         v -= sunCost(fg[i]);
-        /* Open water dims slowly: full daylight in the shallows, gone by the
-           bottom of the reef, and below that you bring your own light.
+        /* Open water dims slowly: full daylight in the shallows, the last of
+           it at the bottom of the reef, and below that you bring your own.
 
-           These numbers are TIED TO THE LAYER TABLE in world/gen.js and were
-           left behind when the world went from 460 tiles deep to 700. At one
-           level lost every five tiles from y=34 the sun hit zero at 109 - and
-           the reef now starts at 120, so the reef, the ruins and everything
-           under them went pitch black and the game read as a cave. One level
-           every eleven tiles from 60 puts the last of the daylight at 225,
-           which is the bottom of the reef, which is where it belongs. */
-        if (y > 60 && y % 11 === 0) v--;
+           The rate is DERIVED from KD.Zones.D rather than written here. It
+           used to be "one level every five tiles from y=34", and when the
+           ocean got deeper that put the last of the daylight above the top
+           of the reef - the reef, the ruins and everything under them went
+           black, and the game read as a cave with fish in it. */
+        if (y > SUN_FROM && (y - SUN_FROM) % SUN_EVERY === 0) v--;
         if (v <= 0) { v = 0; break; }
       }
     }
@@ -88,11 +90,11 @@ KD.Light = (function () {
        Written straight into the buffer, NOT queued - these need no spreading
        and half a million queue entries is what overran the ring. */
     for (let y = 0; y < H; y++) {
-      /* Scaled with the layers, and raised: this is a bright, warm ocean
-         down to the ruins and only then a dark one. The old floor gave out
-         at 140, which under the new layer table is halfway through the
-         reef. */
-      const amb = y < 130 ? 7 : y < 215 ? 5 : y < 280 ? 3 : y < 340 ? 2 : 0;
+      /* The ambient floor, also off KD.Zones.D. This is a bright, warm
+         ocean down to the ruins and only then a dark one. */
+      const Zd = KD.Zones.D;
+      const amb = y < Zd.reef ? 7 : y < Zd.ruins ? 5
+                : y < (Zd.ruins + Zd.trench) / 2 ? 3 : y < Zd.trench ? 2 : 0;
       if (!amb) continue;
       for (let x = 0; x < W; x++) {
         const i = y * W + x;

@@ -104,10 +104,17 @@ KD.Parallax = (function () {
      in the same navy as the trench, and the whole game read as a cave with
      fish in it. Everything below the shallows moved down, and the bright
      end of the ramp holds for twice as long. */
+  const _D = KD.Zones.D;
   const BANDS = [
-    [34, 'WATER.3'], [46, 'WATER.2'], [78, 'WATER.1'], [126, 'WATER.0'],
-    [186, 'DEEP.2'], [242, 'DEEP.1'], [340, 'DEEP.0'], [480, 'ROT.0'],
-    [600, 'INK.1']
+    [_D.sea, 'WATER.3'],
+    [_D.sea + 12, 'WATER.2'],
+    [_D.shallows + 26, 'WATER.1'],
+    [_D.reef - 20, 'WATER.0'],
+    [_D.reef + 40, 'DEEP.2'],
+    [_D.ruins, 'DEEP.1'],
+    [_D.trench, 'DEEP.0'],
+    [_D.abyss, 'ROT.0'],
+    [_D.abyss + 120, 'INK.1']
   ];
 
   /* ---- the sky above the waterline -------------------------------- */

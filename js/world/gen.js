@@ -6,28 +6,29 @@
 KD.Gen = (function () {
   const W = () => KD.World;
   /* depth bands, in tiles. The whole game's pacing lives here. */
-  /* Stretched with the world, which went from 460 tiles deep to 700. The
-     surface stays exactly where it was - everything below it got longer,
-     because the Drop is meant to be somewhere you are frightened of running
-     out of air and you could see the floor of it from the top. */
+  /* Both of these come off KD.Zones.D, which is the one place the ocean's
+     depths are written down. They used to be hand-copied numbers here, and
+     twice the world got deeper and they did not follow. */
+  const Z_D = KD.Zones.D;
   const LAYERS = [
-    { id: 'sky',      y0: 0,   y1: 40,  fill: 'air' },
-    { id: 'shallows', y0: 40,  y1: 120, fill: 'sand' },
-    { id: 'reef',     y0: 120, y1: 215, fill: 'stone' },
-    { id: 'ruins',    y0: 215, y1: 340, fill: 'stone' },
-    { id: 'trench',   y0: 340, y1: 500, fill: 'dark' },
-    { id: 'abyss',    y0: 500, y1: 690, fill: 'rot' }
+    { id: 'sky',      y0: 0,             y1: Z_D.sea,      fill: 'air' },
+    { id: 'shallows', y0: Z_D.sea,       y1: Z_D.reef,     fill: 'sand' },
+    { id: 'reef',     y0: Z_D.reef,      y1: Z_D.ruins,    fill: 'stone' },
+    { id: 'ruins',    y0: Z_D.ruins,     y1: Z_D.trench,   fill: 'stone' },
+    { id: 'trench',   y0: Z_D.trench,    y1: Z_D.abyss,    fill: 'dark' },
+    { id: 'abyss',    y0: Z_D.abyss,     y1: Z_D.floor,    fill: 'rot' }
   ];
   const layerAt = (y) => LAYERS.find((l) => y >= l.y0 && y < l.y1) || LAYERS[LAYERS.length - 1];
 
-  /* Bands and attempt counts both scale with the world, so a bigger ocean
-     is not a thinner one. */
+  /* Ore bands, as fractions of the way down, so a deeper ocean spreads them
+     out instead of leaving them all in the top third. */
+  const OB = (a, b) => ({ y0: KD.Zones.d(a), y1: KD.Zones.d(b) });
   const ORES = [
-    { t: 'ore_copper',  y0: 80,  y1: 260, tries: 3000, size: 5,  rare: 1.0 },
-    { t: 'ore_bronze',  y0: 130, y1: 340, tries: 2200, size: 5,  rare: 0.8 },
-    { t: 'ore_iron',    y0: 210, y1: 440, tries: 1750, size: 6,  rare: 0.7 },
-    { t: 'ore_gold',    y0: 330, y1: 560, tries: 1150, size: 5,  rare: 0.5 },
-    { t: 'ore_abyssal', y0: 480, y1: 690, tries: 750,  size: 4,  rare: 0.4 }
+    Object.assign({ t: 'ore_copper',  tries: 3800, size: 5, rare: 1.0 }, OB(0.05, 0.28)),
+    Object.assign({ t: 'ore_bronze',  tries: 2800, size: 5, rare: 0.8 }, OB(0.11, 0.38)),
+    Object.assign({ t: 'ore_iron',    tries: 2200, size: 6, rare: 0.7 }, OB(0.20, 0.50)),
+    Object.assign({ t: 'ore_gold',    tries: 1500, size: 5, rare: 0.5 }, OB(0.34, 0.66)),
+    Object.assign({ t: 'ore_abyssal', tries: 1000, size: 4, rare: 0.4 }, OB(0.52, 0.99))
   ];
 
   let surface = null;                 // surface[x] = first solid y
@@ -49,6 +50,7 @@ KD.Gen = (function () {
       ['smoothing the rock', smoothPass],
       ['salting in ore', ores],
       ['raising the ruins', ruins],
+      ['sinking the wrecks', landmarks],
       ['planting the village', village],
       ['seating the cook on your throne', throne],
       ['flooding the ocean', flood],
@@ -93,15 +95,18 @@ KD.Gen = (function () {
 
        Control points in (tile x, seabed y); everything between is a
        smoothstep, so there are no cliffs where two zones meet. */
-    const SHELF = [[0, 48], [750, 52], [1050, 56], [1420, 60], [1700, 96],
-                   [2150, 150], [2500, 196], [2830, 240], [3200, 286],
-                   [3510, 330], [3800, 392], [4100, 442], [4400, 560],
-                   [99999, 650]];
+    const D = KD.Zones.D, WD = KD.Zones.d;
+    const SHELF = [[0.00, D.sea + 14], [0.11, D.sea + 18], [0.15, D.sea + 22],
+                   [0.20, D.shallows + 8], [0.24, WD(0.08)], [0.31, WD(0.15)],
+                   [0.36, WD(0.20)], [0.40, WD(0.26)], [0.46, WD(0.32)],
+                   [0.50, WD(0.37)], [0.54, WD(0.45)], [0.59, WD(0.51)],
+                   [0.63, WD(0.63)], [1.01, WD(0.76)]];
     function shelfAt(x) {
+      const f = x / w;
       for (let k = 0; k < SHELF.length - 1; k++) {
         const a = SHELF[k], b = SHELF[k + 1];
-        if (x < b[0]) {
-          const u = (x - a[0]) / (b[0] - a[0]);
+        if (f < b[0]) {
+          const u = (f - a[0]) / (b[0] - a[0]);
           const e = u * u * (3 - 2 * u);            // smoothstep
           return a[1] + (b[1] - a[1]) * e;
         }
@@ -117,16 +122,16 @@ KD.Gen = (function () {
       let s = base + (Wd.fbm(x * 0.012, 0.5, 4) - 0.5) * rough * 2
                    + (Wd.fbm(x * 0.05, 9.5, 2) - 0.5) * 6;
       if (z.id === 'village' || z.id === 'gate') {
-        const d = Math.min(1, Math.abs(x - shelfX) / 190);
-        s = s * d + 56 * (1 - d);
+        const dd = Math.min(1, Math.abs(x - shelfX) / 260);
+          s = s * dd + (D.shallows + 4) * (1 - dd);
       }
-      surface[x] = Math.max(40, Math.round(s));
+      surface[x] = Math.max(D.sea + 6, Math.round(s));
       for (let y = 0; y < h; y++) {
         const i = y * w + x;
         if (y < surface[x]) { Wd.fg[i] = T.AIR; continue; }
         const L = layerAt(y);
         /* the zone owns the surface rock; the depth layer owns the deep rock */
-        let t = T.id(y < 110 ? (z.rock || L.fill) : (y < 240 ? (z.deep || L.fill) : L.fill));
+        let t = T.id(y < D.reef ? (z.rock || L.fill) : (y < D.ruins ? (z.deep || L.fill) : L.fill));
         /* dithered transition bands, so layers blend instead of striping */
         const band = 7;
         const prev = LAYERS[LAYERS.indexOf(L) - 1];
@@ -135,7 +140,7 @@ KD.Gen = (function () {
           if (Wd.noise2(x * 0.4, y * 0.4) > f) t = T.id(prev.fill);
         }
         if (Wd.fbm(x * 0.06, y * 0.06, 2) > 0.66) {
-          t = T.id(y < 110 ? 'mud' : (y < 240 ? 'sand' : 'dark'));
+          t = T.id(y < D.reef ? 'mud' : (y < D.ruins ? 'sand' : 'dark'));
         }
         Wd.fg[i] = t;
       }
@@ -143,7 +148,7 @@ KD.Gen = (function () {
     /* coral crusts the reef roof */
     for (let x = 0; x < w; x++) {
       const y = surface[x];
-      if (y >= 90 && y < 160 && Wd.chance(0.5)) {
+      if (y >= KD.Zones.D.shallows + 20 && y < KD.Zones.D.ruins && Wd.chance(0.5)) {
         for (let k = 0; k < Wd.rint(1, 3); k++) if (Wd.inside(x, y + k)) Wd.fg[(y + k) * w + x] = T.id('coral');
       }
     }
@@ -429,6 +434,112 @@ KD.Gen = (function () {
     meta.structures.push({ kind: 'throne', x, y, w: rw, h: rh });
   }
 
+  /* ---------- landmarks ----------
+     Forty per cent of this world is open water now, and open water with
+     nothing in it is just a long swim. These are the things worth crossing
+     it for: hulls with a chest in them, vents on the abyss floor, whale
+     falls, and rock spires so the column has something to hide behind.
+
+     Everything is placed off the shelf, so a wreck sits on whatever the
+     seabed turns out to be rather than at a depth somebody typed in.
+     ------------------------------------------------------------------ */
+  function landmarks() {
+    const Wd = W(), w = Wd.W, h = Wd.H, T = KD.Tiles;
+    const D = KD.Zones.D;
+    const set = (x, y, id) => { if (Wd.inside(x, y)) Wd.fg[y * w + x] = T.id(id); };
+    const carve = (x, y) => { if (Wd.inside(x, y)) { Wd.fg[y * w + x] = T.AIR; Wd.bg[y * w + x] = T.id('plank'); } };
+
+    /* ---- wrecks: a hull lying on the seabed with a hold you can get into */
+    for (let n = 0; n < 9; n++) {
+      const cx = Math.round(w * (0.20 + n * 0.085) + Wd.rrange(-90, 90));
+      if (cx < 40 || cx > w - 60) continue;
+      const len = Wd.rint(26, 46), hh = Wd.rint(9, 14);
+      const base = surface[Math.min(w - 1, cx)] - 1;
+      const tilt = Wd.rrange(-0.12, 0.12);
+      for (let i = 0; i < len; i++) {
+        const x = cx - (len >> 1) + i;
+        const u = i / (len - 1);
+        /* the hull: a shallow arc, deepest amidships */
+        const depth = Math.round(hh * Math.sqrt(Math.max(0, 1 - (2 * u - 1) * (2 * u - 1))));
+        const top = Math.round(base - depth + tilt * (i - len / 2));
+        for (let y = top; y <= base + 1; y++) {
+          const edge = y === top || y === base + 1 || i === 0 || i === len - 1;
+          if (edge) set(x, y, 'plank'); else carve(x, y);
+        }
+        if (i % 9 === 4 && depth > 5) set(x, top + 1, 'lantern');
+      }
+      /* a mast, and the hold */
+      const mx = cx + Math.round(len * 0.15);
+      for (let y = base - hh - Wd.rint(6, 16); y < base - hh + 2; y++) set(mx, y, 'plank');
+      set(cx - 3, base, 'chest');
+      set(cx + 5, base, 'chest');
+      meta.structures.push({ kind: 'wreck', x: cx - (len >> 1), y: base - hh, w: len, h: hh + 2 });
+    }
+
+    /* ---- vents: chimneys on the abyss floor, which is the only warm thing
+            down there and the only light that is not yours */
+    for (let n = 0; n < 26; n++) {
+      const cx = Math.round(w * (0.55 + Wd.rrange(0, 0.44)));
+      if (cx < 20 || cx > w - 20) continue;
+      const base = surface[Math.min(w - 1, cx)] - 1;
+      if (base < D.trench) continue;
+      const tall = Wd.rint(10, 26);
+      for (let k = 0; k < tall; k++) {
+        const r = Math.max(1, 3 - Math.round(k * 2.4 / tall));
+        for (let dx = -r; dx <= r; dx++) set(cx + dx, base - k, 'rot');
+      }
+      /* Glowpods all the way up, not one on the cap. Down here the water is
+         at light level zero, and a landmark you cannot see from more than a
+         screen away is not a landmark - these are the only things burning in
+         the trench and they are what you steer by. */
+      for (let k = 1; k < tall; k += 4) {
+        set(cx - 2, base - k, 'glowpod');
+        set(cx + 2, base - k - 2, 'glowpod');
+      }
+      set(cx, base - tall, 'glowpod');
+      set(cx - 4, base, 'glowpod');
+      set(cx + 4, base, 'glowpod');
+      meta.structures.push({ kind: 'vent', x: cx - 3, y: base - tall, w: 7, h: tall });
+    }
+
+    /* ---- whale falls: a skull and a ribcage, on the deep shelf */
+    for (let n = 0; n < 5; n++) {
+      const cx = Math.round(w * (0.42 + n * 0.12) + Wd.rrange(-60, 60));
+      if (cx < 40 || cx > w - 40) continue;
+      const base = surface[Math.min(w - 1, cx)] - 1;
+      if (base < D.ruins) continue;
+      for (let i = 0; i < 9; i++) {                 /* the spine */
+        set(cx + i * 3, base, 'bones');
+        const rib = 4 + ((i * 7) % 5);
+        for (let k = 1; k <= rib; k++) {
+          set(cx + i * 3 - 1, base - k, 'bones');
+          set(cx + i * 3 + 1, base - k, 'bones');
+        }
+      }
+      for (let dy = 0; dy < 5; dy++) for (let dx = 0; dx < 7; dx++) set(cx - 8 + dx, base - dy, 'bones');
+      set(cx - 5, base - 5, 'chest');
+      meta.structures.push({ kind: 'whale', x: cx - 10, y: base - 10, w: 42, h: 11 });
+    }
+
+    /* ---- spires: rock towers rising out of the shelf into the column, so
+            the open water has something in it to swim around */
+    for (let n = 0; n < 120; n++) {
+      const cx = Wd.rint(60, w - 60);
+      const base = surface[cx] - 1;
+      if (base < D.shallows + 30) continue;
+      const tall = Wd.rint(14, Math.max(20, Math.round((base - D.sea) * 0.42)));
+      const rock = base > D.trench ? 'dark' : (base > D.reef ? 'stone' : 'sand');
+      for (let k = 0; k < tall; k++) {
+        const u = k / tall;
+        const r = Math.max(0, Math.round(4 * (1 - u) + 1));
+        for (let dx = -r; dx <= r; dx++) set(cx + dx, base - k, rock);
+      }
+      if (base < D.trench) {
+        for (let k = 0; k < 4; k++) set(cx + Wd.rint(-2, 2), base - tall + k, 'coral');
+      }
+    }
+  }
+
   /* ---------- 9. decoration ---------- */
   function decorate() {
     const Wd = W(), w = Wd.W, h = Wd.H, T = KD.Tiles;
@@ -504,7 +615,7 @@ KD.Gen = (function () {
     for (let n = 0; n < 9000; n++) {
       const x = Wd.rint(1, w - 2), y = Wd.rint(60, h - 2);
       if (Wd.at(x, y) === AIR && !isBuilt(x, y) && !Wd.bg[y * w + x] &&
-          T.isSolid(Wd.at(x, y + 1)) && y < 240 && Wd.chance(0.3)) {
+          T.isSolid(Wd.at(x, y + 1)) && y < KD.Zones.D.ruins && Wd.chance(0.3)) {
         Wd.bg[y * w + x] = T.id('moss');
       }
     }
