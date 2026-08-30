@@ -18,7 +18,6 @@ KD.Mobs = (function () {
     bandit:   { spr: 'bandit',   w: 10, h: 16, hp: 24, dmg: 1, spd: 44, xp: 8,  swim: false, y0: 300, y1: 510, drop: ['beer_lager', 'ore_iron'], steal: true },
     sentinel: { spr: 'sentinel', w: 16, h: 22, hp: 52, dmg: 2, spd: 26, xp: 16, swim: false, y0: 225, y1: 360, drop: ['brick_i', 'ore_gold'], armour: 4 },
     horror:   { spr: 'horror',   w: 20, h: 18, hp: 70, dmg: 2, spd: 34, xp: 24, swim: true,  y0: 420, y1: 640, drop: ['ore_abyssal', 'pearl'], spit: true },
-    baron:    { spr: 'baron',    w: 40, h: 36, hp: 420, dmg: 3, spd: 40, xp: 200, swim: false, boss: true, drop: [] },
     /* ---- the ocean past the Gate. One shape per zone, so where you are
        is legible from what is swimming at you. --------------------- */
     clown:    { spr: 'an_clown',  w: 12, h: 9,  hp: 8,  dmg: 1, spd: 54, xp: 2,  swim: true,  y0: 34, y1: 225, drop: ['fish1'], shy: true },
@@ -330,12 +329,6 @@ KD.Mobs = (function () {
       S.save();
       return;
     }
-    if (m.kind === 'baron') {
-      S.S.flags.baronDead = 1;
-      S.give('crown', 1);
-      S.save();
-      KD.Game.win();
-    }
   }
 
   /* a champion gets its name and its health over its head, so a landmark
@@ -378,21 +371,10 @@ KD.Mobs = (function () {
       const lit = Math.max(l, pl < 40 ? KD.Light.MAX - 4 : 0);
       KD.PX.blit(ctx, name, px, py, { anchor: false, flipX: m.face < 0, shade: KD.PX.bandFor(lit, KD.Light.MAX) });
       if (m.hurtT > 0) KD.Dither.fill(ctx, px, py, s.w, s.h, 'WHITE', 0.7);
-      /* a champion carries its name over its own head; the Baron gets the
-         whole top of the screen, because he is the one you came for */
+      /* a champion carries its name over its own head. There is no
+         mob-kind boss any more: THE boss is sim/boss.js, which draws its own
+         bar with the outfit he is down to. */
       if (m.champ) champBar(m, cam);
-      else if (m.K.boss) {
-        const bw = 90;
-        KD.Text.draw('BARON FOAMHELM', KD.W / 2, 4, 'GOLD.3', { align: 'center', shadow: 'INK.0' });
-        /* whose he is, so the fight closes Act One's story instead of being
-           a name nobody in it has heard before */
-        KD.Text.draw("THE DEEP'S CHAMPION", KD.W / 2, 13, 'ROT.3',
-                     { align: 'center', tiny: true, shadow: 'INK.0' });
-        KD.Screen.rect(KD.W / 2 - bw / 2 - 1, 20, bw + 2, 7, 'INK.0');
-        KD.Screen.frame(KD.W / 2 - bw / 2 - 1, 20, bw + 2, 7, 'GOLD.0');
-        KD.Screen.rect(KD.W / 2 - bw / 2, 21, Math.round(bw * (m.hp / m.hpMax)), 5, 'BLOOD.2');
-        KD.Screen.rect(KD.W / 2 - bw / 2, 21, Math.round(bw * (m.hp / m.hpMax)), 1, 'BLOOD.3');
-      }
     }
     for (const s of shots) {
       KD.Screen.rect(Math.round(s.x - cam.x) - 1, Math.round(s.y - cam.y) - 1, 3, 3, 'ROT.3');

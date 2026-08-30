@@ -58,12 +58,14 @@ KD.Cine = (function () {
   }
 
   /* ---- arriving at the throne ---------------------------------------
-     The cook took the castle; the thing at the foot of the throne is what
-     he keeps to sit on it for him. Before this the cutscene called the boss
-     The Deep while his own health bar said BARON FOAMHELM, and the art is a
-     knight in a beer barrel - so the barrel knight is the Keg's new man and
-     the cook is the one who put him there, which is what the sprite was
-     always saying.
+     The cook fights his own fight, and the fight is him taking his armour
+     off. Four phases, one outfit each, and the outfit IS the telegraph -
+     sim/boss.js has had that in it all along.
+
+     A previous pass had this cutscene say he keeps a champion at the foot of
+     the throne, because sim/mobs.js has a `baron` kind with boss: true and a
+     health bar that says BARON FOAMHELM. Nothing ever spawns it. That mob is
+     gone now, and the story says what the code does.
      ------------------------------------------------------------------ */
   function throne() {
     return {
@@ -71,17 +73,14 @@ KD.Cine = (function () {
       beats: [
         { kind: 'fade', to: 1, t: 0.6 },
         { kind: 'fade', to: 0, t: 0.8 },
-        { kind: 'card', t: 2.6, lines: ['THE DROP'], sub: 'four hundred metres down' },
+        { kind: 'card', t: 2.6, lines: ['THE DROP'], sub: 'six hundred metres down' },
         { kind: 'art', spr: 'po_octo', scale: 2, y: 0.40, t: 0.1 },
         { kind: 'say', who: 'po_octo', name: 'The Deep', t: 4.6,
-          text: 'Oh. You actually did it. Eighteen kilos and four hundred metres, for a chair.' },
+          text: 'Oh. You actually did it. Eighteen kilos and six hundred metres, for a chair.' },
         { kind: 'say', who: 'po_king', name: 'You', t: 3.0,
           text: 'Get off it.' },
-        { kind: 'say', who: 'po_octo', name: 'The Deep', t: 4.6,
-          text: 'I have eight arms, majesty, and not one of them has to touch you. That is what a champion is for.' },
-        { kind: 'card', t: 2.6, lines: ['BARON FOAMHELM'],
-          sub: "the keg's new man, and he is made of her" },
-        { kind: 'art', spr: 'baron0', scale: 2, y: 0.42, t: 0.1 },
+        { kind: 'say', who: 'po_octo', name: 'The Deep', t: 5.0,
+          text: 'I have been wearing your armour for four seasons, majesty. Let us find out how much of it I actually need.' },
         { kind: 'shake', amp: 9, t: 0.3 }
       ],
       after: () => { mark('throne'); KD.Game.go('play', {}); }

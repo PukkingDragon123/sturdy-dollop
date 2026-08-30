@@ -50,7 +50,7 @@ KD.Gen = (function () {
       ['salting in ore', ores],
       ['raising the ruins', ruins],
       ['planting the village', village],
-      ['seating the Baron', throne],
+      ['seating the cook on your throne', throne],
       ['flooding the ocean', flood],
       ['filling the chests', loot],
       ['scattering the reef', decorate],
@@ -375,7 +375,14 @@ KD.Gen = (function () {
   function throne() {
     const Wd = W(), w = Wd.W, T = KD.Tiles;
     const rw = 56, rh = 26;
-    const x = w - rw - 30, y = 392;
+    const x = w - rw - 30;
+    /* It sat at a hard-coded y=392. The seabed used to be at 44-76 all the
+       way across, so 392 was three hundred tiles into solid rock; with the
+       shelf the floor at this end of the map is around 520, and 392 left the
+       whole throne room hanging in open water above it. It sits ON the
+       bottom of the Drop, wherever that turns out to be. */
+    const floorHere = surface[Math.min(w - 1, x + (rw >> 1))];
+    const y = Math.max(360, Math.min(W().H - rh - 10, floorHere + 18));
     for (let j = 0; j < rh; j++) for (let i = 0; i < rw; i++) {
       const tx = x + i, ty = y + j;
       if (!Wd.inside(tx, ty)) continue;
@@ -396,14 +403,26 @@ KD.Gen = (function () {
       Wd.fg[(y + rh - 2) * w + x + i] = T.id('masonry');
       Wd.fg[(y + rh - 3) * w + x + i] = T.id('masonry');
     }
-    for (let i = 5; i < rw - 5; i += 7) Wd.fg[(y + 2) * w + x + i] = T.id('lantern');
+    /* Lanterns along the ceiling AND up both walls. One row of five at the
+       top of a fifty-six tile room six hundred tiles down is a fight in the
+       dark. */
+    for (let i = 5; i < rw - 5; i += 5) Wd.fg[(y + 2) * w + x + i] = T.id('lantern');
+    for (let j = y + 5; j < y + rh - 5; j += 5) {
+      Wd.fg[j * w + (x + 2)] = T.id('lantern');
+      Wd.fg[j * w + (x + rw - 3)] = T.id('lantern');
+    }
     Wd.fg[(y + rh - 4) * w + (x + 5)] = T.id('statue');
     Wd.fg[(y + rh - 4) * w + (x + rw - 7)] = T.id('statue');
     /* his throne, dead centre against the back wall */
     const seat = x + (rw >> 1) + 12;
     Wd.fg[(y + rh - 4) * w + seat] = T.id('throne_seat');
-    /* a way in from above */
-    for (let j = y - 30; j < y; j++) { Wd.fg[j * w + (x + 5)] = T.AIR; Wd.fg[j * w + (x + 6)] = T.AIR; }
+    /* The way in: a shaft from the open water above right down to the roof,
+       widened enough to swim rather than squeeze. It used to run a fixed
+       thirty tiles, which with the shelf started in the middle of nowhere. */
+    const shaftTop = Math.max(40, floorHere - 24);
+    for (let j = shaftTop; j < y + 3; j++) {
+      for (let i = 4; i <= 8; i++) Wd.fg[j * w + (x + i)] = T.AIR;
+    }
     /* Where the fight happens: standing ON the arena floor, clear of every
        pillar and of the throne itself. */
     meta.throne = { x: x + (rw >> 1) - 6, y: y + rh - 4, room: { x, y, w: rw, h: rh }, seat: seat };

@@ -324,8 +324,18 @@ KD.Boss = (function () {
     if (KD.PX.has(name)) {
       const s = KD.PX.get(name);
       KD.PX.blit(ctx, name, px - (s.w >> 1), py - s.h, { anchor: false, flipX: B.face < 0 });
-      if (B.state === 'wind' && ((B.stateT * 26) | 0) % 2 === 0) {
-        KD.Dither.fill(ctx, px - (s.w >> 1), py - s.h, s.w, s.h, 'BLOOD.3', 0.65);
+      /* The wind-up. It was a 0.65-density dither over the whole forty-pixel
+         sprite, flashing, which turns the largest thing in the fight into an
+         orange checkerboard for the length of the telegraph. It is the same
+         lock-on bracket the sharks use now, so a tell means the same thing
+         everywhere in the game, with a hard line along his edges. */
+      if (B.state === 'wind') {
+        KD.Mark.threat(px, py - (s.h >> 1), KD.Game.t, false,
+                       { rx: (s.w >> 1) + 2, ry: (s.h >> 1) + 2 });
+        if (((B.stateT * 22) | 0) % 2 === 0) {
+          KD.Screen.rect(px - (s.w >> 1), py - s.h, s.w, 2, 'BLOOD.3');
+          KD.Screen.rect(px - (s.w >> 1), py - 2, s.w, 2, 'BLOOD.3');
+        }
       }
       if (B.hurtT > 0) KD.Dither.fill(ctx, px - (s.w >> 1), py - s.h, s.w, s.h, 'WHITE', 0.7);
     } else {

@@ -630,16 +630,21 @@ KD.Scenes.victory = (function () {
     const cx = KD.W / 2;
     const vtop = Math.round(KD.H * 0.10);
     KD.Text.draw('KING AGAIN', cx, vtop, 'GOLD.3', { align: 'center', space: 2, shadow: 'INK.0' });
+    /* This still said the keg was a princess he was in love with, which is
+       two rewrites out of date: she left him for the winner, he turned her
+       down in the win cutscene, and the person he actually owes is the one
+       who sat at that table on her own. */
     const lines = [
       'The crown is back on your head.',
       'It does not fit like it used to.',
-      'Neither does the tunic.',
+      'Nothing does. That is the point.',
       '',
-      'The Princess is still a beer keg.',
-      'You are still in love with her.',
-      'Some things a crown cannot fix.'
+      'The keg wanted to come home. You said no.',
+      'The manta never asked for anything.',
+      'And the long table has two chairs at it again,',
+      'which is not the same as being forgiven.'
     ];
-    lines.forEach((l, i) => KD.Text.draw(l, cx, vtop + 24 + i * 12, i > 3 ? 'GOLD.2' : 'BONE.1', { align: 'center' }));
+    lines.forEach((l, i) => KD.Text.draw(l, cx, vtop + 22 + i * 12, i > 3 ? 'GOLD.2' : 'BONE.1', { align: 'center' }));
     if (KD.PX.has('it_crown')) KD.PX.blit(ctx, 'it_crown', cx - 7, KD.H - 46, { anchor: false });
     if (t > 1 && KD.UI.button(cx - 40, KD.H - 26, 80, 13, 'THE END', { key: 'Enter' })) KD.Game.go('title', {});
   }

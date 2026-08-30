@@ -38,11 +38,12 @@ trident down for the keg and she tells you that was the night she stopped being
 interested. The prologue also reads them when it works out what you weigh, which
 is your starting number for the rest of the game.
 
-**What is on your throne.** The cook runs the castle now and he does not fight
-his own fights: at the bottom of the Drop he is sitting in your chair with the
-keg on a cushion beside him, and the thing he keeps at the foot of it is Baron
-Foamhelm - her new man, in a barrel helmet, carrying a barrel. Beating him is
-the end of the story the prologue started.
+**What is on your throne.** The cook runs the castle now, and at the bottom of
+the Drop he is sitting in your chair with the keg on a cushion beside him. He
+fights his own fight, and the fight is him taking his armour off: four phases,
+one outfit each - scale armour, then gold plate, then ink, then no armour at
+all - and the outfit you can see is the telegraph for what he is about to do.
+Beating him is the end of the story the prologue started.
 
 **He is dressed for the water.** Ninety per cent of this game happens
 underwater and the king used to swim through it in a t-shirt. He has a dive
