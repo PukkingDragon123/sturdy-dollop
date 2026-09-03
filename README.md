@@ -28,6 +28,18 @@ choose between: how warm you are to the queen at the alarm, whether you are
 cruel to the cook about his crab, whether you take the drink, whether you put
 the trident down when she asks.
 
+**Cutscenes are things you stand in.** A cutscene here is not a scene of its
+own - it is a layer over whatever you were already playing, so the room keeps
+its own time and you keep every control you had a second ago. The night she
+walks in on the two of you happens in the throne room you are standing in: she
+comes up the stairs, crosses the floor to you, and throws you out of the room
+while you can walk anywhere in it you like. There is nowhere in the room to go,
+which is the point of being able to try. The cook comes all the way up from the
+kitchens without being asked, and the room he offers you is not narrated
+either - it is a locked brick cellar with five tables in it and four seasons on
+the clock, and the hundred kilos you start the game with is something you did
+one plate at a time.
+
 **And everybody leaves you for the specific reason you gave them.** Those four
 answers are read back out in the scene where you lose everything. Promise the
 queen dinner and mean it and she goes quietly, which is worse; never promise it

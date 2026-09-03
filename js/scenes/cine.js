@@ -1,143 +1,130 @@
 /* ============================================================
-   scenes/cine.js - cutscenes.
+   scenes/cine.js - cutscenes, and you are standing IN them.
 
-   A cutscene is a list of BEATS, each a small object the player
-   runs in order. Beats are declarative on purpose: a beat says
-   "hold on this portrait and say this line" or "pan the camera
-   here over two seconds", never "on frame 41 do this". That way a
-   scene reads like a script, can be skipped at any point, and
-   nothing in it can leave the game in a half-set-up state - the
-   scene's `after` runs whether it played out or was skipped.
+   A cutscene used to be a scene of its own. It replaced the world
+   with a frozen photograph of wherever you had been, dropped a
+   black bar over each end of it, and took every key on the
+   keyboard until it was finished. That is a video, and you cannot
+   be in a video - so four of the best moments in this game were
+   things you watched happen to somebody who looked like you: the
+   queen walking in on him, the cook offering him a room, the sea
+   gate grinding open, the crown coming back.
+
+   A cutscene is not a scene now. It is a LAYER. game.js ticks it
+   BEFORE the scene underneath and draws it AFTER, which buys three
+   things at once:
+
+     - the world keeps its own time. Torches burn, water moves,
+       fish swim past, the cast keep breathing.
+     - you keep every control you had a second ago. Walk around
+       the queen while she throws you out of your own throne room.
+       Walk out of the room. She is still talking.
+     - the layer eats the advance key before the scene sees it, so
+       SPACE moves the story on and does not also swing a trident.
+
+   The only cutscenes with nothing underneath them are the ones on
+   the title screen, and KD.Scenes.cine is the bare stage those
+   play on: the same layer, over black, with the portraits held up
+   full size because there is nothing behind them to look at.
 
    Beat kinds:
      say    { who, name, text, t }      portrait and a line
-     card   { lines, t, sub }           full-screen title card
+     card   { lines, sub, t }           a title plate
      wait   { t }                       hold on what is there
-     fade   { t, to }                   fade to or from black
-     shake  { amp }                     kick the camera
+     fade   { to, t }                   shutter closed or open
+     shake  { amp }                     kick the camera once
      sfx    { id }                      one cue
-     art    { spr, x, y, t, scale }     hold a sprite on the card
-     two    { l, r, t }                 two portraits facing each other
-     pan    { to:{x,y}, t }             glide the camera somewhere
-     flash  { col, t }                  a hit of colour over everything
-     rumble { t, amp }                  sustained shake for a whole beat
+     art    { spr, scale, x, y, t }     hold a portrait in frame
+     two    { l, r, text, t }           two portraits facing off
+     pan    { to:{x,y}, t }             take the camera somewhere
+     move   { who, to, t }              walk a member of the cast
+     flash  { col, t }                  a hit of colour
+     rumble { amp, t }                  sustained shake
      do     { fn }                      run a function once
 
-   Every beat can carry `vig` to close a vignette in around the frame and
-   `slow` to hold the world's own time still while it plays.
+   Every beat can carry `vig` to squeeze the letterbox in on the
+   frame and `slow` to run the world at quarter speed while it
+   plays. Neither one stops you moving.
    ============================================================ */
-KD.Scenes.cine = (function () {
-  let beats = [], i = 0, bt = 0, done = null, name = '';
-  let fade = 0, fadeTo = 0, letter = 0, skipHold = 0;
-  let flash = 0, pan = null, vig = 0;
-  /* what the last `art` beat put on screen, so it can persist across says */
-  let held = null;
-  /* A frozen copy of whatever was on screen when the cutscene started.
-     Every Act One beat is world:false, and world:false used to mean a black
-     rectangle - so the queen left him, the cook took the castle and the
-     manta found him all in the same empty void. A cutscene should happen
-     WHERE YOU WERE STANDING. The scene is snapshotted here rather than kept
-     live because the scene underneath has been swapped out by the time this
-     one is drawing, and because a still frame under a letterbox is what a
-     cutscene looks like anyway. */
-  let shot = null, shotCtx = null;
+KD.Cut = (function () {
+  /* ---- which scenes you can walk around in -------------------------
+     Anything not in here has no player in it, so a cutscene called
+     from it goes to the bare stage instead. */
+  const HOSTS = { play: 1, castle: 1, buffet: 1, dinner: 1, gym: 1, interior: 1 };
 
-  /* Darkening the snapshot with a full-screen dither wash turned the whole
-     frame into a checkerboard - the same lesson as the god rays and the
-     window light, at the largest possible scale. So the frozen frame is
-     POSTERIZED instead: every pixel in it is remapped to a darker colour
-     from the same 64-entry palette, once, when the cutscene starts. No
-     alpha, no pattern, and it comes out looking like the same picture
-     lit by less light, which is what a cutscene wants behind it. */
-  let dark = null;
-  function darkMap() {
-    if (dark) return dark;
-    const P = KD.PAL, n = P.LIST.length;
-    dark = new Uint8Array(n * 3);
-    for (let i = 0; i < n; i++) {
-      const c = P.RGB[i];
-      const want = [c[0] * 0.42, c[1] * 0.44, c[2] * 0.52];   /* cool it, too */
-      let best = 0, bd = 1e9;
-      for (let k = 0; k < n; k++) {
-        const q = P.RGB[k];
-        const d = (q[0] - want[0]) * (q[0] - want[0])
-                + (q[1] - want[1]) * (q[1] - want[1])
-                + (q[2] - want[2]) * (q[2] - want[2]);
-        if (d < bd) { bd = d; best = k; }
-      }
-      dark[i * 3] = P.RGB[best][0];
-      dark[i * 3 + 1] = P.RGB[best][1];
-      dark[i * 3 + 2] = P.RGB[best][2];
+  let beats = [], i = 0, bt = 0, after = null, id = '';
+  let on = false, stage = false, pending = null;
+  let letter = 0, fade = 0, fadeTo = 0, flash = 0, vig = 0;
+  let pan = null, mv = null, held = null, heldSpr = '', artT = 0;
+  let resolve = null;                        /* host's cast lookup, for `move` */
+
+  const R = (x, y, w, h, c) => KD.Screen.rect(Math.round(x), Math.round(y),
+                                              Math.round(w), Math.round(h), c);
+
+  /* ---- starting ---------------------------------------------------- */
+  function play(scene) {
+    if (!scene || !scene.beats || !scene.beats.length) {
+      if (scene && scene.after) scene.after();
+      return;
     }
-    return dark;
+    /* Two cutscenes must never be half-playing at once: the second one's
+       `after` is what advances the story, and the first one's is what puts
+       the player somewhere sensible. Retire the one running first. */
+    if (on) finish();
+    if (HOSTS[KD.Game.scene]) { begin(scene, false); return; }
+    /* nothing to stand in: put it on the bare stage */
+    pending = scene;
+    KD.Game.go('cine', {});
   }
 
-  function snapshot() {
-    const b = KD.Screen.buf;
-    if (!b || !b.width) { shot = null; return; }
-    if (!shot || shot.width !== b.width || shot.height !== b.height) {
-      shot = document.createElement('canvas');
-      shot.width = b.width; shot.height = b.height;
-      shotCtx = shot.getContext('2d');
-      shotCtx.imageSmoothingEnabled = false;
-    }
-    shotCtx.clearRect(0, 0, shot.width, shot.height);
-    shotCtx.drawImage(b, 0, 0);
-    /* remap it down the palette, once */
-    try {
-      const D = darkMap(), P = KD.PAL, n = P.LIST.length;
-      const img = shotCtx.getImageData(0, 0, shot.width, shot.height);
-      const d = img.data;
-      const key = new Map();
-      for (let k = 0; k < n; k++) {
-        const q = P.RGB[k];
-        key.set((q[0] << 16) | (q[1] << 8) | q[2], k);
-      }
-      for (let i = 0; i < d.length; i += 4) {
-        const h = (d[i] << 16) | (d[i + 1] << 8) | d[i + 2];
-        const k = key.get(h);
-        if (k === undefined) {            /* not a palette colour: just halve it */
-          d[i] = d[i] * 0.42; d[i + 1] = d[i + 1] * 0.44; d[i + 2] = d[i + 2] * 0.52;
-        } else {
-          d[i] = D[k * 3]; d[i + 1] = D[k * 3 + 1]; d[i + 2] = D[k * 3 + 2];
-        }
-      }
-      shotCtx.putImageData(img, 0, 0);
-    } catch (e) {
-      /* Only a tainted or zero-size buffer should land here. It hid a typo
-         once - KD.Pal for KD.PAL - and the cutscene just quietly stopped
-         dimming, so it says something now. */
-      if (window.console) console.warn('cine: could not posterize the frame', e);
-    }
-  }
-
-  function enter(args) {
-    const sc = (args && args.scene) || null;
-    beats = (sc && sc.beats) || [];
-    done = (sc && sc.after) || null;
-    name = (sc && sc.id) || '';
-    i = 0; bt = 0; fade = 1; fadeTo = 0; letter = 0; skipHold = 0; held = null;
-    flash = 0; pan = null; vig = 0;
-    snapshot();
-    if (!beats.length) { finish(); return; }
+  function begin(scene, onStage) {
+    beats = scene.beats; after = scene.after || null; id = scene.id || '';
+    i = 0; bt = 0; on = true; stage = !!onStage;
+    letter = 0; fade = 1; fadeTo = 0; flash = 0; vig = 0;
+    pan = null; mv = null; held = null; heldSpr = ''; artT = 0;
     start();
   }
+
+  /* A host scene says how to find a member of its cast, so a `move`
+     beat can walk somebody across the room. Scenes with nobody in them
+     leave this alone and `move` quietly does nothing. */
+  const setCast = (fn) => { resolve = fn || null; };
 
   function start() {
     const b = beats[i];
     if (!b) return;
     bt = b.t === undefined ? 2.4 : b.t;
-    if (b.kind === 'fade') { fadeTo = b.to === undefined ? 1 : b.to; }
+    if (b.kind === 'fade') fadeTo = b.to === undefined ? 1 : b.to;
     if (b.kind === 'shake') KD.Fx.shake(b.amp || 6);
     if (b.kind === 'sfx' && b.id) KD.Sfx.play(b.id);
-    if (b.kind === 'art') held = b;
+    if (b.kind === 'art') hold(b.spr, b.scale);
     if (b.kind === 'do' && b.fn) b.fn();
-    if (b.kind === 'say' && b.sfx !== false) KD.Sfx.play('click');
-    if (b.kind === 'flash') flash = 1;
-    if (b.kind === 'pan' && b.to) {
-      pan = { fx: KD.Cam.x, fy: KD.Cam.y, tx: b.to.x * 8, ty: b.to.y * 8, t: 0, len: Math.max(0.2, b.t || 1.4) };
+    if (b.kind === 'say') {
+      if (b.sfx !== false) KD.Sfx.play('click');
+      /* Over the live world the say box is slim and has no portrait in it,
+         so the speaker's face goes up in the corner panel instead - the
+         same slot an `art` beat uses. It only drops in again when the
+         speaker actually changes. */
+      if (!stage && b.who) hold(b.who, 1);
     }
-    if (b.kind === 'two') held = null;
+    if (b.kind === 'flash') flash = 1;
+    if (b.kind === 'two') { held = null; heldSpr = ''; artT = 0; }
+    if (b.kind === 'pan' && b.to) {
+      pan = { fx: KD.Cam.x, fy: KD.Cam.y, tx: b.to.x * 8, ty: b.to.y * 8,
+              t: 0, len: Math.max(0.2, b.t || 1.4) };
+    }
+    if (b.kind === 'move') {
+      const a = resolve && resolve(b.who);
+      mv = a ? { a: a, from: a.x, to: b.to, t: 0, len: Math.max(0.2, b.t || 1.2) } : null;
+      if (mv) mv.a.walk = 1;
+    }
+  }
+
+  /* what is in the corner panel, and a drop-in when it changes */
+  function hold(spr, scale) {
+    if (!spr || !KD.PX.has(spr)) return;
+    held = { spr: spr, scale: scale || 1 };
+    if (spr !== heldSpr) { heldSpr = spr; artT = 0; }
   }
 
   function next() {
@@ -146,28 +133,39 @@ KD.Scenes.cine = (function () {
     start();
   }
   function finish() {
-    const f = done;
-    beats = []; done = null;
+    const f = after;
+    beats = []; after = null; on = false;
+    if (mv && mv.a) mv.a.walk = 0;
+    mv = null; pan = null; held = null; heldSpr = '';
     /* `after` decides where we land, so a skipped scene ends up in exactly
-       the same place a watched one does */
-    if (f) f(); else KD.Game.go('play', {});
+       the same place a watched one does. It may not navigate at all any
+       more - most cutscenes now hand the player straight back to the room
+       he never left. */
+    if (f) f();
   }
   const skip = () => finish();
 
+  /* ---- the world's clock while a beat plays ------------------------
+     `slow` used to mean "stop". It cannot mean that any more: a frozen
+     world with a live player is a player swimming through a photograph.
+     Quarter speed instead, which is what the beat wanted anyway. */
+  const timeScale = () => (on && beats[i] && beats[i].slow ? 0.25 : 1);
+  const holdsCam = () => !!(on && pan);
+
   function update(dt) {
+    if (!on) return;
     letter = Math.min(1, letter + dt * 4);
-    KD.Fx.update(dt);
     const b = beats[i];
     if (!b) return;
-    /* the fade eases toward its target rather than snapping */
     fade += (fadeTo - fade) * Math.min(1, dt * 5);
-    if (b.kind === 'fade') fade = fadeTo === 1 ? Math.min(1, fade + dt / Math.max(0.1, b.t || 0.6))
-                                              : Math.max(0, fade - dt / Math.max(0.1, b.t || 0.6));
-    else fadeTo = 0;
+    if (b.kind === 'fade') {
+      fade = fadeTo === 1 ? Math.min(1, fade + dt / Math.max(0.1, b.t || 0.6))
+                          : Math.max(0, fade - dt / Math.max(0.1, b.t || 0.6));
+    } else fadeTo = 0;
     if (flash > 0) flash = Math.max(0, flash - dt * 3.2);
-    vig += (((b.vig || 0)) - vig) * Math.min(1, dt * 3);
+    vig += ((b.vig || 0) - vig) * Math.min(1, dt * 3);
+    artT = Math.min(1, artT + dt * 5);
     if (b.kind === 'rumble') KD.Fx.shake((b.amp || 4) * dt * 30);
-    /* the camera glide, eased so it starts and stops softly */
     if (pan) {
       pan.t = Math.min(pan.len, pan.t + dt);
       const k = KD.Juice.outCubic(pan.t / pan.len);
@@ -175,110 +173,245 @@ KD.Scenes.cine = (function () {
       KD.Cam.y = pan.fy + (pan.ty - pan.fy) * k;
       if (pan.t >= pan.len) pan = null;
     }
+    if (mv) {
+      mv.t = Math.min(mv.len, mv.t + dt);
+      const k = mv.t / mv.len, e = k * k * (3 - 2 * k);
+      mv.a.x = Math.round(mv.from + (mv.to - mv.from) * e);
+      if (mv.t >= mv.len) { mv.a.walk = 0; mv = null; }
+    }
     bt -= dt;
-    /* advance on time, or immediately on a press */
+    /* Advance, and EAT the press. The scene under us reads the same hit
+       set a moment later; if we did not take the key out of it, one tap
+       would advance the story and talk to whoever was standing there. */
     const hit = KD.In.isHit('Space', 'Enter', 'KeyE') || KD.In.mouse.click || KD.In.actHit('act');
-    if (hit) { KD.In.consumedClick(); next(); return; }
-    if (KD.In.isHit('Escape')) { skip(); return; }
+    const esc = KD.In.isHit('Escape');
+    if (hit || esc) {
+      KD.In.consumedClick();
+      KD.In.eat('Space', 'Enter', 'KeyE', 'Escape', 'act');
+      if (esc) skip(); else next();
+      return;
+    }
     if (bt <= 0) next();
   }
 
-  function draw(ctx) {
-    KD.Screen.clear('INK.0');
-    const b = beats[i] || {};
-    /* the room he is standing in, held under the whole cutscene and pushed
-       back a step so the words stay on top of it */
-    if (shot) ctx.drawImage(shot, 0, 0);
-    /* the world behind, if this scene is playing live over it */
-    if (b.world !== false && KD.Gen && KD.Gen.meta && KD.Gen.meta.village) {
-      const sh = KD.Fx.shakeOffset();
-      const cam = { x: Math.round(KD.Cam.x + sh.x), y: Math.round(KD.Cam.y + sh.y) };
-      KD.Parallax.back(ctx, cam, KD.Game.t);
-      KD.Render.draw(ctx, cam);
-      KD.Village.draw(ctx, cam);
-      KD.Parallax.surface(ctx, cam, KD.Game.t);
-      KD.Folk.draw(ctx, cam);
-      KD.Parallax.front(ctx, cam, KD.Game.t);
+  /* ================================================================
+     DRAWING
+
+     Two looks, because a cutscene over a live world and a cutscene
+     over black want opposite things. On the bare stage the portraits
+     are held up big in the middle of the frame, because there is
+     nothing else to look at. Over the world they are framed insets in
+     the top corner and the words sit on a solid plate - the picture
+     underneath is the scene, and covering it up is the one thing this
+     rewrite exists to stop.
+     ================================================================ */
+  function bars() {
+    const base = stage ? 24 : 13;
+    return Math.round((base + vig * (stage ? 10 : 11)) * KD.Juice.outCubic(letter));
+  }
+
+  /* a framed portrait panel - one blit inside two rules of light. Small
+     sprites get scaled up so an item like the crown still reads; a
+     forty-by-sixty face is already big enough at 1x. */
+  function insetW(spr, sc) {
+    if (!spr || !KD.PX.has(spr)) return 0;
+    return KD.PX.get(spr).w * insetScale(spr, sc) + 6;
+  }
+  function insetScale(spr, sc) {
+    const s = KD.PX.get(spr);
+    let k = Math.max(1, Math.min(4, Math.round(sc || 1)));
+    while (k > 1 && (s.h * k > 96 || s.w * k > 96)) k--;
+    if (s.h * 2 <= 56 && k < 2) k = 2;
+    return k;
+  }
+  function inset(ctx, spr, x, y, flip, sc) {
+    if (!spr || !KD.PX.has(spr)) return 0;
+    const s = KD.PX.get(spr), k = insetScale(spr, sc);
+    const w = s.w * k + 6, h = s.h * k + 6;
+    R(x - 1, y - 1, w + 2, h + 2, 'INK.0');
+    R(x, y, w, h, 'DEEP.0');
+    KD.Screen.frame(x, y, w, h, 'GOLD.0');
+    R(x + 1, y + 1, w - 2, 1, 'DEEP.2');
+    KD.PX.blit(ctx, spr, x + 3, y + 3,
+               { anchor: false, flipX: !!flip, dw: s.w * k, dh: s.h * k });
+    return h;
+  }
+
+  /* a title plate: solid, engraved, and readable over anything */
+  function plate(lines, sub, y0) {
+    const lh = 13;
+    const hh = 11 + lines.length * lh + (sub ? 9 : 0);
+    R(0, y0 - 1, KD.W, hh + 2, 'INK.0');
+    R(0, y0 - 1, KD.W, 1, 'INK.2');
+    R(0, y0 + hh, KD.W, 1, 'INK.2');
+    R(10, y0 + 2, KD.W - 20, 1, 'GOLD.0');
+    R(10, y0 + hh - 3, KD.W - 20, 1, 'GOLD.0');
+    lines.forEach((l, k) => {
+      KD.Text.draw(l, KD.W / 2, y0 + 7 + k * lh, k === 0 ? 'GOLD.3' : 'BONE.2',
+                   { align: 'center', shadow: 'INK.0', space: k === 0 ? 1 : 0 });
+    });
+    if (sub) {
+      KD.Text.draw(sub, KD.W / 2, y0 + 7 + lines.length * lh, 'INK.3',
+                   { tiny: true, align: 'center' });
     }
-    /* whatever art is being held up */
+    return hh;
+  }
+
+  function draw(ctx) {
+    if (!on) return;
+    const b = beats[i] || {};
+    const bar = bars();
+    let top = bar + 7;
+
+    /* ---- portraits ------------------------------------------------- */
+    if (b.kind === 'two') {
+      if (stage) {
+        const y0 = Math.round(KD.H * 0.30);
+        [[b.l, 0.26, false], [b.r, 0.74, true]].forEach(([spr, fx, flip]) => {
+          if (!spr || !KD.PX.has(spr)) return;
+          const s = KD.PX.get(spr);
+          KD.PX.blit(ctx, spr, Math.round(KD.W * fx - s.w), y0,
+                     { anchor: false, dw: s.w * 2, dh: s.h * 2, flipX: flip });
+        });
+      } else {
+        const k = KD.Juice.outCubic(artT), sl = Math.round((1 - k) * 14);
+        const lw = insetW(b.l, 1), rw = insetW(b.r, 1);
+        const h1 = inset(ctx, b.l, 8 - sl, top, false);
+        const h2 = inset(ctx, b.r, KD.W - 8 - rw + sl, top, true);
+        /* a rule between them, so they read as facing each other */
+        const my = top + Math.round(Math.max(h1, h2) / 2);
+        R(8 + lw + 4, my, KD.W - 24 - lw - rw, 1, 'INK.2');
+        top += Math.max(h1, h2) + 6;
+      }
+      if (b.text) {
+        if (stage) {
+          KD.Text.draw(b.text, KD.W / 2, Math.round(KD.H * 0.30) - 14, 'BONE.2',
+                       { align: 'center', shadow: 'INK.0', max: KD.W - 30 });
+        } else {
+          plate([b.text], null, top);
+        }
+      }
+    }
     const a = held;
     if (a && KD.PX.has(a.spr)) {
-      const s = KD.PX.get(a.spr);
-      const k = a.scale || 1;
-      KD.PX.blit(ctx, a.spr,
-        Math.round((a.x === undefined ? 0.5 : a.x) * KD.W - s.w * k / 2),
-        Math.round((a.y === undefined ? 0.36 : a.y) * KD.H - s.h * k / 2),
-        { anchor: false, dw: s.w * k, dh: s.h * k });
-    }
-    /* letterbox bars slide in, which is the whole signal that this is a
-       cutscene and not the game */
-    const bar = Math.round(24 * KD.Juice.outCubic(letter));
-    KD.Screen.rect(0, 0, KD.W, bar, 'INK.0');
-    KD.Screen.rect(0, KD.H - bar, KD.W, bar, 'INK.0');
-    /* a lit lip on each bar, so they read as bars rather than as nothing */
-    if (bar > 1) {
-      KD.Screen.rect(0, bar - 1, KD.W, 1, 'INK.2');
-      KD.Screen.rect(0, KD.H - bar, KD.W, 1, 'INK.2');
+      if (stage) {
+        const s = KD.PX.get(a.spr), k = a.scale || 1;
+        KD.PX.blit(ctx, a.spr,
+          Math.round((a.x === undefined ? 0.5 : a.x) * KD.W - s.w * k / 2),
+          Math.round((a.y === undefined ? 0.36 : a.y) * KD.H - s.h * k / 2),
+          { anchor: false, dw: s.w * k, dh: s.h * k });
+      } else {
+        const sl = Math.round((1 - KD.Juice.outCubic(artT)) * 16);
+        top += inset(ctx, a.spr, 8 - sl, top, false, a.scale) + 6;
+      }
     }
 
-    if (b.kind === 'two') {
-      /* two portraits facing each other, which is how you stage a betrayal */
-      const y0 = Math.round(KD.H * 0.30);
-      [[b.l, 0.26, false], [b.r, 0.74, true]].forEach(([spr, fx, flip]) => {
-        if (!spr || !KD.PX.has(spr)) return;
-        const s = KD.PX.get(spr);
-        KD.PX.blit(ctx, spr, Math.round(KD.W * fx - s.w), y0,
-          { anchor: false, dw: s.w * 2, dh: s.h * 2, flipX: flip });
-      });
-      if (b.text) {
-        KD.Text.draw(b.text, KD.W / 2, Math.round(KD.H * 0.30) - 14, 'BONE.2',
-          { align: 'center', shadow: 'INK.0', max: KD.W - 30 });
-      }
+    /* ---- the letterbox --------------------------------------------- */
+    R(0, 0, KD.W, bar, 'INK.0');
+    R(0, KD.H - bar, KD.W, bar, 'INK.0');
+    if (bar > 1) {
+      R(0, bar - 1, KD.W, 1, 'INK.2');
+      R(0, KD.H - bar, KD.W, 1, 'INK.2');
     }
+
+    /* ---- words ----------------------------------------------------- */
     if (b.kind === 'card') {
       const lines = b.lines || [];
-      const lh = 13;
-      /* If art is being held up, the caption goes UNDER it. Centring both
-         put the words across the picture's face. */
-      const y0 = held
-        ? Math.round(KD.H * 0.70)
-        : Math.round(KD.H / 2 - (lines.length * lh) / 2) - (b.sub ? 8 : 0);
-      lines.forEach((l, k) => {
-        KD.Text.draw(l, KD.W / 2, y0 + k * lh, k === 0 ? 'GOLD.3' : 'BONE.2',
-          { align: 'center', shadow: 'INK.0', space: k === 0 ? 1 : 0 });
-      });
-      if (b.sub) {
-        KD.Text.draw(b.sub, KD.W / 2, y0 + lines.length * lh + 6, 'INK.3',
-          { tiny: true, align: 'center' });
+      /* On the bare stage the words are the picture, so they sit in open
+         black with nothing drawn behind them. Over the live world they need
+         the plate: a caption laid straight over a brick wall is a caption
+         you cannot read. */
+      if (stage) {
+        const lh = 13;
+        const y0 = held ? Math.round(KD.H * 0.70)
+                        : Math.round(KD.H / 2 - (lines.length * lh) / 2) - (b.sub ? 8 : 0);
+        lines.forEach((l, k) => {
+          KD.Text.draw(l, KD.W / 2, y0 + k * lh, k === 0 ? 'GOLD.3' : 'BONE.2',
+                       { align: 'center', shadow: 'INK.0', space: k === 0 ? 1 : 0 });
+        });
+        if (b.sub) {
+          KD.Text.draw(b.sub, KD.W / 2, y0 + lines.length * lh + 6, 'INK.3',
+                       { tiny: true, align: 'center' });
+        }
+      } else {
+        plate(lines, b.sub, top);
       }
     } else if (b.kind === 'say') {
-      /* the same box the conversations use. The cutscenes had their own
-         thinner panel and it read as a different game from the scene either
-         side of it. */
-      const L = KD.Convo.layout(0, b.text || '');
-      L.y = KD.H - L.h - bar - 6;
+      const L = KD.Convo.layout(0, b.text || '', { slim: !stage });
+      /* flush to the bottom edge over the letterbox bar, so the people
+         talking are not cut off at the knees by the words they are saying */
+      L.y = stage ? KD.H - L.h - bar - 6 : KD.H - L.h - 3;
       const cast = KD.Convo.CAST;
       let tint = 'GOLD.3';
       for (const k in cast) if (cast[k].portrait === b.who) tint = cast[k].tint;
       KD.Convo.box({ portrait: b.who, name: b.name, tint: tint }, b.text,
                    { L: L, speaking: false });
     }
-    /* a vignette closes in from the edges when a beat asks for one */
-    if (vig > 0.01) {
-      for (let k = 1; k <= 5; k++) {
-        const pad = Math.round((1 - vig) * 60) + k * 8;
-        const a = 0.20 * vig;
-        KD.Dither.wash(ctx, 0, 0, KD.W, Math.max(0, bar + pad), 'INK.0', a);
-        KD.Dither.wash(ctx, 0, KD.H - bar - pad, KD.W, Math.max(0, bar + pad), 'INK.0', a);
-        KD.Dither.wash(ctx, 0, 0, Math.max(0, pad * 2), KD.H, 'INK.0', a);
-        KD.Dither.wash(ctx, KD.W - pad * 2, 0, Math.max(0, pad * 2), KD.H, 'INK.0', a);
+
+    /* ---- transitions -----------------------------------------------
+       The fade is a SHUTTER, not a cross-fade. Dimming a picture with a
+       half-density dither turns it into a checkerboard - the lesson the
+       god rays, the window light and the old cutscene wash all taught -
+       so black closes in from both edges instead, solid the whole way. */
+    if (fade > 0.005) {
+      const h = Math.round(fade * (KD.H / 2 + 1));
+      R(0, 0, KD.W, h, 'INK.0');
+      R(0, KD.H - h, KD.W, h, 'INK.0');
+      if (h > 1 && fade < 0.99) {
+        R(0, h - 1, KD.W, 1, 'INK.1');
+        R(0, KD.H - h, KD.W, 1, 'INK.1');
       }
     }
-    /* the fade sits over everything except the skip hint */
-    if (fade > 0.01) KD.Dither.wash(ctx, 0, 0, KD.W, KD.H, 'INK.0', Math.min(1, fade));
-    if (flash > 0.01) KD.Dither.wash(ctx, 0, 0, KD.W, KD.H, (b.col || 'WHITE'), Math.min(0.85, flash));
-    KD.Text.draw(KD.touch ? 'tap to go on' : 'SPACE to go on   -   ESC to skip',
-      KD.W - 6, KD.H - bar + 7, 'INK.2', { tiny: true, align: 'right' });
+    /* and the flash is solid for two frames rather than a screen of dots */
+    if (flash > 0.34) R(0, 0, KD.W, KD.H, b.col || 'WHITE');
+
+    /* the hint lives in the TOP bar: the bottom one is where the words go */
+    if (fade < 0.6 && bar > 8) {
+      KD.Text.draw(KD.touch ? 'tap to go on' : 'SPACE to go on   -   ESC to skip',
+        KD.W - 6, bar - 9, 'INK.2', { tiny: true, align: 'right' });
+    }
   }
-  return { enter, update, draw, skip };
+
+  return { play, begin, update, draw, skip, setCast, timeScale, holdsCam,
+           get active() { return on; },
+           get id() { return id; },
+           _takeStage: () => { const p = pending; pending = null; return p; } };
+})();
+
+/* ---------------------------------------------------------------
+   The bare stage. Only the title screen's cutscenes land here, and
+   only because a story about how he used to be king has no room to
+   walk around in yet.
+   --------------------------------------------------------------- */
+KD.Scenes.cine = (function () {
+  let t = 0, dead = 0;
+  function enter(args) {
+    t = 0; dead = 0;
+    const sc = (args && args.scene) || KD.Cut._takeStage();
+    if (!sc) { KD.Game.go('title', {}); return; }
+    KD.Cut.begin(sc, true);
+  }
+  function update(dt) {
+    t += dt;
+    KD.Fx.update(dt);
+    /* The layer's `after` is what moves us off this stage. If a scene ever
+       forgets to say where it goes we would sit here on black forever, so
+       count the frames it has been finished and bail out to the title.
+       Checked here and not in draw(): a Game.go() from draw would land
+       AFTER the after-hook's and quietly overrule it. */
+    if (!KD.Cut.active && KD.Game.scene === 'cine') {
+      dead += dt;
+      if (dead > 0.4) KD.Game.go('title', {});
+    }
+  }
+  function draw() {
+    KD.Screen.clear('INK.0');
+    /* not quite black: a few slow motes, so the stage is not a dead panel */
+    for (let k = 0; k < 26; k++) {
+      const x = Math.round((k * 149 + t * (6 + (k % 5) * 3)) % KD.W);
+      const y = Math.round((k * 71 + t * 4) % KD.H);
+      KD.Screen.rect(x, y, 1, 1, k % 3 ? 'INK.1' : 'INK.2');
+    }
+  }
+  return { enter, update, draw };
 })();

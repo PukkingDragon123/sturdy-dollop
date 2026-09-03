@@ -133,6 +133,26 @@ KD.Scenes.play = (function () {
     S.tick(dt);
     dayT += dt;
 
+    /* A cutscene runs OVER the ocean now. He keeps swimming; he does not
+       open his bag, pause the game, dig a hole or ride the manta in the
+       middle of somebody's speech. */
+    if (KD.Cut.active) {
+      tapWalk(S, { x: KD.Cam.x, y: KD.Cam.y });
+      KD.Player.update(dt, S);
+      KD.Boss.update(dt, S);
+      KD.Mobs.update(dt, S);
+      KD.Mobs.updateShots(dt, S);
+      KD.Water.step(2600);
+      KD.Light.step();
+      KD.Fx.update(dt);
+      KD.Parallax.tick(dt);
+      KD.Folk.update(dt, S);
+      KD.Belly.update(dt, S);
+      KD.Santa.update(dt, S);
+      camera(dt);
+      return;
+    }
+
     /* panels: open one and the world pauses around you */
     if (KD.In.isHit('KeyI', 'Tab')) KD.Panels.toggle('bag');
     if (KD.In.isHit('KeyC') || KD.In.actHit('make')) KD.Panels.toggle('body');
@@ -164,19 +184,26 @@ KD.Scenes.play = (function () {
     KD.Santa.update(dt, S);
     gateWatch();
 
-    /* camera: lead the player, snap to whole pixels so nothing shimmers */
+    camera(dt);
     const P = KD.Player.P;
-    const tx = clampCamX(P.x + P.vx * 0.16 - KD.W / 2);
-    const ty = clampCamY(P.y - P.h / 2 + P.vy * 0.10 - KD.H / 2);
-    KD.Cam.x += (tx - KD.Cam.x) * Math.min(1, dt * 7);
-    KD.Cam.y += (ty - KD.Cam.y) * Math.min(1, dt * 7);
-
     if (P.swim > 0.45 && Math.random() < dt * 2.2) KD.Fx.bubbles(P.x, P.y - P.h, 1);
     bossWatch(S);
     /* autosave, quietly */
     if ((S.S.playtime | 0) % 30 === 0 && S.S.playtime - (S.lastSave || 0) > 30) {
       S.lastSave = S.S.playtime; S.save();
     }
+  }
+
+  /* camera: lead the player, snap to whole pixels so nothing shimmers. A
+     `pan` beat in a cutscene takes the camera off him for as long as it is
+     running, and hands it straight back. */
+  function camera(dt) {
+    if (KD.Cut.holdsCam()) return;
+    const P = KD.Player.P;
+    const tx = clampCamX(P.x + P.vx * 0.16 - KD.W / 2);
+    const ty = clampCamY(P.y - P.h / 2 + P.vy * 0.10 - KD.H / 2);
+    KD.Cam.x += (tx - KD.Cam.x) * Math.min(1, dt * 7);
+    KD.Cam.y += (ty - KD.Cam.y) * Math.min(1, dt * 7);
   }
 
   /* The King is sitting in there the whole time. Walk in out of shape and he
@@ -293,21 +320,30 @@ KD.Scenes.play = (function () {
     KD.Santa.draw(ctx, cam);
     KD.Mobs.draw(ctx, cam);
     KD.Boss.draw(ctx, cam);
-    walkMark(cam);
+    if (!KD.Cut.active) walkMark(cam);
     drawKing(ctx, cam);
-    threatMark(cam);
+    if (!KD.Cut.active) threatMark(cam);
     KD.Fx.draw(ctx, cam);
     KD.Parallax.front(ctx, cam, dayT);
     KD.Fx.overlay(ctx);
-    KD.Hud.draw(S, cam);
-    KD.UI.touchPad(BTNS);
-    KD.Panels.draw(S);
-    KD.UI.tooltips();
+    /* Under a cutscene: the stick stays, the rest of the interface goes.
+       The health, the hotbar, the depth gauge and eight touch buttons all
+       sit exactly where the letterbox and the words land. */
+    const cut = KD.Cut.active;
+    if (!cut) {
+      KD.Hud.draw(S, cam);
+      KD.UI.touchPad(BTNS);
+      KD.Panels.draw(S);
+      KD.UI.tooltips();
+    } else if (KD.touch) {
+      KD.In.buttons([]);
+      KD.UI.touchPad([]);
+    }
     /* The controls, for the first fourteen seconds. It used to be a bare
        line of BONE.0 laid straight over the sea floor, which is a shadow
        under every letter and still unreadable; on a strip it is legible and
        it goes away on its own. */
-    if (!KD.Panels.isOpen() && S.S.playtime < 14) {
+    if (!KD.Panels.isOpen() && !cut && S.S.playtime < 14) {
       const txt = KD.touch ? 'pad to move   -   DIG   -   BODY   -   BAG'
                            : 'WASD move  -  click to dig  -  F swing  -  E use  -  C body  -  Q tasks  -  V skills  -  I bag';
       const tw = KD.Text.width(txt, { tiny: true }) + 16;

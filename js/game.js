@@ -40,11 +40,20 @@ KD.Game = (function () {
     /* Hit stop. A solid landing or a solid hit holds the world for a few
        frames - the UI timers above already ran on real time, so menus and
        pops stay responsive while the game itself hesitates. */
-    const sdt = KD.Juice.scale(dt);
+    let sdt = KD.Juice.scale(dt);
+    /* A cutscene is a LAYER over whatever scene is running, not a scene of
+       its own - see scenes/cine.js. It ticks BEFORE the scene so it can take
+       the advance key out of the frame before the scene reads it, and draws
+       AFTER so its letterbox and its words land on top of the live world.
+       A beat asking for `slow` slows the world down; it never stops it,
+       because the whole point is that you can still move. */
+    if (KD.Cut.active) sdt *= KD.Cut.timeScale();
     try {
+      KD.Cut.update(dt);
       if (cur && cur.update) cur.update(sdt);
       const ctx = KD.Screen.ctx();
       if (cur && cur.draw) cur.draw(ctx);
+      KD.Cut.draw(ctx);
     } catch (e) {
       /* draw the error instead of a white screen: a black screen tells you nothing */
       const ctx = KD.Screen.ctx();

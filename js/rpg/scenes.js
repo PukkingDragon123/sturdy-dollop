@@ -30,30 +30,34 @@ KD.Cine = (function () {
     return {
       id: 'intro',
       beats: [
-        { kind: 'card', world: false, t: 3.0,
+        { kind: 'card', t: 3.0,
           lines: ['KING OF THE ATLANTIC'],
           sub: 'a story about a man, a barrel and a manta ray' },
-        { kind: 'art', world: false, spr: 'po_king', scale: 2, y: 0.42, t: 0.1 },
-        { kind: 'card', world: false, t: 3.4,
+        { kind: 'art', spr: 'po_king', scale: 2, y: 0.42, t: 0.1 },
+        { kind: 'card', t: 3.4,
           lines: ['The trench answered to you.', 'So did the reef, and the drop, and the blue.'],
           sub: 'and there was a queen, and a very long table' },
-        { kind: 'fade', world: false, to: 1, t: 0.8 }
+        { kind: 'fade', to: 1, t: 0.8 }
       ],
       after: () => { mark('intro'); KD.Game.go('wake', {}); }
     };
   }
 
+  /* Over the water, not instead of it. He is treading water in front of the
+     open gate for all four of these beats and can swim on through any of
+     them - the turtle will keep talking behind him. */
   function gate() {
     return {
       id: 'gate',
       beats: [
         { kind: 'shake', amp: 7, t: 0.3 },
         { kind: 'sfx', id: 'open', t: 0.2 },
+        { kind: 'rumble', amp: 2, t: 0.8 },
         { kind: 'say', who: 'po_turtle', name: 'Bulwark', t: 4.2,
           text: 'Well. Look at you. Go on then - it is warm out there, and everything in it bites.' },
         { kind: 'card', t: 2.6, lines: ['THE SEA GATE IS OPEN'], sub: 'the reef is east' }
       ],
-      after: () => { mark('gate'); KD.Game.go('play', {}); }
+      after: () => mark('gate')
     };
   }
 
@@ -70,20 +74,24 @@ KD.Cine = (function () {
   function throne() {
     return {
       id: 'throne',
+      /* This used to open by fading the screen to black and back, and then
+         hold a portrait of the octopus up in the middle of the frame. He is
+         SITTING RIGHT THERE, forty pixels of him, on the throne, at the
+         bottom of the drop you just swam. Covering him up with a picture of
+         himself was the old system in one line. */
       beats: [
-        { kind: 'fade', to: 1, t: 0.6 },
-        { kind: 'fade', to: 0, t: 0.8 },
-        { kind: 'card', t: 2.6, lines: ['THE DROP'], sub: 'six hundred metres down' },
-        { kind: 'art', spr: 'po_octo', scale: 2, y: 0.40, t: 0.1 },
-        { kind: 'say', who: 'po_octo', name: 'The Deep', t: 4.6,
+        { kind: 'card', t: 2.6, vig: 0.7, lines: ['THE DROP'],
+          sub: 'six hundred metres down' },
+        { kind: 'say', who: 'po_octo', name: 'The Deep', t: 4.6, vig: 0.5,
           text: 'Oh. You actually did it. Eighteen kilos and six hundred metres, for a chair.' },
-        { kind: 'say', who: 'po_king', name: 'You', t: 3.0,
+        { kind: 'say', who: 'po_king', name: 'You', t: 3.0, vig: 0.5,
           text: 'Get off it.' },
-        { kind: 'say', who: 'po_octo', name: 'The Deep', t: 5.0,
+        { kind: 'say', who: 'po_octo', name: 'The Deep', t: 5.0, vig: 0.5,
           text: 'I have been wearing your armour for four seasons, majesty. Let us find out how much of it I actually need.' },
+        { kind: 'rumble', amp: 5, t: 0.9, vig: 0.8 },
         { kind: 'shake', amp: 9, t: 0.3 }
       ],
-      after: () => { mark('throne'); KD.Game.go('play', {}); }
+      after: () => mark('throne')
     };
   }
 
@@ -98,21 +106,20 @@ KD.Cine = (function () {
     return {
       id: 'win',
       beats: [
-        { kind: 'fade', to: 1, t: 0.7 },
-        { kind: 'art', world: false, spr: 'ic_crown', scale: 6, y: 0.38, t: 0.1 },
-        { kind: 'fade', to: 0, t: 0.8 },
-        { kind: 'card', world: false, t: 3.0, lines: ['THE CROWN IS YOURS'] },
-        { kind: 'say', world: false, who: 'po_keg', name: 'The Keg', t: 4.6,
+        { kind: 'art', spr: 'ic_crown', scale: 4, y: 0.38, t: 0.1 },
+        { kind: 'card', t: 3.0, vig: 0.5, lines: ['THE CROWN IS YOURS'] },
+        { kind: 'say', who: 'po_keg', name: 'The Keg', t: 4.6,
           text: 'There he is. There is the man I got fat. Come home, I have not moved.' },
-        { kind: 'say', world: false, who: 'po_king', name: 'You', t: 3.6,
+        { kind: 'say', who: 'po_king', name: 'You', t: 3.6,
           text: 'No. You have not.' },
-        { kind: 'say', world: false, who: 'po_santa', name: 'Santa the Manta', t: 4.8,
+        { kind: 'say', who: 'po_santa', name: 'Santa the Manta', t: 4.8,
           text: 'HO! Do not look at me like that, majesty, I only carried you the first hundred metres. You did the other three hundred yourself.' },
-        { kind: 'card', world: false, t: 2.6, lines: ['AND THE LONG TABLE'],
+        { kind: 'card', t: 2.6, lines: ['AND THE LONG TABLE'],
           sub: 'somebody had put the chairs back' },
-        { kind: 'say', world: false, who: 'po_queen', name: 'Coralene', t: 4.8,
+        { kind: 'say', who: 'po_queen', name: 'Coralene', t: 4.8,
           text: 'I am not coming back. But I will sit down, and you will tell me about the four hundred metres, and we will see.' },
-        { kind: 'card', world: false, t: 3.4,
+        { kind: 'fade', to: 1, t: 1.0 },
+        { kind: 'card', t: 3.4, vig: 1,
           lines: ['KING OF THE ATLANTIC'], sub: 'and eighteen kilos less of him' }
       ],
       after: () => { mark('win'); KD.Game.go('victory', {}); }
@@ -125,7 +132,7 @@ KD.Cine = (function () {
     const mk = BY_ID[id];
     if (!mk) return false;
     if (!force && seen(id)) return false;
-    KD.Game.go('cine', { scene: mk() });
+    KD.Cut.play(mk());
     return true;
   }
   return { play, seen, mark, BY_ID };

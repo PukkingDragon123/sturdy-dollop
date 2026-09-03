@@ -46,8 +46,12 @@ KD.Act1 = (function () {
       hint: 'Something buzzed in the throne room' },
     { id: 'night', kind: 'talk', who: 'keg', room: 0, mark: 'talk',
       hint: 'She is waiting by the throne', talk: 'keg' },
+    /* This used to say "go back to the Great Hall", and it fired in room 1,
+       which meant the scene where she walks in on the two of them played in
+       an empty hall with the keg one room away. It happens where it happens:
+       the throne room, with her still sitting there. */
     { id: 'fall', kind: 'cine', cine: 'a1_fall', mark: 'go',
-      hint: 'Go back to the Great Hall', room: 1 }
+      hint: 'Stay where you are. Somebody is coming up the stairs', room: 0 }
   ];
 
   const beat = () => BEATS[Math.min(A.beat, BEATS.length - 1)];

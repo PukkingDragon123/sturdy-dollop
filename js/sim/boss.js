@@ -119,6 +119,12 @@ KD.Boss = (function () {
     }
     B.y = ny;
 
+    /* He does not swing while somebody is talking - and in the throne scene
+       the somebody is him. The cutscene plays over this arena now, so the
+       fight stands still through it: he keeps breathing and he keeps
+       falling, and the moment the last line lands he starts. */
+    if (KD.Cut && KD.Cut.active) { B.vx *= 0.86; return; }
+
     B.stateT -= dt;
     if (B.state === 'entrance') {
       if (B.stateT <= 0) {

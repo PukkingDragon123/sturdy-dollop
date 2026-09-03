@@ -90,21 +90,28 @@ KD.Convo = (function () {
      far - the box was a fixed 54 pixels tall with maxLines: 3, and on a
      390-wide phone (where the panel gives up 96 columns to the buttons) a
      long line simply lost its last third with no indication that it had. */
-  function layout(nRows, full) {
+  /* `slim` drops the portrait gutter and the minimum height with it, so the
+     box is exactly as tall as the words in it. Cutscenes use it: they play
+     over the live room now, and a fifty-six pixel panel across the bottom
+     of a two-hundred-and-forty pixel frame cut everybody in the scene off
+     at the knees. The face goes in the corner up top instead, where the
+     wall is. */
+  function layout(nRows, full, o) {
+    const slim = !!(o && o.slim);
     const gap = KD.touch ? 96 : 0;
     const w = Math.min(KD.W - 12 - gap, 352);
     const x = Math.round((KD.W - gap - w) / 2);
-    const tx = x + 7 + PW + 10;
+    const tx = slim ? x + 9 : x + 7 + PW + 10;
     const tw = x + w - tx - 8;
-    let body = 54;
+    let body = slim ? 34 : 54;
     if (nRows) {
       body = 20 + nRows * 13;
     } else if (full) {
       const n = KD.Text.wrap(full, tw, { tiny: true }).length;
-      body = 14 + Math.max(3, n) * LH;
+      body = (slim ? 11 : 14) + Math.max(slim ? 2 : 3, n) * LH;
     }
-    const h = Math.max(body, PH + 16);
-    return { w: w, h: h, x: x, y: KD.H - h - 12, tx: tx, tw: tw };
+    const h = slim ? body : Math.max(body, PH + 16);
+    return { w: w, h: h, x: x, y: KD.H - h - 12, tx: tx, tw: tw, slim: slim };
   }
   const rowY = (L, k) => L.y + 20 + k * 13;
   function rowAt(L, n) {
@@ -206,17 +213,19 @@ KD.Convo = (function () {
        and drops in when the speaker CHANGES, which is the cheapest way to
        make a conversation feel like it has two people in it. */
     if (who.portrait !== popWho) { popWho = who.portrait; popT = 0.22; }
-    const drop = popT > 0 ? Math.round(KD.Juice.outCubic(1 - popT / 0.22) * 6 - 6) : 0;
-    const bob = (o.speaking ? Math.round(Math.sin(t * 22) * 1.2) : 0) + drop;
-    const px = x + 7, py = Math.round(y + (h - PH) / 2);
-    R(px - 3, py - 3, PW + 6, PH + 6, 'INK.0');
-    R(px - 2, py - 2, PW + 4, PH + 4, 'GOLD.0');
-    R(px - 1, py - 1, PW + 2, 1, 'GOLD.2');
-    R(px - 1, py - 1, PW + 2, PH + 2, 'DEEP.1');
-    if (who.portrait && KD.PX.has(who.portrait)) {
-      KD.PX.blit(KD.Screen.ctx(), who.portrait, px, py + bob, { anchor: false });
+    if (!L.slim) {
+      const drop = popT > 0 ? Math.round(KD.Juice.outCubic(1 - popT / 0.22) * 6 - 6) : 0;
+      const bob = (o.speaking ? Math.round(Math.sin(t * 22) * 1.2) : 0) + drop;
+      const px = x + 7, py = Math.round(y + (h - PH) / 2);
+      R(px - 3, py - 3, PW + 6, PH + 6, 'INK.0');
+      R(px - 2, py - 2, PW + 4, PH + 4, 'GOLD.0');
+      R(px - 1, py - 1, PW + 2, 1, 'GOLD.2');
+      R(px - 1, py - 1, PW + 2, PH + 2, 'DEEP.1');
+      if (who.portrait && KD.PX.has(who.portrait)) {
+        KD.PX.blit(KD.Screen.ctx(), who.portrait, px, py + bob, { anchor: false });
+      }
+      for (const ry of [py - 2, py + PH]) { R(px - 2, ry, 2, 2, 'GOLD.2'); R(px + PW, ry, 2, 2, 'GOLD.2'); }
     }
-    for (const ry of [py - 2, py + PH]) { R(px - 2, ry, 2, 2, 'GOLD.2'); R(px + PW, ry, 2, 2, 'GOLD.2'); }
     /* the name, on a plaque over the top edge */
     const nm = (who.name || '').toUpperCase();
     if (nm) {
@@ -227,7 +236,7 @@ KD.Convo = (function () {
       KD.Text.draw(nm, L.tx + 2, y - 3, who.tint || 'GOLD.3', { shadow: 'INK.0' });
     }
     if (shownText !== null && shownText !== undefined) {
-      KD.Text.block(shownText, L.tx, y + 10, 'BONE.2',
+      KD.Text.block(shownText, L.tx, y + (L.slim ? 8 : 10), 'BONE.2',
                     { tiny: true, max: L.tw });
     }
     return L;

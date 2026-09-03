@@ -113,6 +113,13 @@ KD.In = (function () {
   const actHit = (name, ...keys) => (btn[name] && btn[name].hit) || isHit(...keys);
   const padState = () => pad;
   const consumedClick = () => { M.click = false; };
+  /* Take a press back out of this frame's hit set. The cutscene layer runs
+     before the scene it is sitting on and both of them read the same keys -
+     without this, one tap on SPACE would advance the story AND talk to
+     whoever happened to be standing next to you. */
+  const eat = (...c) => {
+    for (const k of c) { hit.delete(k); if (btn[k]) btn[k].hit = false; }
+  };
   function endFrame() {
     hit.clear(); rel.clear();
     M.click = false; M.rclick = false; M.up = false; M.wheel = 0;
@@ -120,5 +127,5 @@ KD.In = (function () {
   }
   const any = () => { const v = anyInput; anyInput = false; return v; };
   return { attach, buttons, stick, isDown, isHit, act, actHit, endFrame, mouse: M,
-           padState, consumedClick, any, DEFS: () => DEFS };
+           padState, consumedClick, eat, any, DEFS: () => DEFS };
 })();

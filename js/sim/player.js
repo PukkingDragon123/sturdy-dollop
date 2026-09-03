@@ -460,6 +460,12 @@ KD.Player = (function () {
 
   function hurt(n, S, from) {
     if (P.iframe > 0) return;
+    /* Nothing kills him mid-speech. Cutscenes are played now rather than
+       watched - he swims around while the story happens - and the very
+       first time the throne scene ran over a live arena the King ate him
+       three lines into his own monologue. He can still move, still swing,
+       still be pushed around; he just cannot be hurt until the last beat. */
+    if (KD.Cut && KD.Cut.active) return;
     P.hp -= n; P.hurtT = 0.35; P.iframe = 0.7;
     KD.Sfx.play('hurt');
     KD.Fx.shake(3);

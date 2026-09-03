@@ -43,7 +43,7 @@ KD.Scenes.buffet = (function () {
   const cam = { x: 0, y: 0 };
 
   function enter() {
-    t = 0; phase = 'in'; pt = 0; ate = 0; chew = 0; said = ''; saidT = 0;
+    t = 0; phase = 'in'; pt = 0; ate = 0; chew = 0; said = ''; saidT = 0; handed = false;
     season = 0; doorT = 0; knock = 0;
     crumbs.length = 0; eaten.length = 0;
     for (let i = 0; i < TABLES.length; i++) eaten.push(0);
@@ -134,14 +134,13 @@ KD.Scenes.buffet = (function () {
       c.t -= dt; c.x += c.vx * dt; c.y += c.vy * dt; c.vy += 300 * dt;
       if (c.t <= 0) crumbs.splice(i, 1);
     }
-    if (phase === 'in') {
-      if (pt > 2.2) { phase = 'eat'; pt = 0; say('The door does not open from this side.'); }
-      return;
+    /* The door closing behind him and the door opening again are both
+       things he should be able to walk around in, so neither phase stops
+       the world any more - they just change what the words say. */
+    if (phase === 'in' && pt > 2.2) {
+      phase = 'eat'; pt = 0; say('The door does not open from this side.');
     }
-    if (phase === 'out') {
-      if (pt > 2.6) finish();
-      return;
-    }
+    if (phase === 'out' && pt > 2.6 && !handed) { handed = true; finish(); }
 
     /* ---- he walks. This is the whole of the interaction. ---------- */
     const ax = KD.In.stick().x;
@@ -154,6 +153,7 @@ KD.Scenes.buffet = (function () {
     cam.x = clampCam(cam.x);
 
     /* the nearest table, and eating from it */
+    if (phase !== 'eat' || KD.Cut.active) return;
     const i = nearTable();
     if (i >= 0 && !eaten[i] && press()) eat(i);
   }
@@ -200,10 +200,14 @@ KD.Scenes.buffet = (function () {
   }
 
   function say(s) { said = s; saidT = 4.0; }
+  /* the outro is armed exactly once, whatever the frame rate does */
+  let handed = false;
 
   function finish() {
     A1.save();
-    KD.Game.go('cine', { scene: KD.Scenes.buffet._outro() });
+    /* over the cellar, not instead of it: the cook is at the door and he
+       can walk up to it while the man talks */
+    KD.Cut.play(outro());
   }
 
   /* ---- draw -------------------------------------------------------- */
@@ -241,19 +245,25 @@ KD.Scenes.buffet = (function () {
       R(hx + 3, hy + 4, 2, 2, 'INK.0');
     }
 
-    /* ---- the words ------------------------------------------------ */
-    if (phase === 'in') {
+    /* ---- the words ------------------------------------------------
+       Under a cutscene the layer owns the bottom of the frame and the
+       letterbox owns the top, so the plaque, the weight and his own
+       muttering all stand down and let it through. */
+    const cut = KD.Cut.active;
+    if (cut) {
+      /* nothing: the layer is drawing */
+    } else if (phase === 'in') {
       band('THE ROOM WITH FOOD IN IT', 'he did say to eat something', Math.min(1, pt / 0.4));
     } else if (phase === 'out') {
       band('FOUR SEASONS', 'and the door has not opened once', 1);
     } else {
       hud();
     }
-    if (saidT > 0 && phase !== 'in') {
+    if (saidT > 0 && phase !== 'in' && !cut) {
       KD.Convo.box({ portrait: 'po_king', name: 'You', tint: 'WATER.3' }, said,
                    { speaking: false });
     }
-    if (KD.touch) { layout(); KD.In.buttons(BTNS); KD.UI.touchPad(BTNS); }
+    if (KD.touch) { layout(); KD.In.buttons(cut ? [] : BTNS); KD.UI.touchPad(cut ? [] : BTNS); }
   }
 
   function drawKing(ctx, x, y) {
@@ -326,24 +336,24 @@ KD.Scenes.buffet = (function () {
     return {
       id: 'a1_out',
       beats: [
-        { kind: 'card', world: false, t: 2.6, vig: 0.9,
+        { kind: 'card', t: 2.6, vig: 0.9,
           lines: ['THE DOOR OPENED'], sub: 'and he did not fit through it the first time' },
-        { kind: 'art', world: false, spr: 'po_deep', scale: 2, y: 0.42, t: 0.1, vig: 0.8 },
-        { kind: 'say', world: false, who: 'po_deep', name: 'The Deep', t: 5.0, vig: 0.8,
+        { kind: 'art', spr: 'po_deep', scale: 2, y: 0.42, t: 0.1, vig: 0.8 },
+        { kind: 'say', who: 'po_deep', name: 'The Deep', t: 5.0, vig: 0.8,
           text: 'Look at you. I did not have to do a single thing, majesty. I just kept the plates coming.' },
-        { kind: 'say', world: false, who: 'po_king', name: 'You', t: 3.0,
+        { kind: 'say', who: 'po_king', name: 'You', t: 3.0,
           text: 'The castle.' },
-        { kind: 'say', world: false, who: 'po_deep', name: 'The Deep', t: 4.8, vig: 0.8,
+        { kind: 'say', who: 'po_deep', name: 'The Deep', t: 4.8, vig: 0.8,
           text: 'Is a kitchen now. All of it. She left in the second season and I have been redecorating.' },
-        { kind: 'shake', world: false, amp: 10, t: 0.4 },
-        { kind: 'flash', world: false, col: 'BLOOD.3', t: 0.4 },
-        { kind: 'card', world: false, t: 3.0, vig: 1,
+        { kind: 'shake', amp: 10, t: 0.4 },
+        { kind: 'flash', col: 'BLOOD.3', t: 0.4 },
+        { kind: 'card', t: 3.0, vig: 1,
           lines: ['OUT THROUGH HIS OWN GATE'],
           sub: 'and the current took him where it liked' },
-        { kind: 'art', world: false, spr: 'po_santa', scale: 2, y: 0.40, t: 0.1 },
-        { kind: 'say', world: false, who: 'po_santa', name: 'Santa the Manta', t: 5.0,
+        { kind: 'art', spr: 'po_santa', scale: 2, y: 0.40, t: 0.1 },
+        { kind: 'say', who: 'po_santa', name: 'Santa the Manta', t: 5.0,
           text: 'Found you face down in the sand, big fella. Nobody sent me and nobody is paying me. Come on. I know a village.' },
-        { kind: 'fade', world: false, to: 1, t: 1.0 }
+        { kind: 'fade', to: 1, t: 1.0 }
       ],
       after: () => { A1.advance(); A1.save(); KD.Game.go('gen', {}); }
     };

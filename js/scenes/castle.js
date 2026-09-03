@@ -348,8 +348,12 @@ KD.Scenes.castle = (function () {
     mobs = []; thrown = []; talk = null; arc = null; sparks.length = 0;
     goTo = null; goWhat = null; goT = 0; warned = false;
     shownRoom = -1; roomT = 0;
+    /* A cutscene can walk a member of the cast across the room now - see
+       the `move` beat in scenes/cine.js. This is how it finds them. */
+    KD.Cut.setCast((who) => A1.CAST[who] || null);
     snapCam();
   }
+  const exit = () => KD.Cut.setCast(null);
 
   function snapCam() {
     cam.x = Math.max(0, Math.min(CW - KD.W, Math.round(P.x - KD.W / 2)));
@@ -359,6 +363,12 @@ KD.Scenes.castle = (function () {
   function update(dt) {
     t += dt;
     if (talk) { KD.Convo.update(dt); return; }
+    /* Under a cutscene he keeps walking - that is the point - but he does
+       not talk to anyone, take a plate or swing anything. The layer already
+       ate the action key before this ran; this stops a queued tap-to-walk
+       arriving mid-scene and firing the next beat underneath the one
+       playing. */
+    if (KD.Cut.active) { goTo = null; goWhat = null; }
 
     tapTarget();
     /* ---- movement ------------------------------------------------- */
@@ -587,10 +597,12 @@ KD.Scenes.castle = (function () {
       }
       return;
     }
-    /* the throne, for the text message beat */
-    if (b.kind === 'cine' && insideRoom(0) &&
+    /* the throne, for the text message beat. Both of these used to be able
+       to fire on the same press - a beat with room 0 matched the throne test
+       AND the room test, and armed the cutscene twice. */
+    if (b.kind === 'cine' && b.room === undefined && insideRoom(0) &&
         Math.abs(P.x - (ROOMS[0].x + (ROOMS[0].w >> 1))) < 40) {
-      playCine(b.cine);
+      playCine(b.cine); return;
     }
     if (b.kind === 'cine' && b.room !== undefined && insideRoom(b.room)) playCine(b.cine);
   }
@@ -746,27 +758,25 @@ KD.Scenes.castle = (function () {
   /* ================================================================
      CUTSCENES
      ================================================================ */
-  /* A cutscene is its own scene in this engine, so playing one means
-     leaving the castle and coming back. The `after` both advances the beat
-     and walks us back in. */
+  /* A cutscene plays OVER the castle now - it does not replace it. Nothing
+     is unloaded, nobody is teleported back, and he can walk around the room
+     while it happens, which is the whole reason the queen coming up the
+     stairs is worth watching. */
   function playCine(id) {
     const mk = CINE[id];
     /* the beats are built from the answers he gave, so they are made here
        rather than read out of a fixed table */
     const beats = typeof mk === 'function' ? mk(A1.A.said || {}) : mk;
     if (!beats) { A1.advance(); return; }
-    const back = P.x;
-    KD.Game.go('cine', { scene: { id: id, beats: beats, after: () => {
+    KD.Cut.play({ id: id, beats: beats, after: () => {
       A1.advance();
-      P.x = back;
-      /* The last beat does not end the act any more. The cook has just
-         offered him a room with food in it, and that room is a scene you
-         PLAY - it is where the hundred kilos comes from, and a cutscene
-         saying "he got fat" is a caption where doing it is a scene. The
-         buffet's own outro hands off to the village. */
-      if (A1.done) { A1.save(); KD.Game.go('buffet', {}); return; }
-      KD.Game.go('castle');
-    } } });
+      /* The last beat does not end the act. The cook has just offered him a
+         room with food in it, and that room is a scene you PLAY - it is
+         where the hundred kilos comes from, and a cutscene saying "he got
+         fat" is a caption where doing it is a scene. The buffet's own outro
+         hands off to the village. */
+      if (A1.done) { A1.save(); KD.Game.go('buffet', {}); }
+    } });
   }
 
   /* The weight Act One put on him is applied by scenes/gen once the world
@@ -794,75 +804,85 @@ KD.Scenes.castle = (function () {
      ================================================================ */
   const CINE = {
     a1_text: () => [
-      { kind: 'card', world: false, t: 2.4, vig: 0.6,
+      { kind: 'card', t: 2.4, vig: 0.6,
         lines: ['A LIGHT UNDER THE THRONE'],
         sub: 'something buzzing where nothing should be' },
-      { kind: 'art', world: false, spr: 'po_keg', scale: 2, y: 0.40, t: 0.1 },
-      { kind: 'say', world: false, who: 'po_keg', name: 'The Keg', t: 3.0,
+      { kind: 'art', spr: 'po_keg', scale: 2, y: 0.40, t: 0.1 },
+      { kind: 'say', who: 'po_keg', name: 'The Keg', t: 3.0,
         text: 'hey. u up' },
-      { kind: 'say', world: false, who: 'po_king', name: 'You', t: 2.6,
+      { kind: 'say', who: 'po_king', name: 'You', t: 2.6,
         text: 'who is this' },
-      { kind: 'say', world: false, who: 'po_keg', name: 'The Keg', t: 4.4,
+      { kind: 'say', who: 'po_keg', name: 'The Keg', t: 4.4,
         text: 'someone who does not ask u to sit still at a long table with candles on it' },
-      { kind: 'shake', world: false, amp: 4, t: 0.4 },
-      { kind: 'card', world: false, t: 2.6, lines: ['HE PUT THE TRIDENT DOWN'],
+      { kind: 'shake', amp: 4, t: 0.4 },
+      { kind: 'card', t: 2.6, lines: ['HE PUT THE TRIDENT DOWN'],
         sub: 'and did not pick it up for four seasons' }
     ],
 
     /* ---- the night it all goes ----------------------------------
-       She walks in. That is the whole scene, and it is better than the
-       version before it, which was three separate people leaving him in
-       three separate rooms with a card between each one. She finds him
-       with the keg, she throws him out, and the cook - who has been
-       waiting four seasons for exactly this - offers to help.
+       She walks in. And now she really does walk in - `move` beats take
+       her out of the Great Hall, through the doorway and across the floor
+       to where he is sitting, while he is still holding the stick and can
+       still walk anywhere in the room he likes. There is nowhere in the
+       room to go, which is the point of being able to try.
 
-       He is not thrown out of his own gate. He is put somewhere with
-       food in it and the door is locked, and that is where the hundred
-       kilos comes from. The next scene is that room, and you play it.
+       No held portraits in this one. There used to be four of them, each
+       one a forty-by-sixty face pasted over the throne room - and the
+       throne room is where the scene IS. Everybody who speaks here is
+       standing on the floor in front of you.
        -------------------------------------------------------------- */
     a1_fall: (S) => {
       const warm = S.warm, cruel = S.cruel, put = S.putDown;
+      const Q = A1.CAST.queen, K2 = A1.CAST.keg, D = A1.CAST.deep;
       const B = [];
-      B.push({ kind: 'card', world: false, t: 2.2, vig: 0.5,
-               lines: ['SOMEBODY IS AT THE DOOR'],
-               sub: 'and she has stopped knocking on it' });
-      B.push({ kind: 'shake', world: false, amp: 6, t: 0.4 });
-      B.push({ kind: 'art', world: false, spr: 'po_queen', scale: 2, y: 0.40, t: 0.1 });
-      B.push({ kind: 'say', world: false, who: 'po_queen', name: 'Coralene', t: 3.0,
+      /* park the cast where the scene starts, so replaying it looks the
+         same as playing it the first time */
+      B.push({ kind: 'do', t: 0.01, fn: () => { Q.x = 262; D.x = 470; K2.x = 60; } });
+      B.push({ kind: 'card', t: 2.0, vig: 0.5,
+               lines: ['SOMEBODY IS ON THE STAIRS'],
+               sub: 'and she has stopped knocking' });
+      B.push({ kind: 'sfx', id: 'open', t: 0.2 });
+      B.push({ kind: 'shake', amp: 5, t: 0.3 });
+      /* through the doorway, and then all the way over */
+      B.push({ kind: 'move', who: 'queen', to: 196, t: 1.5, vig: 0.4 });
+      B.push({ kind: 'say', who: 'po_queen', name: 'Coralene', t: 3.0,
                text: 'I could hear you both from the stairs.' });
-      B.push({ kind: 'two', world: false, l: 'po_queen', r: 'po_keg', t: 3.4,
-               text: 'Nobody said anything for a while.' });
-      B.push({ kind: 'say', world: false, who: 'po_king', name: 'You', t: 3.0,
+      B.push({ kind: 'move', who: 'queen', to: 140, t: 1.6 });
+      /* three of them in one room and nobody talking. Walk around in it. */
+      B.push({ kind: 'wait', t: 2.4, vig: 0.45 });
+      B.push({ kind: 'say', who: 'po_king', name: 'You', t: 3.0,
                text: warm ? 'It is not - I said I would be at the table. I meant it.'
                           : 'She came up on her own. I did not ask her to.' });
       /* what she says depends on the promise he made her at the alarm */
-      B.push({ kind: 'say', world: false, who: 'po_queen', name: 'Coralene', t: 5.0,
+      B.push({ kind: 'say', who: 'po_queen', name: 'Coralene', t: 5.0,
                text: warm
                  ? 'You did mean it. That is the part I am going to have to live with - you meant it, and here you are.'
                  : 'You never even said you would come. And I still laid the table. Twice.' });
-      B.push({ kind: 'say', world: false, who: 'po_queen', name: 'Coralene', t: 4.4,
+      B.push({ kind: 'say', who: 'po_queen', name: 'Coralene', t: 4.4,
                text: 'Get out of my throne room. Not the castle. The room. I want to sit down.' });
-      B.push({ kind: 'fade', world: false, to: 1, t: 0.7 });
-      /* and the keg, on exactly how far he came over */
-      B.push({ kind: 'art', world: false, spr: 'po_keg', scale: 2, y: 0.40, t: 0.1 });
-      B.push({ kind: 'say', world: false, who: 'po_keg', name: 'The Keg', t: 4.6,
+      /* and the keg leaves on exactly how far he came over */
+      B.push({ kind: 'say', who: 'po_keg', name: 'The Keg', t: 4.6,
                text: put
                  ? 'u put the trident down for me. i am not carrying u out of here as well'
                  : 'this got complicated. i do complicated somewhere else' });
-      B.push({ kind: 'rumble', world: false, amp: 3, t: 1.0, vig: 0.7 });
-      /* the cook, who has been waiting four seasons for this exact evening */
-      B.push({ kind: 'card', world: false, t: 2.4, vig: 0.8,
+      B.push({ kind: 'move', who: 'keg', to: -60, t: 2.0 });
+      B.push({ kind: 'move', who: 'queen', to: 240, t: 1.8, vig: 0.5 });
+      B.push({ kind: 'rumble', amp: 3, t: 0.9, vig: 0.7 });
+      /* the cook, who has been waiting four seasons for this exact evening,
+         comes all the way up from the kitchens without being asked */
+      B.push({ kind: 'card', t: 2.2, vig: 0.7,
                lines: ['AND THEN SOMEBODY WAS KIND'] });
-      B.push({ kind: 'art', world: false, spr: 'po_deep', scale: 2, y: 0.42, t: 0.1, vig: 0.8 });
-      B.push({ kind: 'say', world: false, who: 'po_deep', name: 'The Deep', t: 4.8, vig: 0.8,
+      B.push({ kind: 'move', who: 'deep', to: 150, t: 2.6, vig: 0.6 });
+      B.push({ kind: 'say', who: 'po_deep', name: 'The Deep', t: 4.8, vig: 0.6,
                text: cruel
                  ? 'Majesty. You look like a man who needs somewhere to sit down. I have a room. I insist.'
                  : 'Majesty. You were civil to me once, and I said I would remember. Come downstairs. I have a room.' });
-      B.push({ kind: 'say', world: false, who: 'po_king', name: 'You', t: 2.8,
+      B.push({ kind: 'say', who: 'po_king', name: 'You', t: 2.8,
                text: 'A room.' });
-      B.push({ kind: 'say', world: false, who: 'po_deep', name: 'The Deep', t: 4.6, vig: 0.8,
+      B.push({ kind: 'say', who: 'po_deep', name: 'The Deep', t: 4.6, vig: 0.6,
                text: 'With food in it. You have had a hard night. Eat something.' });
-      B.push({ kind: 'fade', world: false, to: 1, t: 1.0 });
+      B.push({ kind: 'move', who: 'deep', to: 40, t: 1.6, vig: 0.8 });
+      B.push({ kind: 'fade', to: 1, t: 1.0 });
       return B;
     }
   };
@@ -880,8 +900,9 @@ KD.Scenes.castle = (function () {
     /* live: fire, candles, the sea moving through the arch */
     liveDetail(ctx);
 
+    const cut = KD.Cut.active;
     /* where the tap sent him */
-    if (goTo !== null) {
+    if (goTo !== null && !cut) {
       KD.Mark.dest(Math.round(goTo - cam.x), Math.round(FLOOR - cam.y), t);
     }
     /* the cast */
@@ -891,24 +912,27 @@ KD.Scenes.castle = (function () {
     drawSparks();
     for (const p of thrown) drawPlate(ctx, p);
     drawKing(ctx);
-    beatMark();
+    if (!cut) beatMark();
 
-    /* UI */
-    if (roomT > 0) roomBanner();
-    hud();
+    /* UI. A cutscene keeps the stick and drops everything else: the quest
+       scroll, the health, the objective marker and the action buttons all
+       land exactly where the letterbox and the words go, and none of them
+       is anything he can act on mid-scene. */
+    if (roomT > 0 && !cut) roomBanner();
+    if (!cut) hud();
     if (talk) KD.Convo.draw();
     if (KD.touch) {
       layoutButtons();
-      KD.In.buttons(BTNS);
+      KD.In.buttons(cut ? [] : BTNS);
       /* This was missing: buttons() only registers them for hit-testing.
          Without touchPad() the whole phone control layout was invisible. */
       /* the stick sits bottom-left, which is exactly where the conversation
          portrait goes - and there is nothing to walk to mid-sentence */
-      KD.UI.touchPad(BTNS, { noStick: !!talk });
+      KD.UI.touchPad(cut ? [] : BTNS, { noStick: !!talk });
     }
     /* not while somebody is talking: the strike prompt lands at H-30, which
        is the middle of the conversation panel */
-    if (!talk) combatPrompt();
+    if (!talk && !cut) combatPrompt();
   }
 
   function liveDetail(ctx) {
@@ -954,11 +978,15 @@ KD.Scenes.castle = (function () {
     if (x < -40 || x > KD.W + 40) return;
     const nm = KD.PX.frameOf ? KD.PX.frameOf(c.sprite, t) : null;
     const name = nm && KD.PX.has(nm) ? nm : (KD.PX.has(c.sprite + '0') ? c.sprite + '0' : null);
-    if (name) KD.PX.blit(ctx, name, x, y, { flipX: c.x > P.x ? true : false });
+    /* Nobody in Act One has a walk cycle, so a cutscene sliding somebody
+       across the room read as a cardboard cutout on a rail. One pixel of
+       bob at three steps a second is enough to sell it as walking. */
+    const bob = c.walk ? -(Math.floor(t * 6) % 2) : 0;
+    if (name) KD.PX.blit(ctx, name, x, y + bob, { flipX: c.x > P.x ? true : false });
     /* the objective marker over them is drawn by beatMark(), on top of the
        whole cast - it used to be two rects stapled on here, which put it
        under anyone standing to the right of them. */
-    if (Math.abs(c.x - P.x) < 26 && !talk) {
+    if (Math.abs(c.x - P.x) < 26 && !talk && !KD.Cut.active) {
       KD.Text.draw(KD.touch ? 'TAP' : 'E', x, y - 74, 'GOLD.3',
                    { align: 'center', shadow: 'INK.0', tiny: true });
     }
@@ -1213,7 +1241,7 @@ KD.Scenes.castle = (function () {
     }
   }
 
-  return { enter, update, draw, snapCam,
+  return { enter, exit, update, draw, snapCam,
            /* exposed for the smoke harness */
            _P: P, _ROOMS: ROOMS, _bake: bake,
            _throw: throwPlate, _swing: swing, _A1: A1,
