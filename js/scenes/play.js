@@ -35,6 +35,7 @@ KD.Scenes.play = (function () {
   function snapCam() {
     const P = KD.Player.P;
     KD.Cam.z = Z;
+    cvx = 0; cvy = 0;
     KD.Cam.x = clampCamX(P.x - vw() / 2);
     KD.Cam.y = clampCamY(P.y - vh() * 0.58);
   }
@@ -215,6 +216,13 @@ KD.Scenes.play = (function () {
   /* camera: lead the player, snap to whole pixels so nothing shimmers. A
      `pan` beat in a cutscene takes the camera off him for as long as it is
      running, and hands it straight back. */
+  /* A SPRING, not a lerp. A lerp toward the player is dead weight - it
+     always trails and never arrives - and the whole ask for this pass was
+     that the ocean feel bouncy. Stiffness 140 with damping 15 is a ratio
+     of about 0.63, so a hard change of direction overshoots by a few
+     pixels and settles, and the water gets some mass behind it. */
+  let cvx = 0, cvy = 0;
+  const CAM_K = 140, CAM_C = 15;
   function camera(dt) {
     if (KD.Cut.holdsCam()) return;
     const P = KD.Player.P;
@@ -223,8 +231,22 @@ KD.Scenes.play = (function () {
        as much of what he was swimming into. */
     const tx = clampCamX(P.x + P.vx * 0.30 - vw() / 2);
     const ty = clampCamY(P.y - P.h / 2 + P.vy * 0.20 - vh() / 2);
-    KD.Cam.x += (tx - KD.Cam.x) * Math.min(1, dt * 7);
-    KD.Cam.y += (ty - KD.Cam.y) * Math.min(1, dt * 7);
+    /* integrated in small steps so a dropped frame cannot make it explode */
+    let left = Math.min(0.1, dt);
+    while (left > 0) {
+      const h = Math.min(1 / 120, left);
+      left -= h;
+      cvx += ((tx - KD.Cam.x) * CAM_K - cvx * CAM_C) * h;
+      cvy += ((ty - KD.Cam.y) * CAM_K - cvy * CAM_C) * h;
+      KD.Cam.x += cvx * h;
+      KD.Cam.y += cvy * h;
+    }
+    /* Kill the velocity at the edges of the world. Left to run, the spring
+       kept winding up against the clamp and let go the moment he turned
+       round, which is a whip-pan, not a bounce. */
+    const cx2 = clampCamX(KD.Cam.x), cy2 = clampCamY(KD.Cam.y);
+    if (cx2 !== KD.Cam.x) { KD.Cam.x = cx2; cvx = 0; }
+    if (cy2 !== KD.Cam.y) { KD.Cam.y = cy2; cvy = 0; }
   }
 
   /* The King is sitting in there the whole time. Walk in out of shape and he

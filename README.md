@@ -57,6 +57,27 @@ one outfit each - scale armour, then gold plate, then ink, then no armour at
 all - and the outfit you can see is the telegraph for what he is about to do.
 Beating him is the end of the story the prologue started.
 
+**The ocean is drawn through a lens.** The scene you play used to read
+lower-fidelity than its own cutscenes, and the reason was arithmetic: the
+castle's cast are sixty pixels tall in a two-hundred-and-forty pixel frame and
+the ocean's king was thirty-six. So the world is drawn into its own buffer at
+half the frame's size and blitted back over it at 2x - one drawImage, nearest
+neighbour, still perfectly square pixels. Tiles land at sixteen screen pixels,
+the king at 48x72, and the fish are big enough to have faces. The interface
+draws after the lens closes, at 1:1, so the type stays crisp; anything with
+letters in it that is pinned to somebody in the world - a speech balloon, a
+name plate, a prompt - queues up and comes out at the right size.
+
+**Fish behave like fish.** Every fish used to travel in a straight line at a
+constant speed with a sine wave on its height, at whatever depth it was dropped
+at. Now a fish lives in its own water - clownfish are reef fish, cuttlefish
+live at the ruins and below, and a shoal that wanders out of its own band comes
+back as something that does live where you are. It SURGES rather than glides,
+because fish beat their tail and coast. The school holds its place loosely, so
+it breathes and squeezes when the leader turns. It wanders, turns round and
+darts. And it gets out of your way: swim into a shoal and it scatters, which is
+the moment the ocean stops being scenery.
+
 **He is dressed for the water.** Ninety per cent of this game happens
 underwater and the king used to swim through it in a t-shirt. He has a dive
 mask pushed up on his forehead, a wetsuit, an air tank over his shoulder and

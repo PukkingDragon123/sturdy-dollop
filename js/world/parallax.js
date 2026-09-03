@@ -325,6 +325,9 @@ KD.Parallax = (function () {
      with height, so the whole thing leans on the wind and the tips move
      furthest - and blades hang off it in pairs.
      -------------------------------------------------------------------- */
+  /* Where he is, in screen pixels, so the kelp can get out of his way.
+     Set once per kelp() call rather than looked up per segment. */
+  let wash = null;
   function stalk(x, groundY, h, seed, shade, wide) {
     const segs = Math.max(4, h >> 3);
     const amp = 3 + (seed % 3);
@@ -334,7 +337,15 @@ KD.Parallax = (function () {
       const y = groundY - s * 8;
       if (y < -16) break;
       if (y > KD.H + 8) continue;
-      const off = lean(seed + s, amp) * f * f;
+      let off = lean(seed + s, amp) * f * f;
+      /* a diver swimming through kelp pushes it aside. It is the cheapest
+         reactive thing in the whole scene and it is the one that makes the
+         forest feel like it is made of something. */
+      if (wash) {
+        const dx = x - wash.x, dy = y - wash.y;
+        const d = Math.abs(dx) + Math.abs(dy) * 0.7;
+        if (d < 34) off += (1 - d / 34) * 5 * (dx < 0 ? -1 : 1) * (0.4 + f);
+      }
       px = x + off * 2;
       const w = wide ? (f > 0.8 ? 2 : 3) : 2;
       KD.Screen.rect(Math.round(px), y - 8, w, 9, shade);
@@ -360,8 +371,11 @@ KD.Parallax = (function () {
     { f: 0.86, shade: 'KELP.1', h: [44, 82],  step: 74, wide: true }
   ];
   function kelp(ctx, cam) {
+    const P = KD.Player && KD.Player.P;
     for (let L = 0; L < FOREST.length; L++) {
       const cfg = FOREST[L];
+      /* only the near band reacts: the far ones are a hundred metres away */
+      wash = (P && cfg.f > 0.8) ? { x: P.x - cam.x, y: P.y - cam.y } : null;
       const ox = Math.floor(cam.x * cfg.f);
       const s0 = Math.floor(ox / cfg.step) - 1;
       for (let i = 0; i < Math.ceil(KD.W / cfg.step) + 3; i++) {
@@ -382,6 +396,7 @@ KD.Parallax = (function () {
         stalk(px, Math.round(g), h, r % 251, cfg.shade, cfg.wide);
       }
     }
+    wash = null;
   }
 
   /* plankton, drifting on the wind rather than falling straight */
@@ -426,8 +441,8 @@ KD.Parallax = (function () {
   /* n, band (0 near / 1 mid / 2 the far layer), the tile depths it lives
      between, how many travel together, cruising speed, parallax factor */
   const SPECIES = [
-    { n: 'an_clown',  band: 0, y: [_Zd.shallows,      _Zd.reef + 30],  size: [5, 11], sp: 30, f: 1.00 },
-    { n: 'an_parrot', band: 0, y: [_Zd.shallows + 12, _Zd.reef + 70],  size: [3, 7],  sp: 25, f: 1.00 },
+    { n: 'an_clown',  band: 0, y: [_Zd.shallows,      _Zd.reef + 30],  size: [4, 9],  sp: 30, f: 1.00 },
+    { n: 'an_parrot', band: 0, y: [_Zd.shallows + 12, _Zd.reef + 70],  size: [2, 5],  sp: 25, f: 1.00 },
     { n: 'an_cuda',   band: 1, y: [_Zd.shallows + 24, _Zd.ruins],      size: [2, 5],  sp: 48, f: 0.95 },
     { n: 'an_mantis', band: 1, y: [_Zd.reef - 20,     _Zd.ruins],      size: [1, 3],  sp: 18, f: 0.92 },
     { n: 'an_lion',   band: 1, y: [_Zd.reef,          _Zd.ruins + 40], size: [1, 2],  sp: 13, f: 0.92 },
@@ -446,6 +461,22 @@ KD.Parallax = (function () {
     const lo = Math.max(b0, cy - 60), hi = Math.min(b1, cy + vh + 60);
     if (hi <= lo) return (b0 + b1) / 2;      /* not our water: park, unseen */
     return lo + Math.random() * (hi - lo);
+  }
+
+  /* The wedge used to be measured in flat pixels - eleven across, eight
+     down - which was fine when a fish was twelve pixels long and is a pile
+     when it is twenty-six and drawn at 2x. Rank and file are measured in
+     BODY LENGTHS now, so a school of parrotfish spreads out as far as a
+     school of parrotfish needs to and a school of clownfish stays tight. */
+  function wedge(p, i) {
+    const s0 = KD.PX.has(p.n + '0') ? KD.PX.get(p.n + '0') : null;
+    const w = s0 ? s0.w : 14, h = s0 ? s0.h : 10;
+    if (i === 0) return { tx: 0, ty: 0 };
+    const rank = 1 + ((i - 1) / 3 | 0);
+    return {
+      tx: -Math.round(w * (0.55 + rank * 0.78) + (i % 2 ? w * 0.22 : 0)),
+      ty: Math.round((((i % 5) - 2) * 0.88 + (i % 2 ? 0.2 : -0.2)) * h)
+    };
   }
 
   /* ---- re-casting -------------------------------------------------
@@ -471,9 +502,9 @@ KD.Parallax = (function () {
     const size = p.size[0] + ((Math.random() * (p.size[1] - p.size[0] + 1)) | 0);
     sh.m.length = 0;
     for (let i = 0; i < size; i++) {
+      const o = wedge(p, i);
       sh.m.push({
-        tx: i === 0 ? 0 : -(7 + ((i / 3) | 0) * 11) - (i % 2 ? 5 : 0),
-        ty: i === 0 ? 0 : ((i % 5) - 2) * 8 + (i % 2 ? 2 : -2),
+        tx: o.tx, ty: o.ty,
         x: sh.x, y: sh.y, ph: Math.random() * 9,
         beat: 2.6 + Math.random() * 2.0
       });
@@ -490,7 +521,7 @@ KD.Parallax = (function () {
        so the count is not "how many in the ocean" but "how many within three
        screens of you" - and at the new zoom fifty-eight of them put four
        hundred fish inside one viewport. */
-    const groups = n || 18;
+    const groups = n || 13;
     for (let g = 0; g < groups; g++) {
       const p = pool[(Math.random() * pool.length) | 0];
       const size = p.size[0] + ((Math.random() * (p.size[1] - p.size[0] + 1)) | 0);
@@ -503,11 +534,11 @@ KD.Parallax = (function () {
         ph: Math.random() * 9, vy: 0, dart: 0, turn: 0, m: []
       };
       for (let i = 0; i < size; i++) {
+        /* a wedge three ranks deep behind the leader: a single trailing
+           line reads as a queue, not as a school */
+        const o = wedge(p, i);
         sh.m.push({
-          /* a wedge three ranks deep behind the leader: a single trailing
-             line reads as a queue, not as a school */
-          tx: i === 0 ? 0 : -(7 + ((i / 3) | 0) * 11) - (i % 2 ? 5 : 0),
-          ty: i === 0 ? 0 : ((i % 5) - 2) * 8 + (i % 2 ? 2 : -2),
+          tx: o.tx, ty: o.ty,
           x: sh.x, y: sh.y,
           ph: Math.random() * 9,
           beat: 2.6 + Math.random() * 2.0       /* tail beats a second */
@@ -609,7 +640,12 @@ KD.Parallax = (function () {
         const ftx = (m.x / TS) | 0, fty = (m.y / TS) | 0;
         if (KD.World.solid(ftx, fty) || KD.World.water(ftx, fty) < 3) continue;
         const lit = KD.World.lightAt(ftx, fty);
-        const shade = Math.max(sh.band === 2 ? 1 : 0, KD.PX.bandFor(lit, KD.Light.MAX));
+        /* Capped. The reef is only mid-lit, so the light band alone was
+           taking two steps off every fish in it and a school came out as a
+           cloud of silhouettes with pink dots on. Ambient life is what
+           tells you how deep you are; it has to stay legible.  */
+        const shade = Math.min(sh.band === 2 ? 2 : 1,
+          Math.max(sh.band === 2 ? 1 : 0, KD.PX.bandFor(lit, KD.Light.MAX)));
         KD.PX.blit(ctx, name, px, py, { anchor: false, flipX: sh.dir < 0, shade });
       }
     }
@@ -705,8 +741,49 @@ KD.Parallax = (function () {
   }
 
   /* ---- the whole back half of the frame ---- */
+  /* ---- the current ---------------------------------------------------
+     A flat field of one colour is what "low resolution" actually looks
+     like, and through the 2x lens the middle of the water column was
+     three hundred square pixels of unbroken turquoise. So the water gets
+     a GRAIN: short solid streaks in its own ramp, one step either side of
+     the band it sits in, drifting sideways at three parallax depths.
+
+     Solid, obviously. A dither at this scale is the mistake this whole
+     pass exists to undo. Streaks eight to twenty pixels long read as
+     water moving; anything shorter reads as dust and anything longer
+     reads as a scratch on the screen.
+     ------------------------------------------------------------------ */
+  const DRIFT = [{ f: 0.30, sp: 5, n: 26, len: 18, up: false },
+                 { f: 0.55, sp: 9, n: 22, len: 13, up: true },
+                 { f: 0.90, sp: 15, n: 14, len: 9, up: false }];
+  function drift(ctx, cam, t) {
+    const sea = (KD.Gen.meta.sea || 34) * TS;
+    for (let L = 0; L < DRIFT.length; L++) {
+      const d = DRIFT[L];
+      const spanW = KD.W + 60, spanH = KD.H + 40;
+      for (let i = 0; i < d.n; i++) {
+        const seed = i * 7919 + L * 104729;
+        const x = (((seed % spanW) + t * d.sp * (i % 2 ? 1 : -1) - cam.x * d.f * 0.06)
+                   % spanW + spanW) % spanW - 30;
+        const wy = cam.y + ((((seed >> 5) % spanH) + spanH) % spanH) - 20;
+        if (wy < sea + 8) continue;                 /* not in the sky */
+        const sy = Math.round(wy - cam.y);
+        if (sy < 0 || sy > KD.H) continue;
+        const base = bandColAt(wy);
+        const col = d.up ? (SHAFT_UP[base] || base) : (DOWN[base] || base);
+        if (col === base) continue;                 /* nothing to say here */
+        const len = d.len - (i % 4) * 2;
+        KD.Screen.rect(Math.round(x), sy, Math.max(3, len), 1, col);
+      }
+    }
+  }
+  /* one step DOWN the ramp, for the darker half of the grain */
+  const DOWN = { 'WATER.3': 'WATER.2', 'WATER.2': 'WATER.1', 'WATER.1': 'WATER.0',
+                 'WATER.0': 'DEEP.2', 'DEEP.2': 'DEEP.1', 'DEEP.1': 'DEEP.0' };
+
   function back(ctx, cam, t) {
     const horizon = water(ctx, cam, t);
+    drift(ctx, cam, t);
     shafts(ctx, cam, t);
     caustics(ctx, cam, t);
     kelp(ctx, cam);

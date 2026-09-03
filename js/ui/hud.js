@@ -155,13 +155,23 @@ KD.Hud = (function () {
       }
     }
   }
+  /* One unwrapped line, centred on KD.W. The quest gates say things like
+     "get under 82kg (you are 99) and train to 3 levels (you have 0)" and on
+     any frame narrower than that the sentence simply ran off both edges. */
   function message(S) {
     if (S.S.msgT <= 0 || !S.S.msg) return;
-    const w = KD.Text.width(S.S.msg) + 8;
+    const max = Math.min(300, KD.W - 24);
+    const lines = KD.Text.wrap(S.S.msg, max, {});
+    let w = 0;
+    for (const l of lines) w = Math.max(w, KD.Text.width(l));
+    w = Math.min(max + 10, w + 10);
+    const h = 5 + lines.length * 11;
     const x = ((KD.W - w) >> 1), y = 40;
-    KD.Screen.rect(x, y, w, 11, 'INK.0');
-    KD.Screen.frame(x, y, w, 11, 'INK.2');
-    KD.Text.draw(S.S.msg, KD.W / 2, y + 2, S.S.msgCol, { align: 'center' });
+    KD.Screen.rect(x, y, w, h, 'INK.0');
+    KD.Screen.frame(x, y, w, h, 'INK.2');
+    lines.forEach((l, i) => {
+      KD.Text.draw(l, KD.W / 2, y + 2 + i * 11, S.S.msgCol, { align: 'center' });
+    });
   }
   /* the mining / placing reticle */
   function reticle(cam) {
