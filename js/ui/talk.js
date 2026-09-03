@@ -92,12 +92,16 @@ KD.Talk = (function () {
   }
 
   /* ---- a world line: balloon over a speaker, with the trail --------- */
+  /* The balloon is anchored to a mouth in the world and drawn at 1:1 -
+     see KD.Screen.defer. Inside the ocean's 2x lens the words would come
+     out eight pixels tall and the balloon would not fit the frame. */
   function say(text, wx, wy, cam, t, o) {
-    const sx = Math.round(wx - cam.x), sy = Math.round(wy - cam.y);
-    const by = Math.max(34, sy - 22);
-    const b = bubble(text, sx, by, o);
-    trail(sx, sy - 2, b.x + b.w / 2, b.y + b.h + 2, t);
-    return b;
+    KD.Screen.defer((z) => {
+      const sx = Math.round((wx - cam.x) * z), sy = Math.round((wy - cam.y) * z);
+      const by = Math.max(34, sy - 22);
+      const b = bubble(text, sx, by, o);
+      trail(sx, sy - 2, b.x + b.w / 2, b.y + b.h + 2, t);
+    });
   }
 
   /* ---- the conversation panel -------------------------------------- */

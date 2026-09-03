@@ -302,7 +302,9 @@ KD.Player = (function () {
   function aim(S) {
     const In = KD.In, cam = KD.Cam;
     if (!KD.touch && (In.mouse.x || In.mouse.y)) {
-      P.aimX = In.mouse.x + cam.x; P.aimY = In.mouse.y + cam.y;
+      /* the mouse is in FRAME pixels; the world is drawn through a lens */
+      const z = (KD.Cam && KD.Cam.z) || 1;
+      P.aimX = In.mouse.x / z + cam.x; P.aimY = In.mouse.y / z + cam.y;
     } else {
       const v = In.stick();
       const l = Math.hypot(v.x, v.y);

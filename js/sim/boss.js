@@ -347,12 +347,23 @@ KD.Boss = (function () {
     } else {
       KD.Screen.rect(px - 24, py - 44, 48, 44, B.hurtT > 0 ? 'WHITE' : 'ROT.2');
       KD.Screen.frame(px - 24, py - 44, 48, 44, 'GOLD.2');
-      KD.Text.draw('KING', px, py - 26, 'GOLD.3', { align: 'center' });
+      KD.Screen.defer((z) => KD.Text.draw('KING', px * z, (py - 26) * z, 'GOLD.3',
+                                          { align: 'center' }));
     }
     if (B.mirror > 0) {
-      KD.Text.draw('...looking good', px, py - 56, 'GOLD.2', { tiny: true, align: 'center', shadow: 'INK.0' });
+      KD.Screen.defer((z) => KD.Text.draw('...looking good', px * z, (py - 56) * z,
+        'GOLD.2', { tiny: true, align: 'center', shadow: 'INK.0' }));
     }
-    /* the health bar, and the outfit you are fighting */
+  }
+
+  /* The health bar is INTERFACE, not world. The ocean is drawn through a
+     2x lens now (see px/screen.js) and anything drawn inside it comes out
+     double size - a bar pinned to KD.W would have been half off the frame
+     with letters four pixels tall. So it draws after the lens closes, at
+     1:1, with the rest of the HUD. */
+  function hud() {
+    if (!B) return;
+    const ph = phase();
     const bw = Math.min(220, KD.W - 60);
     const bx = (KD.W - bw) >> 1;
     KD.Screen.rect(bx - 2, 16, bw + 4, 12, 'INK.0');
@@ -365,6 +376,6 @@ KD.Boss = (function () {
     KD.Text.draw('THE KING OF THE ATLANTIC', KD.W / 2, 6, 'GOLD.3', { align: 'center', shadow: 'INK.0' });
     KD.Text.draw(ph.name, KD.W / 2, 30, 'ROT.3', { tiny: true, align: 'center', shadow: 'INK.0' });
   }
-  return { PHASES, start, stop, active, boss, update, draw, playerHit,
+  return { PHASES, start, stop, active, boss, update, draw, hud, playerHit,
            get minions() { return minions; }, get hazards() { return hazards; } };
 })();

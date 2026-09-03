@@ -7,21 +7,39 @@ KD.Scenes.play = (function () {
   const BTNS = [];
   let dayT = 0;
 
+  /* ---- THE LENS ---------------------------------------------------
+     The ocean is drawn through a 2x lens: into a buffer half the frame's
+     size, then blitted back over it. See px/screen.js for why. The
+     numbers that follow from it:
+
+       - the world viewport is vw() x vh(), not KD.W x KD.H, so the
+         camera clamp and every "is it on screen" test uses those.
+       - a tap or a mouse position is in FRAME pixels and has to be
+         divided by Z before it means anything in the world.
+
+     Z is on KD.Cam so sim code can reach it - player.js aims the dig
+     cursor and needs the same division.
+     ---------------------------------------------------------------- */
+  const Z = 2;
+  const vw = () => Math.ceil(KD.W / Z), vh = () => Math.ceil(KD.H / Z);
+
   function enter(args) {
     KD.Cam = KD.Cam || { x: 0, y: 0 };
+    KD.Cam.z = Z;
     snapCam();
-    KD.Parallax.seed(30);
+    KD.Parallax.seed();
     KD.Santa.place();
     KD.Folk.seed();
     KD.UI.guard(0.2);
   }
   function snapCam() {
     const P = KD.Player.P;
-    KD.Cam.x = clampCamX(P.x - KD.W / 2);
-    KD.Cam.y = clampCamY(P.y - KD.H * 0.58);
+    KD.Cam.z = Z;
+    KD.Cam.x = clampCamX(P.x - vw() / 2);
+    KD.Cam.y = clampCamY(P.y - vh() * 0.58);
   }
-  const clampCamX = (v) => Math.max(0, Math.min(KD.World.W * 8 - KD.W, v));
-  const clampCamY = (v) => Math.max(0, Math.min(KD.World.H * 8 - KD.H, v));
+  const clampCamX = (v) => Math.max(0, Math.min(KD.World.W * 8 - vw(), v));
+  const clampCamY = (v) => Math.max(0, Math.min(KD.World.H * 8 - vh(), v));
 
   /* MOBILE CONTROLS: two thumbs, no thinking.
      Left thumb: a stick that appears wherever you put it down.
@@ -39,7 +57,7 @@ KD.Scenes.play = (function () {
   function tapWalk(S, cam) {
     if (!KD.touch) return;
     if (!KD.In.mouse.click || KD.UI.blocked() || KD.Panels.isOpen()) return;
-    const wx = cam.x + KD.In.mouse.x, wy = cam.y + KD.In.mouse.y;
+    const wx = cam.x + KD.In.mouse.x / Z, wy = cam.y + KD.In.mouse.y / Z;
     KD.In.consumedClick();
     /* Santa first: he is the one who moves you around the map */
     if (KD.Santa && Math.abs(KD.Santa.x - wx) < 28 && Math.abs(KD.Santa.y - wy) < 44) {
@@ -200,8 +218,11 @@ KD.Scenes.play = (function () {
   function camera(dt) {
     if (KD.Cut.holdsCam()) return;
     const P = KD.Player.P;
-    const tx = clampCamX(P.x + P.vx * 0.16 - KD.W / 2);
-    const ty = clampCamY(P.y - P.h / 2 + P.vy * 0.10 - KD.H / 2);
+    /* Lead him harder than before. Through the lens the viewport is half
+       as wide in world pixels, so the same 0.16s of look-ahead showed half
+       as much of what he was swimming into. */
+    const tx = clampCamX(P.x + P.vx * 0.30 - vw() / 2);
+    const ty = clampCamY(P.y - P.h / 2 + P.vy * 0.20 - vh() / 2);
     KD.Cam.x += (tx - KD.Cam.x) * Math.min(1, dt * 7);
     KD.Cam.y += (ty - KD.Cam.y) * Math.min(1, dt * 7);
   }
@@ -304,9 +325,12 @@ KD.Scenes.play = (function () {
     KD.Mark.dest(Math.round(P.goTo - cam.x), Math.round(P.y - cam.y), KD.Game.t);
   }
 
-  function draw(ctx) {
+  function draw(frameCtx) {
     const sh = KD.Fx.shakeOffset();
     const cam = { x: Math.round(KD.Cam.x + sh.x), y: Math.round(KD.Cam.y + sh.y) };
+    /* everything from here to unlens() is drawn at world scale, into a
+       buffer half the frame's size */
+    const ctx = KD.Screen.lens(Z);
     KD.Parallax.back(ctx, cam, dayT);
     KD.Render.draw(ctx, cam);
     /* the fruit skins sit on top of the tiles they were carved from, so a
@@ -325,13 +349,23 @@ KD.Scenes.play = (function () {
     if (!KD.Cut.active) threatMark(cam);
     KD.Fx.draw(ctx, cam);
     KD.Parallax.front(ctx, cam, dayT);
-    KD.Fx.overlay(ctx);
+    if (!KD.Cut.active) KD.Hud.reticle(cam);
+    KD.Screen.unlens();
+    /* speech balloons, name plates and prompts: pinned in the world,
+       drawn at 1:1 now that the lens is closed */
+    KD.Screen.flush();
+
+    /* ---- and from here on, the frame itself, at 1:1 --------------- */
+    const ctx2 = frameCtx;
+    KD.Fx.overlay(ctx2);
     /* Under a cutscene: the stick stays, the rest of the interface goes.
        The health, the hotbar, the depth gauge and eight touch buttons all
        sit exactly where the letterbox and the words land. */
     const cut = KD.Cut.active;
     if (!cut) {
       KD.Hud.draw(S, cam);
+      KD.Boss.hud();
+      KD.Santa.hud();
       KD.UI.touchPad(BTNS);
       KD.Panels.draw(S);
       KD.UI.tooltips();

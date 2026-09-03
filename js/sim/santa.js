@@ -146,17 +146,23 @@ KD.Santa = (function () {
     } else if (near()) {
       /* On a plate. Loose over open water this was two grey words you had to
          hunt for, and it is the prompt that opens half the game. */
-      const bx = Math.round(x - cam.x), by = Math.round(y + bob - cam.y) - s.h - 8;
-      const lab = KD.touch ? 'USE  TALK   -   RIDE  TRAVEL' : 'E  TALK   -   R  RIDE';
-      const lw = KD.Text.width(lab, { tiny: true }) + 12;
-      const lx = bx - (lw >> 1);
-      KD.Screen.rect(lx, by - 2, lw, 12, 'INK.0');
-      KD.Screen.frame(lx, by - 2, lw, 12, 'KELP.1');
-      KD.Screen.rect(lx + 1, by - 1, lw - 2, 1, 'KELP.0');
-      KD.Text.draw(lab, bx, by + 1, 'KELP.3', { tiny: true, align: 'center' });
+      const wxp = x - cam.x, wyp = y + bob - cam.y - s.h - 8;
+      KD.Screen.defer((z) => {
+        const bx = Math.round(wxp * z), by = Math.round(wyp * z);
+        const lab = KD.touch ? 'USE  TALK   -   RIDE  TRAVEL' : 'E  TALK   -   R  RIDE';
+        const lw = KD.Text.width(lab, { tiny: true }) + 12;
+        const lx = Math.max(2, Math.min(KD.W - lw - 2, bx - (lw >> 1)));
+        KD.Screen.rect(lx, by - 2, lw, 12, 'INK.0');
+        KD.Screen.frame(lx, by - 2, lw, 12, 'KELP.1');
+        KD.Screen.rect(lx + 1, by - 1, lw - 2, 1, 'KELP.0');
+        KD.Text.draw(lab, lx + (lw >> 1), by + 1, 'KELP.3', { tiny: true, align: 'center' });
+      });
     }
-    if (mode === 'travel') travelPanel();
   }
+
+  /* the travel list is a panel, so it draws at 1:1 after the world lens
+     closes rather than inside it at double size */
+  const hud = () => { if (mode === 'travel') travelPanel(); };
 
   function travelPanel() {
     const list = stops();
@@ -175,5 +181,5 @@ KD.Santa = (function () {
       px + w / 2, py + h - 11, 'INK.3', { tiny: true, align: 'center' });
   }
   const busy = () => mode === 'travel';
-  return { update, draw, place, near, busy, get x() { return x; }, get y() { return y; } };
+  return { update, draw, hud, place, near, busy, get x() { return x; }, get y() { return y; } };
 })();

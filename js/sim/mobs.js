@@ -88,14 +88,19 @@ KD.Mobs = (function () {
       /* Far enough out to be off screen at ANY width. The old 14-36 tile
          band was almost entirely inside a 486px viewport, so nearly every
          candidate was rejected for being visible and the ocean was empty. */
-      const clear = Math.ceil((KD.W / 2 + 40) / TS);
+      /* The world is drawn through a 2x lens, so the VIEWPORT is half the
+         frame - see px/screen.js. Spawning against KD.W put everything two
+         screens away and the ocean read as empty however hard it bred. */
+      const z = (KD.Cam && KD.Cam.z) || 1;
+      const vw = KD.W / z, vh = KD.H / z;
+      const clear = Math.ceil((vw / 2 + 40) / TS);
       const tx = ((P.x / TS) | 0) + side * (clear + ((Math.random() * 26) | 0));
       const ty = py + (((Math.random() * 22) | 0) - 11);
       if (!Wd.inside(tx, ty)) continue;
       /* must be open, and must not be visible on screen */
       if (Wd.solid(tx, ty) || Wd.solid(tx, ty - 1)) continue;
       const sx = tx * TS - KD.Cam.x, sy = ty * TS - KD.Cam.y;
-      if (sx > -30 && sx < KD.W + 30 && sy > -30 && sy < KD.H + 30) continue;
+      if (sx > -30 && sx < vw + 30 && sy > -30 && sy < vh + 30) continue;
       const kind = cands[(Math.random() * cands.length) | 0];
       const K = KINDS[kind];
       const inWater = Wd.water(tx, ty) >= 4;
@@ -346,8 +351,12 @@ KD.Mobs = (function () {
     KD.Screen.rect(x, y, w, 5, 'INK.0');
     KD.Screen.rect(x + 1, y + 1, Math.round((w - 2) * Math.max(0, m.hp / m.hpMax)), 3, 'BLOOD.2');
     KD.Screen.rect(x + 1, y + 1, Math.round((w - 2) * Math.max(0, m.hp / m.hpMax)), 1, 'BLOOD.3');
-    KD.Text.draw(m.champ.name.toUpperCase(), Math.round(m.x - cam.x), y - 11, 'BLOOD.3',
-      { tiny: true, align: 'center', shadow: 'INK.0' });
+    /* the name is letters, so it comes out of the world lens at 1:1 */
+    const nx = m.x - cam.x, ny = y - 11;
+    KD.Screen.defer((z) => {
+      KD.Text.draw(m.champ.name.toUpperCase(), Math.round(nx * z), Math.round(ny * z),
+                   'BLOOD.3', { tiny: true, align: 'center', shadow: 'INK.0' });
+    });
   }
 
   function draw(ctx, cam) {

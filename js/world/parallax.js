@@ -143,6 +143,36 @@ KD.Parallax = (function () {
     }
   }
 
+  /* ---- a seam between two flat bands -------------------------------
+     The ocean is drawn through a 2x lens now (px/screen.js), and a dither
+     is the one thing a lens cannot survive: every checkered pixel comes
+     out as a 2x2 block, so a 0.3-density wash ruled across the whole
+     frame stops reading as a blend and starts reading as gingham. It was
+     already the fifth failure of large dithered light in this file at
+     1:1 - the god rays, the sun track, the sky seams, the caustics.
+
+     So a seam is SOLID DASHES of the colour above, four pixels and up,
+     shrinking and thinning out over five rows. Deterministic in the seam
+     depth so it never shimmers, and at any zoom it reads as light lying
+     on water rather than as a screen door.
+     ---------------------------------------------------------------- */
+  function feather(y0, col, seed, rows) {
+    rows = rows || 5;
+    for (let r = 0; r < rows; r++) {
+      const sy = y0 + r * 2;
+      if (sy > KD.H) return;
+      if (sy < -2) continue;
+      const w = 16 - r * 3;                       // 16, 13, 10, 7, 4
+      if (w < 3) return;
+      const step = 22 + r * 9;
+      const off = ((seed * 37 + r * 149) % step) - step;
+      for (let x = off; x < KD.W + step; x += step) {
+        KD.Screen.rect(x, sy, w, 2, col);
+        if (r < 2) KD.Screen.rect(x + step * 0.5, sy, w - 4, 2, col);
+      }
+    }
+  }
+
   function sky(ctx, cam, horizon, t) {
     if (horizon <= 0) return;
     const h = Math.min(KD.H, horizon);
@@ -163,10 +193,18 @@ KD.Parallax = (function () {
       const y1 = Math.round(h * (k + 1) / SKYB.length);
       if (y1 <= 0) continue;
       KD.Screen.rect(0, Math.max(0, y0), KD.W, y1 - Math.max(0, y0), SKYB[k]);
-      if (k) KD.Dither.wash(ctx, 0, y0, KD.W, 2, SKYB[k - 1], 0.3);
+      if (k) feather(y0, SKYB[k - 1], k * 7, 3);
     }
     KD.Screen.rect(0, Math.max(0, h - 4), KD.W, 3, 'WATER.3');
-    KD.Dither.wash(ctx, 0, Math.max(0, h - 9), KD.W, 5, 'WATER.3', 0.45);
+    /* haze at the waterline: cloud bars, not a stipple. Long and low, so
+       they read as the air going white where it meets the sea. */
+    for (let r = 0; r < 4; r++) {
+      const hy = Math.max(0, h - 5 - r * 2);
+      const step = 54 + r * 22;
+      const w = 40 - r * 8;
+      const off = ((r * 197) % step) - step;
+      for (let x = off; x < KD.W + step; x += step) KD.Screen.rect(x, hy, w, 2, 'WATER.3');
+    }
     /* the sun: a stepped disc with a stepped halo around it, never a circle
        and never a gradient */
     const sx = Math.round(KD.W * 0.72 - cam.x * 0.015);
@@ -224,15 +262,7 @@ KD.Parallax = (function () {
       /* blend into the band above over six rows, so depth is a gradient
          and not a stack of stripes - three narrow washes, not a screen
          door across the whole frame */
-      if (i > 0 && y0 > -8 && y0 < KD.H) {
-        const up = BANDS[i - 1][1];
-        /* four light rows, not one heavy one: at 0.72 the top row read as a
-           dotted rule ruled across the whole frame */
-        KD.Dither.wash(ctx, 0, y0, KD.W, 2, up, 0.46);
-        KD.Dither.wash(ctx, 0, y0 + 2, KD.W, 2, up, 0.33);
-        KD.Dither.wash(ctx, 0, y0 + 4, KD.W, 2, up, 0.21);
-        KD.Dither.wash(ctx, 0, y0 + 6, KD.W, 2, up, 0.11);
-      }
+      if (i > 0 && y0 > -12 && y0 < KD.H) feather(y0, BANDS[i - 1][1], BANDS[i][0]);
     }
     /* No sun-track on the water. Drawn as a dithered wedge it read as a
        screen-doored box hanging in mid-ocean, which is the third time
@@ -249,7 +279,13 @@ KD.Parallax = (function () {
      a fraction, narrowing as they sink, and cut off before they reach the
      dark. Low contrast is what keeps them from becoming curtains.
      -------------------------------------------------------------------- */
-  const SHAFT_UP = { 'WATER.3': 'BONE.2', 'WATER.2': 'WATER.3', 'WATER.1': 'WATER.2',
+  /* WATER.3 is not in here on purpose. One step up from the brightest water
+     is BONE, and through the 2x lens six thirty-pixel bars of near-white
+     across the shallows read as grey slabs laid over the sea - the fourth
+     time light in this file has been too strong for the scale it is drawn
+     at. The shallowest band is already the bright one; the shafts start
+     below it. */
+  const SHAFT_UP = { 'WATER.2': 'WATER.3', 'WATER.1': 'WATER.2',
                      'WATER.0': 'WATER.1', 'DEEP.2': 'WATER.0', 'DEEP.1': 'DEEP.2' };
   function bandColAt(wy) {
     let col = BANDS[0][1];
@@ -271,14 +307,14 @@ KD.Parallax = (function () {
         if (sy < -2) continue;
         if (sy > KD.H) break;
         const k = y / DEPTH;
-        const w = Math.round(15 * (1 - k * 0.7));
-        if (w < 3) break;
+        /* nine world pixels, not fifteen: at 2x that is already a
+           eighteen-pixel bar in a two-hundred-pixel viewport */
+        const w = Math.round(9 * (1 - k * 0.62));
+        if (w < 2) break;
         const col = SHAFT_UP[bandColAt(cam.y + sy)] || null;
-        if (!col) break;
+        if (!col) continue;                  /* skip the band, do not stop */
         const x = Math.round(sx + y * slant);
         KD.Screen.rect(x, sy, w, 2, col);
-        /* a brighter core, half the width, for the first third */
-        if (k < 0.30) KD.Screen.rect(x + (w >> 2), sy, w >> 1, 2, col);
       }
     }
   }
@@ -359,96 +395,223 @@ KD.Parallax = (function () {
     }
   }
 
-  /* ---- drifting life at several depths ---- */
-  const fauna = [];
-  /* These pools named sprites that never existed - an_clownfish, an_tang,
-     an_wrasse and the rest - so the pool came out empty and there was no
-     ambient life in the entire ocean. The real names are the eight animals
-     in art/reef.js. */
-  const SMALL = ['an_clown', 'an_parrot'];
-  const MEDIUM = ['an_cuttle', 'an_lion', 'an_moray', 'an_mantis'];
-  const BIG = ['an_manta', 'an_cuda'];
+  /* ================================================================
+     THE FISH
 
-  /* Fish move in SHOALS. One leader per group and the rest hold a fixed
-     offset from it with a little sway of their own, which is what makes a
-     school read as a school rather than as ten fish that happen to be near
-     each other. */
-  function seed(n) {
-    seedSky();
-    fauna.length = 0;
-    const pool = [];
-    for (const s of SMALL) if (KD.PX.hasAny(s)) pool.push({ n: s, band: 0 });
-    for (const s of MEDIUM) if (KD.PX.hasAny(s)) pool.push({ n: s, band: 1 });
-    for (const s of BIG) if (KD.PX.hasAny(s)) pool.push({ n: s, band: 2 });
-    if (!pool.length) return;
-    const groups = n || 58;   /* the ocean should be BUSY */
-    for (let g = 0; g < groups; g++) {
-      const p = pool[(Math.random() * pool.length) | 0];
-      /* the little ones travel in numbers; the big ones travel alone */
-      const size = p.band === 0 ? 7 + ((Math.random() * 11) | 0)
-                 : p.band === 1 ? 1 + ((Math.random() * 3) | 0) : 1;
-      const lx = Math.random() * KD.World.W * TS;
-      const ly = (36 + Math.random() * 210) * TS;
-      const dir = Math.random() < 0.5 ? -1 : 1;
-      const sp = (p.band === 2 ? 11 : p.band === 1 ? 18 : 30) * (0.7 + Math.random() * 0.6);
-      const f = p.band === 2 ? 0.72 : p.band === 1 ? 0.86 : 1.0;
-      for (let i = 0; i < size; i++) {
-        fauna.push({
-          name: p.n, band: p.band, x: lx, y: ly, dir, sp, f,
-          ph: Math.random() * 9,
-          /* offsets fan out BEHIND the leader, so the shoal has a shape */
-          /* a wedge behind the leader, three ranks deep, so a shoal has a
-             SHAPE - a single trailing line reads as a queue */
-          ox: i === 0 ? 0 : -dir * (7 + ((i / 3) | 0) * 11) - (i % 2 ? 5 : 0),
-          oy: i === 0 ? 0 : ((i % 5) - 2) * 8 + (i % 2 ? 2 : -2),
-          sway: 3 + (i % 4)
-        });
-      }
+     Every fish in the ocean used to travel in a straight line at a
+     constant speed with a sine wave on its y, at whatever depth it was
+     dropped at. Through the 2x lens that reads as wallpaper: fifteen
+     identical clownfish stamped across the frame, all the same size, all
+     moving at the same rate, none of them reacting to anything.
+
+     A fish here now:
+
+       - lives in ITS OWN WATER. A clownfish is a reef fish and stays in
+         the reef; a cuttlefish is a ruins-and-below animal. Recycling
+         respawns a shoal inside its own band, so the surface stops
+         filling up with things that live at four hundred metres.
+       - SURGES. Fish do not glide, they beat their tail and coast, so
+         forward speed is multiplied by the beat rather than being
+         constant. It is the single cheapest thing that makes a sprite
+         read as alive.
+       - HOLDS ITS PLACE loosely. Followers spring toward a slot in the
+         wedge instead of being welded to it, so the school breathes and
+         squeezes when the leader turns.
+       - CHANGES ITS MIND. A shoal wanders vertically, turns round every
+         so often, and darts.
+       - GETS OUT OF THE WAY. Swim into a shoal and it scatters, which
+         is the moment the ocean stops being scenery.
+     ================================================================ */
+  const _Zd = KD.Zones.D;
+  /* n, band (0 near / 1 mid / 2 the far layer), the tile depths it lives
+     between, how many travel together, cruising speed, parallax factor */
+  const SPECIES = [
+    { n: 'an_clown',  band: 0, y: [_Zd.shallows,      _Zd.reef + 30],  size: [5, 11], sp: 30, f: 1.00 },
+    { n: 'an_parrot', band: 0, y: [_Zd.shallows + 12, _Zd.reef + 70],  size: [3, 7],  sp: 25, f: 1.00 },
+    { n: 'an_cuda',   band: 1, y: [_Zd.shallows + 24, _Zd.ruins],      size: [2, 5],  sp: 48, f: 0.95 },
+    { n: 'an_mantis', band: 1, y: [_Zd.reef - 20,     _Zd.ruins],      size: [1, 3],  sp: 18, f: 0.92 },
+    { n: 'an_lion',   band: 1, y: [_Zd.reef,          _Zd.ruins + 40], size: [1, 2],  sp: 13, f: 0.92 },
+    { n: 'an_moray',  band: 1, y: [_Zd.ruins - 30,    _Zd.trench],     size: [1, 1],  sp: 12, f: 0.90 },
+    { n: 'an_cuttle', band: 1, y: [_Zd.ruins,         _Zd.abyss],      size: [1, 2],  sp: 15, f: 0.90 },
+    { n: 'an_manta',  band: 2, y: [_Zd.reef,          _Zd.abyss],      size: [1, 1],  sp: 14, f: 0.74 }
+  ];
+
+  const shoals = [];
+  const vwOf = () => KD.W / ((KD.Cam && KD.Cam.z) || 1);
+  const vhOf = () => KD.H / ((KD.Cam && KD.Cam.z) || 1);
+
+  /* somewhere in this shoal's own band that the camera can actually see */
+  function bandY(sh, cy, vh) {
+    const b0 = sh.s.y[0] * TS, b1 = sh.s.y[1] * TS;
+    const lo = Math.max(b0, cy - 60), hi = Math.min(b1, cy + vh + 60);
+    if (hi <= lo) return (b0 + b1) / 2;      /* not our water: park, unseen */
+    return lo + Math.random() * (hi - lo);
+  }
+
+  /* ---- re-casting -------------------------------------------------
+     Eighteen shoals across eight species is two shoals of clownfish in
+     the whole Atlantic, and the first pass at depth bands emptied the
+     reef out completely as a result. So a shoal is not one species for
+     life: when it wraps round the camera and its own water is nowhere
+     near the frame, it comes back as something that DOES live here. A
+     fixed budget of shoals, always cast for the depth you are at.
+     ---------------------------------------------------------------- */
+  let POOL = null;
+  const here = (p, cy, vh) => p.y[0] * TS < cy + vh + 40 && p.y[1] * TS > cy - 40;
+  function recast(sh, cy, vh) {
+    if (!POOL || !POOL.length) return;
+    if (here(sh.s, cy, vh)) return;               /* still our water */
+    const fit = POOL.filter((p) => here(p, cy, vh));
+    if (!fit.length) return;
+    const p = fit[(Math.random() * fit.length) | 0];
+    sh.s = p; sh.name = p.n; sh.band = p.band; sh.f = p.f;
+    sh.sp = p.sp * (0.75 + Math.random() * 0.5);
+    /* the school changes size with the species: a barracuda pack is not a
+       cloud of clownfish */
+    const size = p.size[0] + ((Math.random() * (p.size[1] - p.size[0] + 1)) | 0);
+    sh.m.length = 0;
+    for (let i = 0; i < size; i++) {
+      sh.m.push({
+        tx: i === 0 ? 0 : -(7 + ((i / 3) | 0) * 11) - (i % 2 ? 5 : 0),
+        ty: i === 0 ? 0 : ((i % 5) - 2) * 8 + (i % 2 ? 2 : -2),
+        x: sh.x, y: sh.y, ph: Math.random() * 9,
+        beat: 2.6 + Math.random() * 2.0
+      });
     }
   }
+
+  function seed(n) {
+    seedSky();
+    shoals.length = 0;
+    const pool = SPECIES.filter((p) => KD.PX.hasAny(p.n));
+    POOL = pool;
+    if (!pool.length) return;
+    /* Eighteen shoals, not fifty-eight. They are recycled around the camera,
+       so the count is not "how many in the ocean" but "how many within three
+       screens of you" - and at the new zoom fifty-eight of them put four
+       hundred fish inside one viewport. */
+    const groups = n || 18;
+    for (let g = 0; g < groups; g++) {
+      const p = pool[(Math.random() * pool.length) | 0];
+      const size = p.size[0] + ((Math.random() * (p.size[1] - p.size[0] + 1)) | 0);
+      const sh = {
+        s: p, name: p.n, band: p.band, f: p.f,
+        x: Math.random() * KD.World.W * TS,
+        y: (p.y[0] + Math.random() * (p.y[1] - p.y[0])) * TS,
+        dir: Math.random() < 0.5 ? -1 : 1,
+        sp: p.sp * (0.75 + Math.random() * 0.5),
+        ph: Math.random() * 9, vy: 0, dart: 0, turn: 0, m: []
+      };
+      for (let i = 0; i < size; i++) {
+        sh.m.push({
+          /* a wedge three ranks deep behind the leader: a single trailing
+             line reads as a queue, not as a school */
+          tx: i === 0 ? 0 : -(7 + ((i / 3) | 0) * 11) - (i % 2 ? 5 : 0),
+          ty: i === 0 ? 0 : ((i % 5) - 2) * 8 + (i % 2 ? 2 : -2),
+          x: sh.x, y: sh.y,
+          ph: Math.random() * 9,
+          beat: 2.6 + Math.random() * 2.0       /* tail beats a second */
+        });
+      }
+      shoals.push(sh);
+    }
+  }
+
   function tick(dt) {
     wind(dt);
     const wpx = KD.World.W * TS;
-    /* Recycle round the CAMERA, not round the world. Spread over 2600 tiles
-       a hundred fish is one every seventeen tiles - three on screen. Wrapping
-       them just past the edge of view keeps a steady stream going past. */
-    const cx = KD.Cam ? KD.Cam.x : 0;
-    const cy = KD.Cam ? KD.Cam.y : 0;
-    const sea = (KD.Gen.meta.sea || 34) * TS;
-    const span = KD.W + 260;
-    /* Recycle round the camera in BOTH axes. Horizontally this was already
-       right; vertically they were being dropped anywhere in a 1600px water
-       column, so at any moment nearly all of them were above or below a
-       240px viewport and the sea looked empty however many there were. */
-    const relight = () => Math.max(sea + 10, cy - 70 + Math.random() * (KD.H + 140));
-    for (const f of fauna) {
-      f.x += f.sp * f.dir * dt;
-      f.y += Math.sin(f.ph + KD.Game.t * 0.5) * 4 * dt;
-      const rel = f.x - cx;
-      if (rel < -260) { f.x += span; f.y = relight(); }
-      else if (rel > span) { f.x -= span; f.y = relight(); }
-      /* drifted a long way out of view vertically? bring it back next pass */
-      if (f.y < cy - 300 || f.y > cy + KD.H + 300) f.y = relight();
-      if (f.x < 0) f.x += wpx; else if (f.x > wpx) f.x -= wpx;
+    const cx = KD.Cam ? KD.Cam.x : 0, cy = KD.Cam ? KD.Cam.y : 0;
+    const vw = vwOf(), vh = vhOf();
+    /* Recycle round the CAMERA in both axes, and over nearly three screens
+       of travel rather than one, so a shoal you swam past does not pop back
+       into frame ten seconds later. */
+    const span = vw * 2.6 + 120;
+    const T = KD.Game.t;
+    const P = KD.Player && KD.Player.P;
+    for (const sh of shoals) {
+      /* ---- the leader ------------------------------------------- */
+      if (sh.dart > 0) sh.dart -= dt;
+      if (sh.turn > 0) sh.turn -= dt;
+      /* the tail beat, and the surge that comes with it */
+      const surge = 1 + 0.45 * Math.sin(T * 3.1 + sh.ph);
+      const sp = sh.sp * surge * (sh.dart > 0 ? 3.1 : 1);
+      const wasX = sh.x;
+      sh.x += sp * sh.dir * dt;
+      /* it wanders up and down instead of holding one line */
+      const wantVy = Math.sin(T * 0.37 + sh.ph * 2.1) * 12;
+      sh.vy += (wantVy - sh.vy) * Math.min(1, dt * 1.5);
+      sh.y += sh.vy * dt;
+      /* and it stays in its own water */
+      const b0 = sh.s.y[0] * TS, b1 = sh.s.y[1] * TS;
+      if (sh.y < b0) { sh.y = b0; sh.vy = Math.abs(sh.vy); }
+      if (sh.y > b1) { sh.y = b1; sh.vy = -Math.abs(sh.vy); }
+      /* the odd change of mind */
+      if (sh.turn <= 0 && sh.dart <= 0 && Math.random() < dt * 0.07) {
+        sh.dir = -sh.dir; sh.turn = 2.6;
+      }
+      /* SCATTER. He swims into them and they go. */
+      if (P && sh.dart <= 0) {
+        const dx = sh.x - P.x, dy = sh.y - P.y;
+        if (dx * dx + dy * dy < 54 * 54) {
+          sh.dart = 0.7 + Math.random() * 0.5;
+          sh.dir = dx >= 0 ? 1 : -1;
+          sh.vy = dy >= 0 ? 30 : -30;
+          sh.turn = 1.4;
+        }
+      }
+      /* ---- recycling -------------------------------------------- */
+      let jump = 0;
+      const rel = sh.x - cx;
+      if (rel < -span * 0.4) { jump = span; }
+      else if (rel > span * 0.8) { jump = -span; }
+      if (jump) {
+        sh.x += jump;
+        recast(sh, cy, vh);
+        const ny = bandY(sh, cy, vh);
+        for (const m of sh.m) { m.x += jump; m.y = ny + m.ty; }
+        sh.y = ny;
+        sh.dart = 0;
+      }
+      if (sh.x < 0) { sh.x += wpx; for (const m of sh.m) m.x += wpx; }
+      else if (sh.x > wpx) { sh.x -= wpx; for (const m of sh.m) m.x -= wpx; }
+      /* ---- the rest of the school ------------------------------- */
+      /* They chase a slot rather than sitting in one, so the shoal squeezes
+         up when the leader turns and stretches out when it bolts. */
+      const k = Math.min(1, dt * (sh.dart > 0 ? 6.0 : 2.6));
+      for (let i = 0; i < sh.m.length; i++) {
+        const m = sh.m[i];
+        if (i === 0) { m.x = sh.x; m.y = sh.y; continue; }
+        m.x += (sh.x + sh.dir * m.tx - m.x) * k;
+        m.y += (sh.y + m.ty - m.y) * k;
+      }
+      if (wasX === sh.x && !jump) { /* nothing moved: leave it alone */ }
     }
   }
+
   function life(ctx, cam, near) {
-    for (const f of fauna) {
-      if ((f.band === 2) === !!near) continue;
-      const px = Math.round(f.x + (f.ox || 0) - cam.x * f.f);
-      const py = Math.round(f.y + (f.oy || 0)
-        + Math.sin(KD.Game.t * 1.6 + f.ph) * (f.sway || 3) - cam.y * f.f);
-      if (px < -90 || px > KD.W + 90 || py < -60 || py > KD.H + 60) continue;
-      const name = KD.PX.frameOf(f.name, KD.Game.t + f.ph);
-      if (!KD.PX.has(name)) continue;
-      /* Do not draw a fish inside the seabed. The shoals wander on their own
-         y, and nothing was checking whether that y had rock in it - so there
-         were clownfish swimming around in the middle of the mud. */
-      const ftx = ((f.x + (f.ox || 0)) / TS) | 0, fty = ((f.y + (f.oy || 0)) / TS) | 0;
-      if (KD.World.solid(ftx, fty) || KD.World.water(ftx, fty) < 3) continue;
-      const lit = KD.World.lightAt(ftx, fty);
-      const shade = Math.max(f.band === 2 ? 1 : 0, KD.PX.bandFor(lit, KD.Light.MAX));
-      KD.PX.blit(ctx, name, px, py, { anchor: false, flipX: f.dir < 0, shade });
+    const T = KD.Game.t;
+    for (const sh of shoals) {
+      if ((sh.band === 2) === !!near) continue;
+      const bolt = sh.dart > 0;
+      for (const m of sh.m) {
+        /* the beat drives the body too - a fish holding one height is a
+           fish on a rail */
+        const wob = Math.sin(T * m.beat + m.ph) * (sh.band === 2 ? 2.6 : 1.5);
+        const px = Math.round(m.x - cam.x * sh.f);
+        const py = Math.round(m.y + wob - cam.y * sh.f);
+        if (px < -70 || px > KD.W + 70 || py < -50 || py > KD.H + 50) continue;
+        /* and it drives the frame: a bolting fish beats faster */
+        const name = KD.PX.frameOf(sh.name, T * (0.7 + m.beat * (bolt ? 0.55 : 0.28)) + m.ph);
+        if (!KD.PX.has(name)) continue;
+        /* Do not draw a fish inside the seabed. The shoals wander on their
+           own y and nothing was checking whether that y had rock in it, so
+           there were clownfish swimming around in the middle of the mud. */
+        const ftx = (m.x / TS) | 0, fty = (m.y / TS) | 0;
+        if (KD.World.solid(ftx, fty) || KD.World.water(ftx, fty) < 3) continue;
+        const lit = KD.World.lightAt(ftx, fty);
+        const shade = Math.max(sh.band === 2 ? 1 : 0, KD.PX.bandFor(lit, KD.Light.MAX));
+        KD.PX.blit(ctx, name, px, py, { anchor: false, flipX: sh.dir < 0, shade });
+      }
     }
   }
 
@@ -641,5 +804,7 @@ KD.Parallax = (function () {
   }
   return { back, front, surface, seed, tick, kelp, vents, bubbles, caustics,
            get wind() { return W.gust; }, get windX() { return W.x; },
-           get fauna() { return fauna; } };
+           get shoals() { return shoals; },
+           /* a seam for the harness: what is swimming out there right now */
+           _shoals: () => shoals };
 })();

@@ -180,8 +180,11 @@ KD.Hud = (function () {
     }
   }
   function draw(S, cam) {
-    reticle(cam);
     hearts(S); stamina(S); stats(S); hotbar(S); message(S);
   }
-  return { draw };
+  /* The dig reticle lives in the WORLD, not on the interface: it marks a
+     tile. Everything else in here is pinned to the frame. Since the ocean
+     draws through a 2x lens now, the two have to happen in different
+     phases - play.js calls this one inside the lens and draw() after it. */
+  return { draw, reticle };
 })();

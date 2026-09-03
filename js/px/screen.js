@@ -80,6 +80,75 @@ KD.Screen = (function () {
     return { x: (cx - ox) / cssScale, y: (cy - oy) / cssScale };
   }
 
+  /* ================================================================
+     THE LENS
+
+     The ocean used to be drawn straight into the frame at 1:1, and the
+     castle cutscenes are 60-pixel characters in a 240-pixel frame while
+     the ocean was a 36-pixel king in the same frame. Same buffer, half
+     the size on screen - which is why the game looked lower-fidelity
+     than its own cutscenes.
+
+     So the world gets a lens. It is drawn into its own buffer at HALF
+     the frame's size and blitted back over the frame at 2x: one
+     drawImage, nearest neighbour, still perfectly square pixels. Tiles
+     land at sixteen screen pixels, the king at 48x72, and the fish are
+     big enough to have faces.
+
+     Everything in the world phase reads KD.W and KD.H to cull and to
+     pin edge markers, so the push swaps those too - inside the lens
+     they ARE the world viewport. The HUD, the panels and the cutscene
+     layer all draw after unlens(), at 1:1, so text stays crisp and the
+     interface does not double in size with the world.
+     ================================================================ */
+  let lensBuf = null, lensCtx = null, zoom = 1;
+  const stack = [];
+  function lens(z) {
+    z = Math.max(1, Math.round(z || 1));
+    const w = Math.ceil(KD.W / z), h = Math.ceil(KD.H / z);
+    if (!lensBuf) {
+      lensBuf = document.createElement('canvas');
+      lensCtx = lensBuf.getContext('2d', { alpha: false });
+    }
+    if (lensBuf.width !== w || lensBuf.height !== h) {
+      lensBuf.width = w; lensBuf.height = h;
+      lensCtx.imageSmoothingEnabled = false;
+    }
+    stack.push({ c: bctx, w: KD.W, h: KD.H, z: zoom });
+    bctx = lensCtx; KD.W = w; KD.H = h; zoom = z;
+    return lensCtx;
+  }
+  function unlens() {
+    const p = stack.pop();
+    if (!p) return;
+    const z = zoom;
+    bctx = p.c; KD.W = p.w; KD.H = p.h; zoom = p.z;
+    bctx.imageSmoothingEnabled = false;
+    bctx.drawImage(lensBuf, 0, 0, lensBuf.width, lensBuf.height,
+                   0, 0, lensBuf.width * z, lensBuf.height * z);
+  }
+
+  /* ---- world-anchored, frame-scaled -------------------------------
+     Letters. A speech bubble, a name plate or a prompt is pinned to
+     somebody standing in the world, but it has to be drawn at 1:1 or it
+     comes out of the lens at double size with four-pixel-tall type and
+     half of it off the edge of the frame. defer() queues a draw until
+     after unlens() and hands it the zoom it was queued at, so a caller
+     can multiply its own coordinates up and otherwise not think about
+     it. Outside a lens it just runs, with a zoom of 1.
+     ---------------------------------------------------------------- */
+  const later = [];
+  function defer(fn) {
+    if (zoom > 1) later.push({ fn: fn, z: zoom });
+    else fn(1);
+  }
+  function flush() {
+    if (!later.length) return;
+    const q = later.slice();
+    later.length = 0;
+    for (const it of q) it.fn(it.z);
+  }
+
   function present() {
     octx.imageSmoothingEnabled = false;
     octx.drawImage(buf, 0, 0, KD.W, KD.H, 0, 0, KD.W * scale, KD.H * scale);
@@ -120,6 +189,8 @@ KD.Screen = (function () {
     }
   }
   return { attach, fit, toBuf, present, ctx, clear, rect, frame, line,
+           lens, unlens, defer, flush,
            get scale() { return scale; }, get cssScale() { return cssScale; },
+           get zoom() { return zoom; },
            get buf() { return buf; } };
 })();

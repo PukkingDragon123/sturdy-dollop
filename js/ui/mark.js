@@ -136,7 +136,8 @@ KD.Mark = (function () {
     glyph(ex - 5, ey - 9, kind, col + '.3', 2);
     /* how far, in whole tiles */
     const d = Math.round(Math.hypot(sx - ex, sy - ey) / 8);
-    KD.Text.draw(d + 'M', ex, ey + 3, 'BONE.2', { tiny: true, align: 'center' });
+    KD.Screen.defer((z) => KD.Text.draw(d + 'M', ex * z, (ey + 3) * z, 'BONE.2',
+                                        { tiny: true, align: 'center' }));
     return true;
   }
 
@@ -163,8 +164,8 @@ KD.Mark = (function () {
     const y = sy - by - 5;
     for (let k = 0; k < 4; k++) R(sx - 4 + k, y + k, 9 - k * 2, 2, col + '.3');
     if (open) {
-      KD.Text.draw('NOW', sx, y - 10, 'KELP.3',
-                   { align: 'center', tiny: true, shadow: 'INK.0' });
+      KD.Screen.defer((z) => KD.Text.draw('NOW', sx * z, (y - 10) * z, 'KELP.3',
+                                          { align: 'center', tiny: true, shadow: 'INK.0' }));
     }
   }
 
