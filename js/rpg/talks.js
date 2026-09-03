@@ -80,42 +80,29 @@ KD.Talks = (function () {
      a rhythm meter is a strange way to dramatise that.
      -------------------------------------------------------------- */
   const keg = [
-    { who: 'keg',   text: 'You came. I did not think you would, and here you are, standing in your own throne room like a man waiting for a bus.' },
-    { who: 'king',  text: 'You said you were downstairs.' },
-    { who: 'keg',   text: 'I said a lot of things. Sit down. Nobody sits in that chair when you are in it - do you know how strange that is?' },
+    { who: 'keg',   text: 'You came. Sit down - nobody sits in that chair while you are in it, do you know how strange that is?' },
     { choose: [
-        { label: 'I should go back up.', goto: 'resist' },
         { label: 'What are you drinking?', goto: 'drink', set: { drank: 1 } },
+        { label: 'I should go back up.', goto: 'resist' },
         { label: 'Say nothing. Sit.', goto: 'drink', set: { drank: 1 } }
       ], text: 'SAY:' },
 
     { label: 'resist' },
-    { who: 'keg',   text: 'Back up. To the long table, and the candles, and the woman who checks whether you finished your fish.' },
-    { who: 'keg',   text: 'I am not asking you to leave her. I am asking you to have one and stop holding your stomach in.' },
-    { who: 'king',  text: 'One.' },
-    { who: 'keg',   text: 'One.' },
+    { who: 'keg',   text: 'Back up to the long table and the woman who checks whether you finished your fish. Have one. Stop holding your stomach in.' },
     { goto: 'drink' },
 
     { label: 'drink' },
-    { who: 'keg',   text: 'There. That is better. You have a whole different face when you are not being the King of the Atlantic.' },
-    { who: 'king',  text: 'What face is that.' },
-    { who: 'keg',   text: 'A younger one. Sit closer, I cannot hear you over the water.' },
+    { who: 'keg',   text: 'There. You have a whole different face when you are not being the King of the Atlantic. Sit closer.' },
     { choose: [
         { label: 'Move closer.', goto: 'fall', set: { fell: 2 } },
-        { label: 'Stay where I am.', goto: 'slow', set: { fell: 1 } }
+        { label: 'Stay where I am.', goto: 'fall', set: { fell: 1 } }
       ], text: 'SAY:' },
 
-    { label: 'slow' },
-    { who: 'keg',   text: 'Suit yourself. I have all night, and so do you - that is the thing about a trench, it does not go anywhere.' },
-    { who: 'keg',   text: 'Another?' },
-    { who: 'king',  text: 'Another.' },
-    { goto: 'fall' },
-
     { label: 'fall' },
-    { who: 'keg',   text: 'Good. Now put that thing down, you are going to have somebody\'s eye out with it.' },
+    { who: 'keg',   text: 'Now put that thing down, you will have somebody\'s eye out with it.' },
     { do: (b) => { b.putDown = 1; } },
     { who: 'king',  text: '...' },
-    { who: 'keg',   text: 'Look at that. Four hundred years of kings and all it took was asking.' }
+    { who: 'keg',   text: 'Four hundred years of kings, and all it took was asking.' }
   ];
 
   /* ---- the long table, one conversation a course -----------------
