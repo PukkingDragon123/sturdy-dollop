@@ -321,7 +321,20 @@ KD.Player = (function () {
   function mine(dt, S) {
     const held = KD.In.act('dig', 'KeyJ') || (KD.In.mouse.down && !KD.touch);
     if (!held) { P.mineT = 0; P.mineTx = -1; P.mineAcc = 0; return; }
-    const Wd = KD.World, tx = P.tgx, ty = P.tgy;
+    const Wd = KD.World;
+    let tx = P.tgx, ty = P.tgy;
+    /* THE HOE FALLS. On a keyboard or a thumbstick the aim points where you
+       are FACING, which is sideways - so pointing at your own plot meant
+       holding a direction key down at the same time as the dig button just
+       to hit the ground you were standing on. If the aim is in open water
+       and there is a plot within a couple of tiles under it, dig THAT. */
+    if (!KD.Tiles.get(Wd.at(tx, ty)).hp) {
+      for (let k = 1; k <= 3; k++) {
+        const t2 = KD.Tiles.get(Wd.at(tx, ty + k));
+        if (t2 && t2.plot && KD.Day.inPlot(tx, ty + k)) { ty = ty + k; break; }
+        if (t2 && t2.hp) break;
+      }
+    }
     const T = KD.Tiles.get(Wd.at(tx, ty));
     if (!T || !T.hp) { P.mineT = 0; return; }
     /* ---- the hoe ---------------------------------------------------
@@ -425,18 +438,40 @@ KD.Player = (function () {
   }
 
   /* returns true if the tile under the cursor handled the press itself */
+  /* Everything within arm's reach, aimed tile first. Requiring the cursor
+     to be exactly ON a bed before you can sleep in it is a mouse test, not
+     a game - and on a thumbstick, where the aim is just "the way he is
+     facing", it made the bed, the bin and the crate unusable. */
+  function reach() {
+    const out = [[P.tgx, P.tgy]];
+    const cx = (P.x / TS) | 0, cy = ((P.y - P.h / 2) / TS) | 0;
+    for (let dy = -1; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        out.push([cx + dx, cy + dy]);
+      }
+    }
+    return out;
+  }
+
   function interact(S) {
-    const Wd = KD.World, tx = P.tgx, ty = P.tgy;
+    const Wd = KD.World;
+    /* the furniture of the cove answers from anywhere beside it */
+    for (const [ax, ay] of reach()) {
+      const A = KD.Tiles.get(Wd.at(ax, ay));
+      if (!A) continue;
+      if (A.sleep) { KD.Game.go('sleep', {}); return true; }
+      if (A.bin) { binDrop(S); return true; }
+      if (A.shop) { KD.Panels.toggle('seeds'); return true; }
+      if (A.board) { KD.Panels.toggle('quest'); return true; }
+    }
+    const tx = P.tgx, ty = P.tgy;
     const T = KD.Tiles.get(Wd.at(tx, ty));
     if (!T) return false;
     /* ---- the cove ---------------------------------------------------
        Bed, bin, crate, and whatever is growing in the furrow you are
        pointing at. All on the one USE key, because a farm with four
        verbs on four buttons is a spreadsheet. */
-    if (T.sleep) { KD.Game.go('sleep', {}); return true; }
-    if (T.bin) { binDrop(S); return true; }
-    if (T.shop) { KD.Panels.toggle('seeds'); return true; }
-    if (T.board) { KD.Panels.toggle('quest'); return true; }
     if (farmAt(S, tx, ty)) return true;
     if (T.container) { openChest(S, tx, ty); return true; }
     if (T.door) {
@@ -456,6 +491,19 @@ KD.Player = (function () {
      get told how long it has left, because "nothing happened" is the
      worst answer a button can give. */
   function farmAt(S, tx, ty) {
+    /* Fall to the furrow, exactly as the hoe does. The aim points where he
+       is FACING, which is sideways, so pointing at a row he is standing on
+       meant holding a direction key at the same time as the use key. */
+    if (!KD.Day.cropAt(tx, ty)) {
+      const T0 = KD.Tiles.get(KD.World.at(tx, ty));
+      if (!T0 || !T0.tilled) {
+        for (let k = 1; k <= 3; k++) {
+          const t2 = KD.Tiles.get(KD.World.at(tx, ty + k));
+          if (KD.Day.cropAt(tx, ty + k) || (t2 && t2.tilled)) { ty += k; break; }
+          if (t2 && t2.solid) break;
+        }
+      }
+    }
     const c = KD.Day.cropAt(tx, ty);
     if (c) {
       if (KD.Day.ripe(c)) {

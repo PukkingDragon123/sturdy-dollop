@@ -362,6 +362,17 @@ KD.Parallax = (function () {
     }
     /* a float at the tip, which is what real kelp has */
     KD.Screen.rect(Math.round(px), groundY - segs * 8 - 10, 3, 3, 'KELP.3');
+    /* AND A HOLDFAST. Kelp does not float: it is bolted to the rock by a
+       knuckle of root, and without one every stalk in the forest read as a
+       green stick hanging in open water with nothing under it - which is
+       exactly what the screenshots showed. Drawn last so it sits over the
+       bottom segment, and sunk two pixels into the ground it grips. */
+    const bx = Math.round(x), by = groundY - 2;
+    KD.Screen.rect(bx - 2, by, 6, 3, shade);
+    KD.Screen.rect(bx - 3, by + 2, 8, 2, 'KELP.0');
+    KD.Screen.rect(bx - 1, by - 1, 4, 1, 'KELP.2');
+    KD.Screen.rect(bx - 4, by + 3, 3, 1, 'KELP.0');
+    KD.Screen.rect(bx + 3, by + 3, 3, 1, 'KELP.0');
   }
 
   /* three depths of forest, so the water has something behind it */

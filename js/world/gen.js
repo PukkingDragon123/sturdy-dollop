@@ -97,18 +97,36 @@ KD.Gen = (function () {
 
        Control points in (tile x, seabed y); everything between is a
        smoothstep, so there are no cliffs where two zones meet. */
-    const D = KD.Zones.D, WD = KD.Zones.d;
-    const SHELF = [[0.00, D.sea + 14], [0.11, D.sea + 18], [0.15, D.sea + 22],
-                   [0.20, D.shallows + 8], [0.24, WD(0.08)], [0.31, WD(0.15)],
-                   [0.36, WD(0.20)], [0.40, WD(0.26)], [0.46, WD(0.32)],
-                   [0.50, WD(0.37)], [0.54, WD(0.45)], [0.59, WD(0.51)],
-                   [0.63, WD(0.63)], [1.01, WD(0.76)]];
+    /* The control points used to be fractions of the map width, which was
+       fine while the zones happened to line up with them and stopped being
+       fine the moment the map was redrawn: the reef zone ended up with its
+       seabed two hundred tiles below the reef, so the "shallow reef" was a
+       screen of open water with nothing in it.
+
+       They are anchored to the ZONES now. Each place gets the floor its
+       own contents need, and a zone that moves takes its seabed with it. */
+    const D = KD.Zones.D;
+    const FLOOR_OF = {
+      cove:    D.sea + 28,
+      village: D.shallows + 10,
+      mine:    D.shallows + 26,
+      gate:    D.shallows + 16,
+      reef:    D.reef - 8,
+      kelp:    D.ruins - 22,
+      ruins:   D.trench - 34,
+      blue:    D.abyss - 24,
+      drop:    D.floor - 26
+    };
+    /* one control point at the middle of each zone, so the slope between
+       two places happens across the boundary rather than at it */
+    const SHELF = Zn.Z.map((z) => [(z.x0 + z.x1) / 2, FLOOR_OF[z.id] || D.shallows + 10]);
+    SHELF.unshift([0, SHELF[0][1]]);
+    SHELF.push([w + 1, SHELF[SHELF.length - 1][1]]);
     function shelfAt(x) {
-      const f = x / w;
       for (let k = 0; k < SHELF.length - 1; k++) {
         const a = SHELF[k], b = SHELF[k + 1];
-        if (f < b[0]) {
-          const u = (f - a[0]) / (b[0] - a[0]);
+        if (x < b[0]) {
+          const u = (x - a[0]) / (b[0] - a[0]);
           const e = u * u * (3 - 2 * u);            // smoothstep
           return a[1] + (b[1] - a[1]) * e;
         }
@@ -123,9 +141,9 @@ KD.Gen = (function () {
       const rough = 5 + base * 0.10;
       let s = base + (Wd.fbm(x * 0.012, 0.5, 4) - 0.5) * rough * 2
                    + (Wd.fbm(x * 0.05, 9.5, 2) - 0.5) * 6;
-      if (z.id === 'village' || z.id === 'gate') {
-        const dd = Math.min(1, Math.abs(x - shelfX) / 260);
-          s = s * dd + (D.shallows + 4) * (1 - dd);
+      if (z.id === 'village' || z.id === 'gate' || z.id === 'cove') {
+        const dd = Math.min(1, Math.abs(x - shelfX) / 300);
+        s = s * dd + (D.shallows + 8) * (1 - dd);
       }
       surface[x] = Math.max(D.sea + 6, Math.round(s));
       for (let y = 0; y < h; y++) {

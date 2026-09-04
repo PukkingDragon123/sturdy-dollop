@@ -85,6 +85,36 @@ flippers - with the crown still on top of the mask, because he has not stopped
 being the king about it. Crown plus goggles is a silhouette you can pick out at
 twenty-four pixels wide, which is all he gets.
 
+**A day is the unit of play.** The ocean used to have no shape to it: you
+could swim east for as long as you liked and nothing ever asked you to stop,
+come back, or decide what today was for. Now the clock runs from six in the
+morning to two the next, about four real minutes. ENERGY is the budget - every
+swing of the pick and every swing of the trident spends some, and only sleep
+gives it back, so how far east you dare go is a decision rather than a
+formality. What you leave in the shipping bin is sold overnight. What you
+planted comes on one day at a time. And getting into bed adds the day up and
+hands it back to you on a card, which is the actual trick: it is what turns "I
+dug some rock" into "that was a good Tuesday".
+
+**The cove is yours.** A flat shelf at the west end of the map, hand-carved
+rather than generated: a shack with a bed and three lanterns in it, a shipping
+bin, a seed crate, a notice board, and forty tiles of seabed marked out as
+yours. The same dig button that breaks rock cuts that seabed into furrows.
+Three things grow in them and they differ in what KIND of decision they are -
+kelp is two days and always worth planting, glowpods take three and light the
+plot after dark, pearl vine takes five and pays for the week. Every day starts
+there and ends there.
+
+**The map is small on purpose.** It went up four times chasing "make the ocean
+bigger" and reached seven thousand tiles by nine hundred, which is two and a
+half million tiles of the same rock and no reason to be at any particular one
+of them. Three thousand by six hundred now, and shaped like a game rather than
+like a noise function: the cove, the village, the old mine, the Sea Gate, and
+then the reef, the kelp forest, the sunken city, the blue and the Drop - each
+one small enough that you can see both ends of it. The seabed is anchored to
+the zones, so every place has the floor its own contents need and swimming east
+really is descending.
+
 **The gauge on the right is the loop.** The ocean is nine hundred tiles deep
 and going down it is the game, so there is a column down the right edge with
 the whole thing on it: the layer bands in the colours the water actually is,
