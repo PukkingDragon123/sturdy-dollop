@@ -3,34 +3,117 @@
    line. Sits over the world, never in the middle of it.
    ============================================================ */
 KD.Hud = (function () {
-  function hearts(S) {
+  const R = (x, y, w, h, c) => KD.Screen.rect(Math.round(x), Math.round(y),
+                                              Math.round(w), Math.round(h), c);
+
+  /* ================================================================
+     THE INTERFACE, cut down.
+
+     There used to be twelve things on screen at once: hearts, a stamina
+     row, a fat bar, a beer bar, five crown pips, a clam count, a level,
+     an XP bar, a depth gauge, a quest scroll, a message box, a hotbar
+     and a tooltip that landed on top of the hotbar. Every one of them
+     was defensible on its own and together they were wallpaper - and
+     the one thing a player actually needs, "what is today for", was a
+     grey line in the corner competing with eleven other grey lines.
+
+     Four groups now, one per corner, and nothing in the middle:
+
+       TOP LEFT     what you are made of - hearts and energy.
+       TOP RIGHT    what today is - the day, the season, the clock, and
+                    your clams.
+       BOTTOM       the hotbar, and nothing else.
+       ONE LINE     under the top-left group: what you are doing.
+
+     Everything else moved into a panel you open on purpose.
+     ================================================================ */
+
+  function vitals(S) {
     const P = KD.Player.P;
+    /* hearts */
     for (let i = 0; i < P.hpMax; i++) {
-      const x = 3 + i * 9, y = 3;
+      const x = 4 + i * 9, y = 4;
       const full = P.hp >= i + 1, half = !full && P.hp > i;
       const n = full ? 'ic_heart_full' : (half ? 'ic_heart_half' : 'ic_heart_empty');
       if (KD.PX.has(n)) KD.PX.blit(KD.Screen.ctx(), n, x, y, { anchor: false });
       else {
-        KD.Screen.rect(x, y, 7, 7, full ? 'BLOOD.2' : (half ? 'BLOOD.1' : 'INK.1'));
+        R(x, y, 7, 7, full ? 'BLOOD.2' : (half ? 'BLOOD.1' : 'INK.1'));
         KD.Screen.frame(x, y, 7, 7, 'INK.0');
       }
     }
-  }
-  function stamina(S) {
-    const P = KD.Player.P;
-    if (P.stam >= 0.999) return;
-    const n = Math.ceil(P.stam * 8);
-    for (let i = 0; i < 8; i++) {
-      const x = 3 + i * 9, y = 12;
-      if (i < n) {
-        if (KD.PX.has('ic_bubble')) KD.PX.blit(KD.Screen.ctx(), 'ic_bubble', x, y, { anchor: false });
-        else { KD.Screen.rect(x + 1, y + 1, 5, 5, 'WATER.2'); KD.Screen.frame(x + 1, y + 1, 5, 5, 'INK.0'); }
-      } else {
-        KD.Screen.frame(x + 1, y + 1, 5, 5, 'INK.2');
-      }
+    /* ENERGY. The number that decides how long today is, so it gets a real
+       bar with a lip and a label rather than eight little bubbles. */
+    const e = KD.Day.energy(), em = KD.Day.energyMax();
+    const bw = 74, bx = 4, by = 15;
+    R(bx - 1, by - 1, bw + 2, 9, 'INK.0');
+    R(bx, by, bw, 7, 'DEEP.0');
+    const f = Math.max(0, Math.min(1, e / em));
+    const col = f > 0.5 ? 'KELP.2' : (f > 0.22 ? 'GOLD.2' : 'BLOOD.2');
+    R(bx, by, Math.round(bw * f), 7, col);
+    R(bx, by, Math.round(bw * f), 1, KD.PAL.shift(col, 1));
+    KD.Screen.frame(bx - 1, by - 1, bw + 2, 9, 'INK.2');
+    KD.Text.draw('ENERGY', bx + 3, by + 1, f > 0.22 ? 'INK.0' : 'BONE.2', { tiny: true });
+    KD.Text.draw(Math.round(e) + '', bx + bw - 3, by + 1, 'BONE.2',
+                 { tiny: true, align: 'right' });
+    /* breath, only while it is running out */
+    if (P.stam < 0.999) {
+      const sw = Math.round(bw * Math.max(0, P.stam));
+      R(bx - 1, by + 9, bw + 2, 5, 'INK.0');
+      R(bx, by + 10, sw, 3, 'WATER.2');
+      KD.Text.draw('AIR', bx + bw + 5, by + 9, 'WATER.1', { tiny: true });
     }
-    KD.Text.draw('PUFF', 3 + 8 * 9 + 2, 13, 'WATER.1', { tiny: true });
   }
+
+  /* ---- the day, the clock and the money, top right ------------------ */
+  function today(S) {
+    const x = KD.W - 4;
+    const dayLab = 'DAY ' + KD.Day.day();
+    const timeLab = KD.Day.hhmm();
+    const seaLab = KD.Day.season().toUpperCase() + ' ' + KD.Day.dayOfSeason();
+    /* Three rows, not two. The season used to be printed on the same line
+       as the day and the two of them overlapped in the middle. */
+    const w = Math.max(KD.Text.width(dayLab), KD.Text.width(timeLab),
+                       KD.Text.width(seaLab, { tiny: true })) + 16;
+    R(x - w, 3, w, 36, 'INK.0');
+    KD.Screen.frame(x - w, 3, w, 36, 'INK.2');
+    R(x - w + 1, 4, w - 2, 1, 'DEEP.2');
+    KD.Text.draw(dayLab, x - 6, 6, 'BONE.2', { align: 'right', shadow: 'INK.0' });
+    KD.Text.draw(seaLab, x - 6, 16, 'INK.3', { tiny: true, align: 'right' });
+    /* the clock, with a bar under it that fills as the day burns down */
+    KD.Text.draw(timeLab, x - 6, 23, KD.Day.late() ? 'BLOOD.3' : 'WATER.3',
+                 { align: 'right', shadow: 'INK.0' });
+    const tw = w - 12;
+    R(x - w + 6, 33, tw, 3, 'DEEP.0');
+    R(x - w + 6, 33, Math.round(tw * KD.Day.through()), 3,
+      KD.Day.late() ? 'BLOOD.2' : 'GOLD.2');
+    /* clams, on their own plate under it */
+    const cl = S.S.clams + 'c';
+    const cw = KD.Text.width(cl) + 12;
+    R(x - cw, 42, cw, 13, 'INK.0');
+    KD.Screen.frame(x - cw, 42, cw, 13, 'GOLD.0');
+    KD.Text.draw(cl, x - 6, 45, 'GOLD.3', { align: 'right', shadow: 'INK.0' });
+  }
+
+  /* ---- ONE line saying what you are doing ---------------------------
+     Not a scroll, not a panel, not a box in the middle of the frame. A
+     tab under the vitals with the current objective on it, in the colour
+     of the thing it wants from you. */
+  function objective(S) {
+    const task = KD.Quests && KD.Quests.current();
+    if (!task) return;
+    const y = KD.Player.P.stam < 0.999 ? 30 : 26;
+    const max = Math.min(190, KD.W - 120);
+    const line = KD.Text.fit(task, max - 16, { tiny: true });
+    const w = KD.Text.width(line, { tiny: true }) + 18;
+    R(4, y, w, 12, 'INK.0');
+    KD.Screen.frame(4, y, w, 12, 'GOLD.0');
+    R(5, y + 1, w - 2, 1, 'GOLD.1');
+    /* a brass tag saying what KIND of thing it is */
+    const kind = KD.Quests.currentMark ? KD.Quests.currentMark() : 'go';
+    if (KD.Mark && KD.Mark.glyph) KD.Mark.glyph(7, y + 3, kind, 'GOLD.3', 1);
+    KD.Text.draw(line, 16, y + 3, 'BONE.2', { tiny: true });
+  }
+
   function hotbar(S) {
     const n = KD.State.HOT;
     const w = n * 17 - 1;
@@ -43,62 +126,29 @@ KD.Hud = (function () {
     }
     const held = S.S.inv[S.S.hot];
     if (held) {
-      KD.Text.draw(KD.State.nameOf(held), KD.W / 2, y - 8, 'BONE.2', { align: 'center', shadow: 'INK.0' });
+      KD.Text.draw(KD.State.nameOf(held), KD.W / 2, y - 8, 'BONE.2',
+                   { align: 'center', shadow: 'INK.0' });
     }
   }
-  function stats(S) {
-    const x = KD.W - 3;
-    /* clams, level, xp */
-    KD.Text.draw(S.S.clams + 'c', x, 3, 'GOLD.3', { align: 'right', shadow: 'INK.0' });
-    KD.Text.draw('LV ' + S.S.level, x, 12, 'BONE.2', { align: 'right', shadow: 'INK.0' });
-    const need = KD.State.xpFor(S.S.level);
-    KD.UI.bar(x - 46, 21, 46, 4, S.S.xp / need, 'GOLD.2');
-    if (S.S.points > 0) {
-      const blink = ((KD.Game.t * 2) | 0) % 2 === 0;
-      KD.Text.draw(S.S.points + ' PT', x, 27, blink ? 'GOLD.3' : 'GOLD.1', { align: 'right', shadow: 'INK.0' });
-    }
-    /* fat and beer */
-    KD.UI.bar(3, 21, 40, 4, S.S.fat / 100, 'SAND.2');
-    KD.Text.draw('FAT', 45, 20, 'SAND.1', { tiny: true });
-    if (S.S.beer) {
-      KD.UI.bar(3, 27, 40, 4, S.S.beer.t / S.S.beer.max, 'GOLD.2');
-      KD.Text.draw('+' + Math.round(S.S.beer.dmg * 100) + '%', 45, 26, 'GOLD.2', { tiny: true });
-    }
-    /* Fragments, tucked under the fat bar on the LEFT. They used to sit
-       top-centre, which is exactly where a boss fight puts the King's name
-       and health, so his title read as "THE KING[][][]E ATLANTIC". */
-    for (let i = 0; i < 5; i++) {
-      const fx = 3 + i * 9;
-      const fy = S.S.beer ? 33 : 27;
-      const got = S.S.frags.length > i;
-      if (KD.PX.has('ic_crown')) {
-        KD.PX.blit(KD.Screen.ctx(), 'ic_crown', fx, fy, { anchor: false });
-        if (!got) KD.Dither.fill(KD.Screen.ctx(), fx, fy, 8, 8, 'INK.0', 0.75);
-      } else {
-        KD.Screen.rect(fx, fy + 1, 7, 5, got ? 'GOLD.3' : 'INK.2');
-        KD.Screen.frame(fx, fy + 1, 7, 5, 'INK.0');
-      }
-    }
-    /* The one line telling you what you are supposed to be doing. Without
-       it a 2600-tile world is just a big cave with fish in it. */
-    const task = KD.Quests && KD.Quests.current();
-    if (task) {
-      /* On a touch layout the right edge belongs to the tab column, so the
-         task line goes under the fragments instead of behind the buttons. */
-      /* Bottom left, above the hotbar. It used to sit at y=38 on the right,
-         which is exactly where a say() message box lands, so the two
-         overlapped every time the game told you anything. */
-      /* Hung as a scroll rather than printed as a line: a bare string in the
-         corner reads as a debug label, and this is the one thing telling you
-         what the next hour of the game is for. */
-      KD.UI.scroll(6, KD.H - 96, task, { w: Math.min(118, KD.W - 150), maxLines: 3,
-                                         kind: KD.Quests.currentMark() });
-    }
-    /* depth read-out, so the layers are legible as progress */
-    const d = (KD.Player.P.y / 8) | 0;
-    const L = KD.Gen.layerAt(d);
-    KD.Text.draw(L.id.toUpperCase() + '  ' + d + 'm', KD.W / 2, KD.H - 27, 'BONE.0', { tiny: true, align: 'center', shadow: 'INK.0' });
-    gauge(S, d);
+
+  /* ---- where you are, once, when it changes -------------------------- */
+  let zoneWas = '', zoneT = 0;
+  function place(S) {
+    const z = KD.Zones.atPx(KD.Player.P.x);
+    if (z.id !== zoneWas) { zoneWas = z.id; zoneT = 2.6; }
+    if (zoneT > 0) zoneT -= 1 / 60;
+    if (zoneT <= 0) return;
+    const k = Math.min(1, zoneT / 0.4);
+    const lab = z.name.toUpperCase();
+    const w = KD.Text.width(lab) + 20;
+    const x = Math.round((KD.W - w) / 2), y = 30;
+    R(x, y, w, 15, 'INK.0');
+    KD.Screen.frame(x, y, w, 15, 'GOLD.0');
+    R(x + 1, y + 1, w - 2, 1, 'GOLD.1');
+    KD.Text.draw(lab, KD.W / 2, y + 4, k > 0.5 ? 'GOLD.3' : 'GOLD.1',
+                 { align: 'center', shadow: 'INK.0' });
+    KD.Text.draw(((KD.Player.P.y / 8) | 0) + 'm', KD.W / 2, y + 17, 'INK.3',
+                 { tiny: true, align: 'center', shadow: 'INK.0' });
   }
 
   /* ---- the depth gauge ----------------------------------------------
@@ -115,8 +165,10 @@ KD.Hud = (function () {
   function gauge(S, depth) {
     const D = KD.Zones.D;
     const R = KD.Screen.rect;
-    const h = Math.min(150, KD.H - 76);
-    const x = KD.W - 13, y = 30;
+    /* Down the right edge, but BELOW the day plate - the two used to
+       overlap and the clock was printed across the top of the column. */
+    const h = Math.min(120, KD.H - 116);
+    const x = KD.W - 13, y = 60;
     const at = (tile) => y + Math.round(h * Math.max(0, Math.min(1, tile / D.floor)));
     /* the water column, in the same colours the water actually is */
     const BAND = [[0, 'WATER.3'], [D.sea, 'WATER.2'], [D.shallows, 'WATER.1'],
@@ -190,11 +242,13 @@ KD.Hud = (function () {
     }
   }
   function draw(S, cam) {
-    hearts(S); stamina(S); stats(S); hotbar(S); message(S);
+    vitals(S);
+    today(S);
+    objective(S);
+    place(S);
+    hotbar(S);
+    message(S);
+    gauge(S, (KD.Player.P.y / 8) | 0);
   }
-  /* The dig reticle lives in the WORLD, not on the interface: it marks a
-     tile. Everything else in here is pinned to the frame. Since the ocean
-     draws through a 2x lens now, the two have to happen in different
-     phases - play.js calls this one inside the lens and draw() after it. */
   return { draw, reticle };
 })();

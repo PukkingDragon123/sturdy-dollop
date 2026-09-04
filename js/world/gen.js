@@ -34,7 +34,8 @@ KD.Gen = (function () {
   let surface = null;                 // surface[x] = first solid y
   let dry = new Set();                // tiles the flood must not fill: air pockets
   let steps = null, si = 0;
-  const meta = { spawn: { x: 0, y: 0 }, village: null, throne: null, gate: null, seed: 0, structures: [] };
+  const meta = { spawn: { x: 0, y: 0 }, village: null, home: null, throne: null,
+                 gate: null, seed: 0, structures: [] };
 
   /* ---------- the pipeline ---------- */
   function begin(w, h, seed) {
@@ -52,6 +53,7 @@ KD.Gen = (function () {
       ['raising the ruins', ruins],
       ['sinking the wrecks', landmarks],
       ['planting the village', village],
+      ['clearing your own cove', home],
       ['seating the cook on your throne', throne],
       ['flooding the ocean', flood],
       ['filling the chests', loot],
@@ -374,6 +376,118 @@ KD.Gen = (function () {
       for (let i = -2; i <= 2; i++) if (Wd.inside(gx + i, j)) Wd.fg[j * w + gx + i] = T.id('gate');
     }
     meta.gate = { x: gx, y: surfaceAt(gx) - 2, top: doorTop };
+  }
+
+  /* ================================================================
+     THE COVE
+
+     Home. The one place in three thousand tiles that is yours, and the
+     reason every day has a shape: you wake up here, you go out, you
+     come back, you put what you found in the bin and you go to bed.
+
+     Carved by hand rather than generated, because a home you cannot
+     recognise from a distance is not a home. A flat shelf, a shack
+     with a bed in it, a bin, a seed crate, a notice board, and forty
+     tiles of seabed marked out as yours to cut up.
+     ================================================================ */
+  function home() {
+    const Wd = W(), w = Wd.W, T = KD.Tiles;
+    const Zc = KD.Zones.byId.cove;
+    /* Deep enough that the whole cove is under water. The first pass put
+       the floor sixteen tiles down and the shack's roof came out ABOVE the
+       waterline, with the surf breaking through the middle of your house. */
+    const Y = KD.Zones.D.sea + 28;            // the cove floor, one flat line
+    const X0 = 40, X1 = 260;                  // how much of it we flatten
+
+    /* ---- flatten the shelf ---------------------------------------
+       The generator gives the cove the same lumpy shelf as everywhere
+       else, and you cannot lay a plot on a lump. */
+    for (let x = X0; x <= X1; x++) {
+      if (x < 0 || x >= w) continue;
+      for (let y = Math.max(0, Y - 26); y < Y; y++) {
+        if (Wd.inside(x, y)) Wd.fg[y * w + x] = T.AIR;
+      }
+      for (let y = Y; y < Y + 14; y++) {
+        if (Wd.inside(x, y) && !T.isSolid(Wd.at(x, y))) Wd.fg[y * w + x] = T.id('sand');
+      }
+      surface[x] = Y;
+    }
+    /* a ridge of rock either side, so the cove reads as a cove */
+    for (const side of [X0 - 1, X1 + 1]) {
+      for (let k = 0; k < 14; k++) {
+        const h2 = 14 - k;
+        for (let i = -2; i <= 2; i++) {
+          const x = side + i * (side === X0 - 1 ? -1 : 1);
+          if (!Wd.inside(x, Y - k)) continue;
+          if (k < h2) Wd.fg[(Y - k) * w + x] = T.id('stone');
+        }
+      }
+    }
+
+    /* ---- the shack ------------------------------------------------ */
+    const HX = 74, HW = 24, HH = 15;
+    room(HX, Y - HH + 1, HW, HH, 'plank', 'plank', true);
+    /* a masonry footing and a brick roof band, so it reads as a BUILDING and
+       not as a rectangle of the same plank inside and out */
+    for (let i = -1; i <= HW; i++) {
+      const tx = HX + i;
+      if (Wd.inside(tx, Y)) Wd.fg[Y * w + tx] = T.id('masonry');
+      if (Wd.inside(tx, Y - HH)) Wd.fg[(Y - HH) * w + tx] = T.id('brick');
+      if (Wd.inside(tx, Y - HH - 1) && i >= 1 && i < HW - 1) {
+        Wd.fg[(Y - HH - 1) * w + tx] = T.id('brick');
+      }
+    }
+    /* a doorway in the right wall, two tiles wide and four tall */
+    for (let j = 1; j <= 4; j++) {
+      for (let i = 0; i < 2; i++) {
+        const tx = HX + HW - 1 + i, ty = Y - j;
+        if (Wd.inside(tx, ty)) Wd.fg[ty * w + tx] = T.AIR;
+      }
+    }
+    /* two windows, so it is a house and not a crate */
+    for (const wx of [HX + 5, HX + 15]) {
+      for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+        const tx = wx + i, ty = Y - HH + 4 + j;
+        if (Wd.inside(tx, ty)) Wd.fg[ty * w + tx] = T.id('glass');
+      }
+    }
+    /* the bed, against the far wall, and a lantern over it */
+    const bed = { x: HX + 3, y: Y - 2 };
+    Wd.fg[bed.y * w + bed.x] = T.id('bed');
+    /* Three lanterns, not one. A twenty-four by fifteen room lit by a
+       single light source is a dark room with a candle in the corner. */
+    for (const lx of [HX + 4, HX + 12, HX + 20]) {
+      Wd.fg[(Y - 8) * w + lx] = T.id('lantern');
+    }
+    meta.structures.push({ kind: 'home', x: HX, y: Y - HH + 1, w: HW, h: HH });
+
+    /* ---- the yard: bin, crate, board ------------------------------ */
+    const bin   = { x: HX + HW + 3, y: Y - 2 };
+    const crate = { x: HX + HW + 8, y: Y - 2 };
+    const board = { x: HX + HW + 13, y: Y - 2 };
+    Wd.fg[bin.y * w + bin.x] = T.id('bin');
+    Wd.fg[crate.y * w + crate.x] = T.id('crate');
+    Wd.fg[board.y * w + board.x] = T.id('sign');
+
+    /* ---- the plot -------------------------------------------------
+       Forty tiles of seabed marked as yours. Two rows deep so the
+       furrows read as a bed rather than as a line. */
+    const P0 = HX + HW + 18, P1 = P0 + 39;
+    for (let x = P0; x <= P1; x++) {
+      if (!Wd.inside(x, Y)) continue;
+      Wd.fg[Y * w + x] = T.id('plot');
+      if (Wd.inside(x, Y + 1)) Wd.fg[(Y + 1) * w + x] = T.id('plot');
+    }
+    /* a low kerb of stone at each end of it */
+    for (const kx of [P0 - 1, P1 + 1]) {
+      if (Wd.inside(kx, Y - 1)) Wd.fg[(Y - 1) * w + kx] = T.id('stone');
+    }
+
+    /* ---- and you start on the doorstep --------------------------- */
+    meta.spawn.x = HX + HW + 1;
+    meta.spawn.y = Y - 1;
+    meta.home = { x: HX, y: Y, bed: bed, bin: bin, crate: crate, board: board,
+                  plot: { x0: P0, x1: P1, y: Y }, floor: Y };
   }
 
   /* ---------- 8. the throne ---------- */

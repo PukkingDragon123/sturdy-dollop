@@ -8,22 +8,39 @@ window.KD = { Scenes: {}, art: {} };
 
 KD.PAL = (function () {
   /* ramps run dark -> light */
+  /* ================================================================
+     REPAINTED.
+
+     The first set was built cold: navy INK over midnight DEEP over
+     cyan WATER, with brown SAND and blue-grey STONE on top of it. Four
+     of the fifteen ramps were within a few degrees of the same hue, so
+     a house on a seabed in front of water came out as three browns and
+     a teal and nothing had an edge. Everything read muddy because
+     everything WAS the same colour at different brightnesses.
+
+     This set is warm and it separates. Water is tropical and goes green
+     as it shallows; sand is gold; stone is violet-grey so it never
+     fights the water; kelp is emerald into lime; rust is terracotta;
+     wood is walnut into honey. Every ramp keeps its name, its length
+     and its dark-to-light order, so every sprite in the game recolours
+     without being touched.
+     ================================================================ */
   const RAMPS = {
-    INK:   ['#0b0f1a', '#131a2b', '#1d2740', '#2b3a5c', '#3d4f75'],
-    DEEP:  ['#071726', '#0d2942', '#14405f', '#1d5c82', '#2a7ba8'],
-    WATER: ['#1b6b7d', '#2a94a8', '#46c2cf', '#8ee9ee'],
-    SAND:  ['#6b5535', '#9c7d4a', '#c9a86a', '#efd9a0'],
-    STONE: ['#3a4250', '#556172', '#7b8798', '#a6b2c2'],
-    CORAL: ['#7a1f3a', '#b8365c', '#e86a8a', '#ffa8bd'],
-    KELP:  ['#1e4a2e', '#2f7a44', '#4fb063', '#8ee08c'],
-    GOLD:  ['#6b4410', '#a8731c', '#e0a832', '#ffd97a'],
-    SKIN:  ['#7a4a30', '#b07a52', '#d8a97c', '#f2d3ac'],
-    RUST:  ['#4a2c22', '#7a4a32', '#ab7048', '#d69c6a'],
-    BONE:  ['#6d7180', '#a8adba', '#e8ecf5'],
-    ROT:   ['#2d1440', '#4d2470', '#7a3fa8', '#b06fd8'],
-    BLOOD: ['#4a0f14', '#8a1c20', '#cc3a2e', '#ff7a48'],
-    WOOD:  ['#3b2415', '#5e3b1f', '#8a5c2e', '#b8874a'],
-    CLOTH: ['#2a2f45', '#454d6b', '#6b7599', '#9aa4c4']
+    INK:   ['#0d0b17', '#171529', '#232244', '#34335f', '#4a4b82'],
+    DEEP:  ['#06182b', '#0a2a49', '#0f4269', '#17608f', '#2286bd'],
+    WATER: ['#1a7a86', '#23a8ad', '#3fd3cd', '#9ff5e8'],
+    SAND:  ['#7a5a2c', '#b5893f', '#e3bc6b', '#ffe6a8'],
+    STONE: ['#3f3f52', '#5c5c75', '#85859e', '#b7b7cb'],
+    CORAL: ['#8a1f46', '#c8386d', '#f56a95', '#ffb0c6'],
+    KELP:  ['#14512e', '#23854a', '#3fc169', '#8ff08a'],
+    GOLD:  ['#6e4712', '#ad7a1e', '#e8b234', '#ffe285'],
+    SKIN:  ['#7d4a2c', '#b87b4c', '#e0a97a', '#f8d9b0'],
+    RUST:  ['#4f2a1c', '#85472a', '#bd7040', '#eda368'],
+    BONE:  ['#74757f', '#b0b2bd', '#f4f3ee'],
+    ROT:   ['#2f1146', '#532079', '#8639b8', '#c072e8'],
+    BLOOD: ['#520f18', '#961c26', '#db3a2c', '#ff8442'],
+    WOOD:  ['#3d2313', '#66401d', '#96632f', '#c79350'],
+    CLOTH: ['#262c4a', '#414a75', '#6a76a6', '#a3afd8']
   };
 
   /* flat list: index -> hex, plus name -> index */

@@ -22,9 +22,36 @@ KD.Quests = (function () {
      of the Drop with The Deep. The manta stayed. Nobody asked him to and
      nobody thanked him for it, and he has never once mentioned either. */
   const Q = [
+    /* ---- THE FIRST MORNING ------------------------------------------
+       Three small ones before the game asks anything of you, because on
+       day one you own a shack, a bed, a bin and forty tiles of seabed
+       and nothing at all tells you that. Each of these teaches exactly
+       one verb: cut the ground, put something in it, sell something.
+       ---------------------------------------------------------------- */
+    { id: 'firstrow', mark: 'use', give: 'santa', name: 'Cut Four Rows',
+      text: 'HO! That patch by your door is yours, majesty. Hold the dig button on it - it will not come up like rock, it turns over. Four rows will do for today.',
+      hint: 'Dig four rows in the plot by your shack.',
+      done: (st) => tilledCount() >= 4,
+      clams: 40, xp: 20 },
+
+    { id: 'firstplant', mark: 'use', give: 'santa', name: 'Get Something In',
+      text: 'Kelp pods. You have eight of them. One in each row, and by the day after tomorrow you will have something worth carrying.',
+      hint: 'Plant four kelp pods in the rows.',
+      need: 'firstrow',
+      done: (st) => Object.keys(st.crops || {}).length >= 4,
+      clams: 50, xp: 25 },
+
+    { id: 'firstship', mark: 'use', give: 'santa', name: 'The Bin Pays At Dawn',
+      text: 'The crate by your door takes anything and pays for it overnight. Nobody counts it. Everybody knows. Put something in and go to bed.',
+      hint: 'Ship something in the bin, then sleep.',
+      need: 'firstplant',
+      done: (st) => (st.day && st.day.lastPay > 0),
+      clams: 60, xp: 30 },
+
     { id: 'firstrep', mark: 'use', give: 'santa', name: 'One Honest Set',
       text: 'HO! Right. First thing. You have never finished a set in your life, your majesty. Do ONE, and I will count it out loud so it happened.',
       hint: 'Finish one set at the gym.',
+      need: 'firstship',
       done: (st) => KD.Goal.trainedTotal(st) >= 1,
       clams: 60, xp: 25 },
 
@@ -92,6 +119,21 @@ KD.Quests = (function () {
       clams: 1200, xp: 900 }
   ];
 
+  /* how much of the plot has actually been turned over */
+  function tilledCount() {
+    const h = KD.Gen && KD.Gen.meta && KD.Gen.meta.home;
+    if (!h) return 0;
+    const Wd = KD.World, T = KD.Tiles;
+    let n = 0;
+    for (let x = h.plot.x0; x <= h.plot.x1; x++) {
+      for (let y = h.plot.y; y <= h.plot.y + 1; y++) {
+        const t = T.get(Wd.at(x, y));
+        if (t && t.tilled) n++;
+      }
+    }
+    return n;
+  }
+
   const byId = {};
   for (const q of Q) byId[q.id] = q;
 
@@ -135,7 +177,11 @@ KD.Quests = (function () {
     const open = Q.find((q) => isOpen(q.id));
     if (open) return (open.done(S()) ? 'READY: ' : '') + open.hint;
     const next = Q.find((q) => offerable(q));
-    if (next) return 'Santa has something to say to you.';
+    /* Show what the NEXT one wants, not "somebody wants to talk to you".
+       On the first morning the only line on screen used to be a pointer to
+       another line, which is one indirection too many when the question is
+       "what am I meant to do here". */
+    if (next) return next.hint + '   (ask Santa)';
     return null;
   }
   /* and which glyph goes on the scroll beside it. A finished quest wants

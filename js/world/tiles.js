@@ -56,6 +56,26 @@ KD.Tiles = (function () {
   def({ id: 'clamshell',name: 'Clam',        solid: false, deco: 'fl_clam',   big: [2, 1], hp: 2, drop: 'pearl' });
   def({ id: 'tuft',     name: 'Seagrass',    solid: false, deco: 'fl_grass2', big: [1, 1], hp: 1, drop: 'kelp_fibre' });
   def({ id: 'podstalk', name: 'Glowpods',    solid: false, deco: 'fl_pod',    big: [1, 1], hp: 1, drop: 'glowpod', light: 5 });
+  /* ================================================================
+     THE COVE. A bed, a bin, a crate and the ground you farm.
+
+     `plot` is plain seabed you are allowed to cut - the dig action
+     turns it into `tilled` instead of breaking it, and only inside
+     the cove, so nobody accidentally ploughs the reef. `tilled` is
+     mud with furrows drawn over it and it is where a crop can go;
+     what is growing in it lives in the save, not in the tile grid,
+     because a crop has an age and a tile id does not.
+     ================================================================ */
+  /* Dark soil, not sand: the plot has to be visible as a PLACE from the
+     other end of the cove, and a bed drawn in the same sand as the seabed
+     around it is invisible. */
+  def({ id: 'plot',   name: 'Seabed',       solid: true, art: 'mud', hard: 0, hp: 6, drop: 'clay', plot: true });
+  def({ id: 'tilled', name: 'Tilled Bed',   solid: true, art: 'mud', deco: 'fm_tilled', hard: 0, hp: 5, drop: 'clay', tilled: true });
+  def({ id: 'bed',    name: 'Your Bed',     solid: false, deco: 'fm_bed',   big: [3, 2], hp: 999, sleep: true });
+  def({ id: 'bin',    name: 'Shipping Bin', solid: false, deco: 'fm_bin',   big: [2, 2], hp: 999, bin: true });
+  def({ id: 'crate',  name: 'Seed Crate',   solid: false, deco: 'fm_crate', big: [2, 2], hp: 999, shop: 'seeds' });
+  def({ id: 'sign',   name: 'Notice Board', solid: false, deco: 'fm_sign',  big: [2, 2], hp: 999, board: true });
+
   /* placeables the player crafts */
   def({ id: 'workbench',name: 'Workbench', solid: false, deco: 'st_workbench', big: [2, 2], hp: 6, station: 'workbench', drop: 'workbench', build: true });
   def({ id: 'furnace',  name: 'Furnace',   solid: false, deco: 'st_furnace',   big: [2, 2], hp: 8, station: 'furnace',drop: 'furnace', light: 6, build: true });

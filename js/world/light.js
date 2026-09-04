@@ -46,14 +46,54 @@ KD.Light = (function () {
   }
 
   let dropped = 0;
-  function push(i, v) {
-    const lit = KD.World.lit;
-    if (lit[i] >= v) return;
-    lit[i] = v;
+  function enq(i) {
     const nxt = qt + 1 >= q.length ? 0 : qt + 1;
     if (nxt === qh) { dropped++; return; }      // full: drop rather than corrupt
     q[qt] = i;
     qt = nxt;
+  }
+  function push(i, v) {
+    const lit = KD.World.lit;
+    if (lit[i] >= v) return;
+    lit[i] = v;
+    enq(i);
+  }
+  /* SEED is push() without the "brighter than what is already there" test.
+     It exists because of a bug that made the game look broken: the local
+     relight cleared a box around a changed tile and then re-seeded the ring
+     of tiles just OUTSIDE it by calling push(i, lit[i]) - which is always a
+     no-op, because lit[i] is never less than lit[i]. Nothing was ever
+     enqueued, so nothing flowed back in, and every single dig punched a
+     thirty-two tile square of pure black into the middle of a sunlit ocean.
+     That is most of what "the side-scroller looks buggy" was. */
+  function seed(i, v) {
+    if (v <= 0) return;
+    const lit = KD.World.lit;
+    if (lit[i] < v) lit[i] = v;
+    enq(i);
+  }
+
+  /* the ambient floor for a row - the sunlit layers never go fully black,
+     or the seabed under a bright surface reads as a hole in the world */
+  function ambientAt(y) {
+    const Zd = KD.Zones.D;
+    return y < Zd.reef ? 7 : y < Zd.ruins ? 5
+         : y < (Zd.ruins + Zd.trench) / 2 ? 3 : y < Zd.trench ? 2 : 0;
+  }
+
+  /* one column of sunlight, from the surface down to `yStop`, writing only
+     into rows >= yFrom. The same rule full() uses, so a relit box agrees
+     with the world around it instead of falling off from its own edges. */
+  function sunColumn(x, yFrom, yStop) {
+    const fg = KD.World.fg;
+    let v = SUN_TOP;
+    for (let y = 0; y <= yStop; y++) {
+      const i = y * W + x;
+      if (v > 0 && y >= yFrom) seed(i, v);
+      v -= sunCost(fg[i]);
+      if (y > SUN_FROM && (y - SUN_FROM) % SUN_EVERY === 0) v--;
+      if (v <= 0) return;
+    }
   }
 
   /* rebuild the whole map: seed the sky column, seed every emitter, flood */
@@ -143,21 +183,35 @@ KD.Light = (function () {
     x1 = Math.min(W - 1, x1 + R); y1 = Math.min(H - 1, y1 + R);
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) lit[y * W + x] = 0;
     qh = qt = 0;
-    /* reseed: the border ring, the sky if the box touches it, and emitters */
+    /* 1. THE SUN, re-poured down every column of the box. This is the part
+       that was missing: light in an ocean comes from straight up, and a box
+       relit only from its own edges falls off one level a tile and goes
+       black in the middle however correctly you seed the ring. */
+    for (let x = x0; x <= x1; x++) sunColumn(x, y0, y1);
+    /* 2. the ambient floor for the rows it covers */
     for (let y = y0; y <= y1; y++) {
-      if (x0 > 0) push(y * W + x0 - 1, lit[y * W + x0 - 1]);
-      if (x1 < W - 1) push(y * W + x1 + 1, lit[y * W + x1 + 1]);
+      const amb = ambientAt(y);
+      if (!amb) continue;
+      for (let x = x0; x <= x1; x++) {
+        const i = y * W + x;
+        if (lit[i] < amb) { lit[i] = amb; enq(i); }
+      }
+    }
+    /* 3. the ring of tiles just outside, so light flows back IN */
+    for (let y = y0; y <= y1; y++) {
+      if (x0 > 0) seed(y * W + x0 - 1, lit[y * W + x0 - 1]);
+      if (x1 < W - 1) seed(y * W + x1 + 1, lit[y * W + x1 + 1]);
     }
     for (let x = x0; x <= x1; x++) {
-      if (y0 > 0) push((y0 - 1) * W + x, lit[(y0 - 1) * W + x]);
-      if (y1 < H - 1) push((y1 + 1) * W + x, lit[(y1 + 1) * W + x]);
-      if (y0 === 0) push(x, SUN_TOP);
+      if (y0 > 0) seed((y0 - 1) * W + x, lit[(y0 - 1) * W + x]);
+      if (y1 < H - 1) seed((y1 + 1) * W + x, lit[(y1 + 1) * W + x]);
     }
+    /* 4. and anything in the box that makes its own light */
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
       const i = y * W + x, e = KD.Tiles.light(fg[i]);
-      if (e) push(i, Math.min(MAX, e * 2));
+      if (e) seed(i, Math.min(MAX, e * 2));
     }
-    flood(120000);
+    flood(220000);
     for (let cy = y0; cy <= y1; cy += 8) for (let cx = x0; cx <= x1; cx += 8) Wd.markChunk(cx, cy);
     Wd.markChunk(x1, y1);
   }

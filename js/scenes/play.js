@@ -328,6 +328,30 @@ KD.Scenes.play = (function () {
     }
   }
 
+  /* ---- what is growing in the plot ----------------------------------
+     Crops live in the SAVE, not in the tile grid, because a crop has an
+     age and a tile id does not. They are drawn here, standing on the
+     furrow they were planted in, and a ripe one gets a small bob so a
+     finished row reads as movement from the other end of the cove. */
+  function drawCrops(ctx, cam) {
+    const c = S.S.crops;
+    if (!c) return;
+    const t = KD.Game.t;
+    for (const k in c) {
+      const p = k.indexOf(',');
+      const tx = +k.slice(0, p), ty = +k.slice(p + 1);
+      const px = tx * 8 - cam.x;
+      if (px < -16 || px > KD.W + 16) continue;
+      const py = ty * 8 - cam.y;
+      if (py < -24 || py > KD.H + 24) continue;
+      const st = KD.Day.stage(c[k]);
+      const name = KD.Day.CROPS[c[k].k].art + st;
+      if (!KD.PX.has(name)) continue;
+      const bob = st === 3 ? Math.round(Math.sin(t * 2.2 + tx) * 1.4) : 0;
+      KD.PX.blit(ctx, name, Math.round(px), Math.round(py) - 16 + bob, { anchor: false });
+    }
+  }
+
   /* the lock-on bracket over the nearest threat, so you know which way to
      face - same shape the castle fight uses, from ui/mark.js */
   function threatMark(cam) {
@@ -366,6 +390,7 @@ KD.Scenes.play = (function () {
     KD.Santa.draw(ctx, cam);
     KD.Mobs.draw(ctx, cam);
     KD.Boss.draw(ctx, cam);
+    drawCrops(ctx, cam);
     if (!KD.Cut.active) walkMark(cam);
     drawKing(ctx, cam);
     if (!KD.Cut.active) threatMark(cam);
@@ -395,21 +420,18 @@ KD.Scenes.play = (function () {
       KD.In.buttons([]);
       KD.UI.touchPad([]);
     }
-    /* The controls, for the first fourteen seconds. It used to be a bare
-       line of BONE.0 laid straight over the sea floor, which is a shadow
-       under every letter and still unreadable; on a strip it is legible and
-       it goes away on its own. */
-    if (!KD.Panels.isOpen() && !cut && S.S.playtime < 14) {
-      const txt = KD.touch ? 'pad to move   -   DIG   -   BODY   -   BAG'
-                           : 'WASD move  -  click to dig  -  F swing  -  E use  -  C body  -  Q tasks  -  V skills  -  I bag';
+    /* The controls, for the first twenty seconds, and ABOVE the hotbar
+       rather than across it - it used to land on the item name and the
+       slot numbers, so the one line explaining the game was printed on
+       top of the game. */
+    if (!KD.Panels.isOpen() && !cut && S.S.playtime < 20) {
+      const txt = KD.touch ? 'pad to move   -   DIG   -   USE   -   tabs, top right'
+                           : 'WASD swim  -  hold click to dig  -  E use  -  F swing  -  I bag';
       const tw = KD.Text.width(txt, { tiny: true }) + 16;
-      const tx = Math.round((KD.W - tw) / 2), ty = KD.H - 38;
-      const fade = Math.min(1, (14 - S.S.playtime) / 1.5);
+      const tx = Math.round((KD.W - tw) / 2), ty = KD.H - 34;
       KD.Screen.rect(tx, ty, tw, 12, 'INK.0');
-      KD.Screen.rect(tx, ty, tw, 1, 'INK.2');
-      KD.Screen.rect(tx, ty + 11, tw, 1, 'INK.0');
-      KD.Text.draw(txt, KD.W / 2, ty + 3, fade > 0.5 ? 'BONE.1' : 'BONE.0',
-                   { tiny: true, align: 'center' });
+      KD.Screen.frame(tx, ty, tw, 12, 'INK.2');
+      KD.Text.draw(txt, KD.W / 2, ty + 3, 'BONE.1', { tiny: true, align: 'center' });
     }
   }
   return { enter, update, draw, snapCam };

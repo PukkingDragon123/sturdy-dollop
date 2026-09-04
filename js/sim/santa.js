@@ -31,6 +31,15 @@ KD.Santa = (function () {
     /* Well clear of the shack door. He used to hover five tiles from it,
        which put him inside the doorway's own hit box - pressing USE next to
        him walked you into the house instead of talking to him. */
+    /* In the cove he waits on the far side of your own door, west of the
+       shack - the yard east of it is the bin, the crate, the board and the
+       plot, and a manta parked on top of the seed crate is a manta you
+       cannot buy seeds through. */
+    if (m.home) {
+      x = (m.home.x - 8) * TS;
+      y = (m.home.floor - 2) * TS;
+      return;
+    }
     const v = m.village;
     const b = v && v.buildings.find((q) => q.kind.home);
     const away = b ? -(b.doorSide || -1) : 1;      // opposite side from the door

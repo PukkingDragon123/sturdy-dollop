@@ -324,6 +324,23 @@ KD.Player = (function () {
     const Wd = KD.World, tx = P.tgx, ty = P.tgy;
     const T = KD.Tiles.get(Wd.at(tx, ty));
     if (!T || !T.hp) { P.mineT = 0; return; }
+    /* ---- the hoe ---------------------------------------------------
+       Inside your own plot the pick is a hoe: it cuts the seabed into
+       furrows instead of carrying it away. It is the same button, it
+       just does the sensible thing with the ground you are standing on.
+       Twelve energy a row, so a plot is a morning's work. */
+    if (T.plot && KD.Day.inPlot(tx, ty)) {
+      P.mineT += dt;
+      if (P.mineT < 0.28) return;
+      P.mineT = 0;
+      if (!KD.Day.spend(12)) { S.say('Too tired to dig.', 'BLOOD.2'); KD.Sfx.play('deny'); return; }
+      Wd.set(tx, ty, KD.Tiles.id('tilled'));
+      KD.Sfx.play('break');
+      KD.Fx.chunks(tx * TS + 4, ty * TS + 4, 4, 'sand');
+      S.burnFat(0.06);
+      S.addXp(2);
+      return;
+    }
     const tool = S.tool();
     if ((T.hard || 0) > (tool.tier || 0)) {
       S.say('That needs a better tool.', 'BLOOD.2');
@@ -339,6 +356,10 @@ KD.Player = (function () {
     const step = Math.floor(P.mineAcc);
     if (step < 1) return;
     P.mineAcc -= step;
+    if (!KD.Day.spend(2)) {
+      S.say('You are out of energy. Get to bed.', 'BLOOD.2');
+      KD.Sfx.play('deny'); P.mineT = 0; return;
+    }
     if (Wd.damage(tx, ty, step)) {
       KD.Sfx.play('break');
       const drop = T.drop;
@@ -367,6 +388,7 @@ KD.Player = (function () {
     const cost = 0.05 + Math.max(0, (wpn.dmg || 3) - 6) * 0.006;
     if (P.stam < cost) { S.say('Out of puff.', 'BLOOD.2'); KD.Sfx.play('deny'); P.swingCd = 0.3; return; }
     P.stam -= cost;
+    KD.Day.spend(3);
     P.swingT = 0.22 / ((wpn.spd || 1) * S.stats.swingSpeed);
     P.swingCd = 0.30 / ((wpn.spd || 1) * S.stats.swingSpeed);
     KD.Sfx.play('swing');
@@ -407,6 +429,15 @@ KD.Player = (function () {
     const Wd = KD.World, tx = P.tgx, ty = P.tgy;
     const T = KD.Tiles.get(Wd.at(tx, ty));
     if (!T) return false;
+    /* ---- the cove ---------------------------------------------------
+       Bed, bin, crate, and whatever is growing in the furrow you are
+       pointing at. All on the one USE key, because a farm with four
+       verbs on four buttons is a spreadsheet. */
+    if (T.sleep) { KD.Game.go('sleep', {}); return true; }
+    if (T.bin) { binDrop(S); return true; }
+    if (T.shop) { KD.Panels.toggle('seeds'); return true; }
+    if (T.board) { KD.Panels.toggle('quest'); return true; }
+    if (farmAt(S, tx, ty)) return true;
     if (T.container) { openChest(S, tx, ty); return true; }
     if (T.door) {
       /* a door is 2x3; swing it by swapping solidity on its whole footprint */
@@ -419,6 +450,53 @@ KD.Player = (function () {
     if (T.station) { KD.Panels.toggle('body'); return true; }
     return false;
   }
+  /* ---- planting and picking ----------------------------------------
+     One key. If there is something ripe there you pick it; if the furrow
+     is empty and you are holding seed you plant it; if it is growing you
+     get told how long it has left, because "nothing happened" is the
+     worst answer a button can give. */
+  function farmAt(S, tx, ty) {
+    const c = KD.Day.cropAt(tx, ty);
+    if (c) {
+      if (KD.Day.ripe(c)) {
+        const C = KD.Day.CROPS[c.k];
+        KD.Day.harvest(tx, ty);
+        S.say('Picked ' + C.name + '.', 'KELP.3');
+        return true;
+      }
+      const C = KD.Day.CROPS[c.k];
+      const left = Math.max(1, C.days - c.a);
+      S.say(C.name + ': ' + left + (left === 1 ? ' more day.' : ' more days.'), 'WATER.3');
+      return true;
+    }
+    const T = KD.Tiles.get(KD.World.at(tx, ty));
+    if (!T || !T.tilled) return false;
+    const slot = S.hotbarItem();
+    const kind = slot && KD.Day.SEED_OF[slot.id];
+    if (!kind) {
+      S.say('Hold a seed pod to plant here.', 'SAND.3');
+      return true;
+    }
+    if (!KD.Day.spend(2)) { S.say('Too tired.', 'BLOOD.2'); return true; }
+    S.take(slot.id, 1);
+    KD.Day.plant(tx, ty, kind);
+    S.say(KD.Day.CROPS[kind].name + ' planted.', 'KELP.3');
+    return true;
+  }
+
+  /* ---- the bin ------------------------------------------------------
+     Drops the whole stack in your hand. It is gone until morning, and
+     that delay is the point: it is what makes you decide what to keep. */
+  function binDrop(S) {
+    const slot = S.hotbarItem();
+    if (!slot || S.isGear(slot)) { S.say('Hold something to ship.', 'SAND.3'); return; }
+    const r = S.resOf(slot.id);
+    if (r && r.quest) { S.say('Not that.', 'BLOOD.2'); return; }
+    const n = slot.n;
+    const took = KD.Day.ship(slot.id, n);
+    if (took) S.say('Shipped ' + took + ' ' + S.nameOf(slot) + '. Paid in the morning.', 'GOLD.3');
+  }
+
   /* Standing in a fruit doorway? Then ACT walks you in. The room is its
      own scene, which is why you can never be sealed inside one. */
   function tryEnter(S) {

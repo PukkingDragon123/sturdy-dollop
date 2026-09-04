@@ -98,6 +98,44 @@ KD.Panels = (function () {
    * not what you had done, not what was coming, not who wanted it. This is
    * the ladder, with the rung you are on lit.
    * ------------------------------------------------------------------ */
+  /* ---- the seed crate ------------------------------------------------
+     Four rows, a price, and what each one is FOR - fast and cheap, slow
+     and rich, or the one that lights the plot after dark. A shop whose
+     rows do not say why you would want the thing is a price list. */
+  function seeds(S) {
+    const C = KD.Day.CROPS;
+    const list = Object.keys(C).map((k) => Object.assign({ k: k }, C[k]));
+    const w = Math.min(KD.W - 20, 262), rowH = 26;
+    const h = 34 + list.length * rowH + 16;
+    const x = Math.round((KD.W - w) / 2);
+    const y = Math.max(4, Math.round((KD.H - h) / 2));
+    const p = KD.UI.titled(x, y, w, h, 'SEED CRATE');
+    KD.Text.draw(S.S.clams + 'c', x + w - 8, y + 3, 'GOLD.3',
+                 { tiny: true, align: 'right', shadow: 'INK.0' });
+    const WHY = { kelp: 'two days. Always worth it.',
+                  glow: 'three days, and it lights the plot.',
+                  pearl: 'five days. Pays for the week.' };
+    list.forEach((c, i) => {
+      const ry = p.iy + 2 + i * rowH;
+      const hot = KD.UI.inside(x + 5, ry - 2, w - 10, rowH - 3);
+      const can = S.S.clams >= c.cost;
+      if (hot) KD.Screen.rect(x + 5, ry - 2, w - 10, rowH - 3, can ? 'DEEP.1' : 'INK.1');
+      const spr = c.art + '3';
+      if (KD.PX.has(spr)) KD.PX.blit(KD.Screen.ctx(), spr, x + 9, ry - 1, { anchor: false });
+      KD.Text.draw(c.name, x + 24, ry, can ? 'BONE.2' : 'INK.3', { shadow: 'INK.0' });
+      KD.Text.draw(WHY[c.k] || '', x + 24, ry + 11, 'INK.3', { tiny: true });
+      KD.Text.draw(c.cost + 'c', x + w - 10, ry + 3, can ? 'GOLD.3' : 'BLOOD.2',
+                   { align: 'right', shadow: 'INK.0' });
+      if (hot && KD.In.mouse.click && !KD.UI.blocked()) {
+        KD.In.consumedClick();
+        if (!can) { KD.State.say('Not enough clams.', 'BLOOD.2'); KD.Sfx.play('deny'); }
+        else { S.spend(c.cost); S.give(c.seed, 1); KD.Sfx.play('pickup'); }
+      }
+    });
+    KD.Text.draw(KD.touch ? 'tap a row to buy one' : 'click a row to buy one',
+                 x + w / 2, y + h - 12, 'INK.3', { tiny: true, align: 'center' });
+  }
+
   function quests(S) {
     const Q = KD.Quests.Q;
     const w = Math.min(KD.W - 20, 300);
@@ -297,6 +335,7 @@ KD.Panels = (function () {
     else if (open === 'body') body(S);
     else if (open === 'quest') quests(S);
     else if (open === 'tree') tree(S);
+    else if (open === 'seeds') seeds(S);
     /* the carried stack rides the cursor */
     if (carry) {
       const spr = KD.State.spriteOf(carry);

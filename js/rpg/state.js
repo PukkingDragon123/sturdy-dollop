@@ -81,6 +81,15 @@ KD.State = (function () {
     res('beer_stout', 'Trench Stout', 'it_beer_mug', { value: 34, beer: { dmg: 0.34, fat: 9, dur: 60 } });
     res('beer_royal', 'Royal Foam', 'it_beer_mug', { value: 90, beer: { dmg: 0.58, fat: 14, dur: 75 } });
     res('beer_keg', 'Her Own Brew', 'it_beer_keg', { value: 240, beer: { dmg: 1.0, fat: 22, dur: 90 } });
+    /* the plot. Seed pods go in the ground, crops come out and go in the
+       bin - see rpg/day.js, which owns how long each one takes. */
+    if (KD.Day) {
+      for (const k in KD.Day.CROPS) {
+        const C = KD.Day.CROPS[k];
+        res(C.seed, C.name + ' Pod', C.art + '0', { value: Math.round(C.cost * 0.5), stack: 50, seed: k });
+        res(C.crop, C.name, C.art + '3', { value: C.sell, stack: 50, food: 1 });
+      }
+    }
   }
   const resOf = (id) => RES[id] || null;
 
@@ -407,6 +416,8 @@ KD.State = (function () {
   function say(t, col) { S.msg = t; S.msgT = 2.6; S.msgCol = col || 'BONE.2'; }
   function tick(dt) {
     S.playtime += dt;
+    /* the clock, and everything that hangs off it */
+    if (KD.Day) KD.Day.tick(dt);
     if (S.msgT > 0) S.msgT -= dt;
     tickBeer(dt);
   }
@@ -420,6 +431,7 @@ KD.State = (function () {
         quests: S.quests, kills: S.kills, mined: S.mined, crafted: S.crafted, equip: S.equip,
         deaths: S.deaths, playtime: S.playtime, npcs: S.npcs, chests: S.chests,
         weight: S.weight, train: S.train, trainXp: S.trainXp, champs: S.champs, body: S.body,
+        day: S.day, energy: S.energy, energyMax: S.energyMax, crops: S.crops, bin: S.bin,
         world: KD.World.save(), px: KD.Player.P.x, py: KD.Player.P.y
       }));
       return true;
@@ -441,8 +453,11 @@ KD.State = (function () {
         weight: d.weight === undefined ? 100 : d.weight,
         train: d.train || { strength: 0, wind: 0, grit: 0 },
         trainXp: d.trainXp || { strength: 0, wind: 0, grit: 0 },
-        champs: d.champs || {}, body: d.body || {}
+        champs: d.champs || {}, body: d.body || {},
+        day: d.day || null, energy: d.energy, energyMax: d.energyMax,
+        crops: d.crops || {}, bin: d.bin || []
       });
+      if (KD.Day) KD.Day.init();
       while (S.inv.length < SLOTS) S.inv.push(null);
       KD.World.loadFrom(d.world);
       KD.Light.init();
@@ -471,6 +486,9 @@ KD.State = (function () {
     /* you start with nothing but a stick and a bad hangover */
     give('torch', 6);
     give('plank_i', 20);
+    /* and eight kelp pods, so the first morning has something to do in it */
+    S.day = null; S.energy = undefined; S.crops = null; S.bin = null;
+    if (KD.Day) { KD.Day.init(); give('seed_kelp', 8); }
   }
   return { S, SLOTS, HOT, RES, buildResources, resOf, isGear, nameOf, spriteOf,
            count, give, giveGear, stampUid, take, takeSlot, hotbarItem, tool, weapon, useItem, art,
