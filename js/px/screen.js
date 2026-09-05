@@ -32,8 +32,15 @@ KD.Screen = (function () {
 
   let cssScale = 1;
   function fit() {
-    const cw = Math.max(160, window.innerWidth);
-    const ch = Math.max(120, window.innerHeight);
+    /* Size to the STAGE, not to the window. They are the same thing when
+       the game owns the whole page - the stage is inset:0 there - but the
+       game also has to live in a panel on a page that has other things on
+       it, and measuring the window in that case renders a canvas taller
+       than the box it sits in. */
+    const host = (out && out.parentNode && out.parentNode.getBoundingClientRect)
+      ? out.parentNode.getBoundingClientRect() : null;
+    const cw = Math.max(160, Math.round(host && host.width ? host.width : window.innerWidth));
+    const ch = Math.max(120, Math.round(host && host.height ? host.height : window.innerHeight));
     const dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
     /* Scale is chosen against DEVICE pixels, not CSS pixels: a phone at
        390 CSS px wide with DPR 2 has 780 real pixels to play with, and
@@ -75,8 +82,16 @@ KD.Screen = (function () {
     out.style.top = oy + 'px';
   }
 
-  /* CSS px -> internal px, for the mouse and touches */
+  /* CSS px -> internal px, for the mouse and touches.
+     Off the canvas's own box rather than off the stage-relative offset:
+     the events carry VIEWPORT coordinates, so subtracting an offset
+     measured inside the stage only lines up while the stage happens to
+     start at the top left of the window. */
   function toBuf(cx, cy) {
+    if (out) {
+      const r = out.getBoundingClientRect();
+      if (r.width) return { x: (cx - r.left) / cssScale, y: (cy - r.top) / cssScale };
+    }
     return { x: (cx - ox) / cssScale, y: (cy - oy) / cssScale };
   }
 
