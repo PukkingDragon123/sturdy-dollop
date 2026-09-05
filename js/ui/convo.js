@@ -104,14 +104,22 @@ KD.Convo = (function () {
     const tx = slim ? x + 9 : x + 7 + PW + 10;
     const tw = x + w - tx - 8;
     let body = slim ? 34 : 54;
+    let rows = 0;
     if (nRows) {
       body = 20 + nRows * 13;
     } else if (full) {
-      const n = KD.Text.wrap(full, tw, { tiny: true }).length;
-      body = (slim ? 11 : 14) + Math.max(slim ? 2 : 3, n) * LH;
+      rows = KD.Text.wrap(full, tw, { tiny: true }).length;
+      body = (slim ? 11 : 14) + Math.max(slim ? 2 : 3, rows) * LH;
     }
     const h = slim ? body : Math.max(body, PH + 16);
-    return { w: w, h: h, x: x, y: KD.H - h - 12, tx: tx, tw: tw, slim: slim };
+    /* `rows` is the line count of the WHOLE line, not of what has been
+       typed so far, so the words can be centred in the box from the first
+       character instead of creeping down it as the typewriter runs. A
+       one-line answer used to sit against the top edge of a fifty-six
+       pixel panel with forty pixels of empty navy under it, which reads as
+       a layout bug rather than as a box. */
+    return { w: w, h: h, x: x, y: KD.H - h - 12, tx: tx, tw: tw, slim: slim,
+             rows: rows };
   }
   const rowY = (L, k) => L.y + 20 + k * 13;
   function rowAt(L, n) {
@@ -236,8 +244,9 @@ KD.Convo = (function () {
       KD.Text.draw(nm, L.tx + 2, y - 3, who.tint || 'GOLD.3', { shadow: 'INK.0' });
     }
     if (shownText !== null && shownText !== undefined) {
-      KD.Text.block(shownText, L.tx, y + (L.slim ? 8 : 10), 'BONE.2',
-                    { tiny: true, max: L.tw });
+      const th = Math.max(1, L.rows || 1) * LH;
+      const ty = Math.round(y + (h - th) / 2) + 1;
+      KD.Text.block(shownText, L.tx, ty, 'BONE.2', { tiny: true, max: L.tw });
     }
     return L;
   }

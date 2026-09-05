@@ -50,13 +50,38 @@ KD.Cut = (function () {
   /* ---- which scenes you can walk around in -------------------------
      Anything not in here has no player in it, so a cutscene called
      from it goes to the bare stage instead. */
-  const HOSTS = { play: 1, castle: 1, buffet: 1, dinner: 1, gym: 1, interior: 1 };
+  const HOSTS = { castle: 1, buffet: 1, dinner: 1 };
 
   let beats = [], i = 0, bt = 0, after = null, id = '';
   let on = false, stage = false, pending = null;
   let letter = 0, fade = 0, fadeTo = 0, flash = 0, vig = 0;
   let pan = null, mv = null, held = null, heldSpr = '', artT = 0;
   let resolve = null;                        /* host's cast lookup, for `move` */
+  /* THE SKIP BUTTON.
+     Escape has skipped a cutscene since the layer was written, which is
+     no use at all on a phone and no use to anybody who does not already
+     know it is there. It is a drawn, hit-tested button now, in the top
+     bar where the words never go, and it is checked BEFORE the
+     tap-to-advance so pressing it cannot also turn the page. */
+  const SKIP = { x: 0, y: 0, w: 0, h: 0 };
+  let skipHot = 0;
+  const SKIP_LAB_OF = () => (KD.touch ? 'SKIP' : 'ESC  SKIP');
+  let SKIP_LAB = 'SKIP';
+  function skipRect() {
+    SKIP_LAB = SKIP_LAB_OF();
+    const w = KD.Text.width(SKIP_LAB, { tiny: true }) + (KD.touch ? 26 : 14);
+    const h = KD.touch ? 18 : 13;
+    SKIP.w = w; SKIP.h = h;
+    SKIP.x = KD.W - w - 5;
+    SKIP.y = 3;
+    return SKIP;
+  }
+  function skipHit() {
+    const B = skipRect();
+    const m = KD.In.mouse;
+    return m.x >= B.x - 4 && m.x < B.x + B.w + 4 &&
+           m.y >= B.y - 4 && m.y < B.y + B.h + 4;
+  }
 
   const R = (x, y, w, h, c) => KD.Screen.rect(Math.round(x), Math.round(y),
                                               Math.round(w), Math.round(h), c);
@@ -183,12 +208,15 @@ KD.Cut = (function () {
     /* Advance, and EAT the press. The scene under us reads the same hit
        set a moment later; if we did not take the key out of it, one tap
        would advance the story and talk to whoever was standing there. */
-    const hit = KD.In.isHit('Space', 'Enter', 'KeyE') || KD.In.mouse.click || KD.In.actHit('act');
-    const esc = KD.In.isHit('Escape');
+    const clicked = KD.In.mouse.click;
+    const onSkip = clicked && skipHit();
+    skipHot = onSkip ? 0.2 : Math.max(0, skipHot - dt);
+    const hit = KD.In.isHit('Space', 'Enter', 'KeyE') || clicked || KD.In.actHit('act');
+    const esc = KD.In.isHit('Escape') || KD.In.isHit('Backspace');
     if (hit || esc) {
       KD.In.consumedClick();
-      KD.In.eat('Space', 'Enter', 'KeyE', 'Escape', 'act');
-      if (esc) skip(); else next();
+      KD.In.eat('Space', 'Enter', 'KeyE', 'Escape', 'Backspace', 'act');
+      if (esc || onSkip) { KD.Sfx.play('click'); skip(); } else next();
       return;
     }
     if (bt <= 0) next();
@@ -330,7 +358,7 @@ KD.Cut = (function () {
                        { align: 'center', shadow: 'INK.0', space: k === 0 ? 1 : 0 });
         });
         if (b.sub) {
-          KD.Text.draw(b.sub, KD.W / 2, y0 + lines.length * lh + 6, 'INK.3',
+          KD.Text.draw(b.sub, KD.W / 2, y0 + lines.length * lh + 6, 'BONE.0',
                        { tiny: true, align: 'center' });
         }
       } else {
@@ -365,10 +393,23 @@ KD.Cut = (function () {
     /* and the flash is solid for two frames rather than a screen of dots */
     if (flash > 0.34) R(0, 0, KD.W, KD.H, b.col || 'WHITE');
 
-    /* the hint lives in the TOP bar: the bottom one is where the words go */
-    if (fade < 0.6 && bar > 8) {
-      KD.Text.draw(KD.touch ? 'tap to go on' : 'SPACE to go on   -   ESC to skip',
-        KD.W - 6, bar - 9, 'INK.2', { tiny: true, align: 'right' });
+    /* ---- the hint and the SKIP button ------------------------------
+       Both live in the TOP bar, because the bottom one is where the words
+       go. The hint used to be one dim line of tiny ink-purple text that
+       said ESC TO SKIP, which is invisible on a laptop and a lie on a
+       phone. Now the skip is a button you can see and hit with a thumb,
+       and the advance hint sits to the left of it. */
+    if (fade < 0.9) {
+      const B = skipRect();
+      KD.Text.draw(KD.touch ? 'tap to go on' : 'SPACE to go on',
+        B.x - 8, B.y + (B.h >> 1) - 2, 'BONE.0', { tiny: true, align: 'right' });
+      const lit = skipHot > 0 || (!KD.touch && KD.UI.inside(B.x - 4, B.y - 4, B.w + 8, B.h + 8));
+      R(B.x - 1, B.y - 1, B.w + 2, B.h + 2, 'INK.0');
+      R(B.x, B.y, B.w, B.h, lit ? 'GOLD.1' : 'INK.1');
+      R(B.x + 1, B.y + 1, B.w - 2, 1, lit ? 'GOLD.3' : 'INK.2');
+      KD.Screen.frame(B.x, B.y, B.w, B.h, lit ? 'GOLD.3' : 'GOLD.0');
+      KD.Text.draw(SKIP_LAB, B.x + (B.w >> 1), B.y + (B.h >> 1) - 2,
+                   lit ? 'INK.0' : 'GOLD.3', { tiny: true, align: 'center' });
     }
   }
 

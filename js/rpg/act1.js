@@ -84,6 +84,24 @@ KD.Act1 = (function () {
     A.drinks = s.drinks || 0; A.kisses = s.kisses || 0;
   }
 
+  /* Straight past the whole act, for somebody who has played it once.
+     He arrives in the pens with the weight he would have eaten his way to
+     and every answer left blank, because he never had the conversations. */
+  function skipAll() {
+    A.beat = BEATS.length - 1;
+    A.done = true;
+    A.fat = 50;
+    A.plates = 0; A.sharks = 0; A.thrown = 0; A.drinks = 0; A.kisses = 0;
+    A.said = {};
+    save();
+  }
+  function reset() {
+    A.beat = 0; A.done = false; A.fat = 0;
+    A.plates = 0; A.sharks = 0; A.thrown = 0; A.drinks = 0; A.kisses = 0;
+    A.said = {};
+  }
+
   return { A, BEATS, CAST, beat, hint, at, advance, gain, save, load,
+           skipAll, reset,
            get done() { return A.done; } };
 })();

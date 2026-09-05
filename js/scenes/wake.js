@@ -211,8 +211,36 @@ KD.Scenes.wake = (function () {
     const sh = shock > 0 ? Math.round(Math.sin(shock * 70) * shock * 8) : 0;
     const ox = Math.round((KD.W - bw) / 2) + sh;
     const oy = Math.round((KD.H - bh) / 2) - 6;
-    ctx.drawImage(baked, 0, 0, bw, bh, ox, oy, bw, bh);
+    /* The room is a 268x168 bake in the middle of the frame, which left a
+       band of dead black up each side - two on a laptop, ninety pixels of it
+       on a wide phone in landscape. Carry the wall and the floor out to both
+       edges first, a step darker, so the picture reads as a room the light
+       does not reach the ends of rather than as a render that came out too
+       small. */
     const FLOOR = oy + 132;
+    R(0, 0, KD.W, KD.H, 'INK.0');
+    R(0, oy + 6, KD.W, FLOOR - oy - 6, 'INK.1');
+    for (let by = oy + 6; by < FLOOR; by += 8) {
+      R(0, by, KD.W, 1, 'INK.2');
+      for (let bx = ((by - oy) / 8 | 0) % 2 ? 0 : 9; bx < KD.W; bx += 18) R(bx, by, 1, 8, 'INK.2');
+    }
+    R(0, FLOOR, KD.W, 3, 'STONE.0');
+    R(0, FLOOR + 3, KD.W, KD.H - FLOOR - 3, 'INK.1');
+    for (let bx = 0; bx < KD.W; bx += 22) R(bx, FLOOR + 3, 1, 6, 'INK.2');
+    /* and the light falls off at the two outer edges, in three solid
+       steps - narrow, so the wall carries most of the way out instead of
+       the black starting again a few pixels past the bake */
+    const STEP = [[0, 'INK.0'], [10, 'INK.0'], [20, 'INK.1']];
+    for (const [w0, c] of STEP) {
+      const wdt = Math.max(0, 30 - w0);
+      R(w0, 0, wdt, KD.H, c);
+      R(KD.W - w0 - wdt, 0, wdt, KD.H, c);
+    }
+    R(0, 0, 30, KD.H, 'INK.0');
+    R(KD.W - 30, 0, 30, KD.H, 'INK.0');
+    R(30, 0, 8, KD.H, 'INK.1');
+    R(KD.W - 38, 0, 8, KD.H, 'INK.1');
+    ctx.drawImage(baked, 0, 0, bw, bh, ox, oy, bw, bh);
 
     /* torch flames, live */
     K.flame(ctx, ox + 17, FLOOR - 60, t, 3);

@@ -122,6 +122,12 @@ remembered, and that it is the difference between the gate and the pot. Put the
 trident down for the keg and she tells you that was the night she stopped being
 interested.
 
+**And you can skip all of it.** Every cutscene carries a SKIP button in the
+top bar - a real one, hit-testable with a thumb, not a line of dim text saying
+ESC that a phone cannot press. And SKIP THE PROLOGUE on the title screen takes
+a returning player straight to the pens with the fifty kilos Act One would have
+put on him, because a twenty-minute prologue is worth playing once.
+
 **New here?** There is a HOW TO PLAY on the title screen: what happened, what
 you do about it, and which button does it, with the control page showing the
 layout you actually have rather than listing both.
@@ -240,4 +246,4 @@ and 390x844.
 ## Saving
 
 localStorage, key `crowndeep.save.v1`. The pod, the money, the standing on the
-card, the day and where Act One got to. NEW GAME wipes it.
+card, the day and where Act One got to. START OVER wipes it.

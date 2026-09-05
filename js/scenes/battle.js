@@ -270,7 +270,13 @@ KD.Scenes.battle = (function () {
       return;
     }
     if (phase === 'done') {
-      if (pt > 1.0 && hit()) { KD.Game.go('circuit', {}); }
+      if (pt > 1.0 && hit()) {
+        /* Clearing the last name on the Iron Gate IS the ending. The game
+           lost its only win condition when the boss fight went out with the
+           side-scroller, so there was nothing at the top of the ladder. */
+        if (result.won && P.tierClear(P.TIERS.length - 1)) KD.Game.win();
+        else KD.Game.go('circuit', {});
+      }
       return;
     }
   }

@@ -32,10 +32,10 @@ KD.Scenes.title = (function () {
     R(x + 3, y + 4, 1, 6, col);
   }
   function logo(cx, y) {
-    const nm = 'CROWNDEEP', sub = 'KING OF ATLANTIC';
+    const nm = 'CROWNDEEP', sub = 'THE DEEPWATER CIRCUIT';
     const nw = KD.Text.width(nm, { space: 2 });
     const sw = KD.Text.width(sub, { space: 1 });
-    const tag = 'he had it all.  then he met a keg.';
+    const tag = 'he had it all.  now he fights dolphins for it.';
     const w = Math.max(nw + 46, sw + 24, KD.Text.width(tag, { tiny: true }) + 20);
     const h = 43;
     const x = cx - (w >> 1);
@@ -437,6 +437,16 @@ KD.Scenes.title = (function () {
         if (!KD.Cine.play('intro')) KD.Game.go('wake', {});
       } });
     }
+    /* SKIP THE PROLOGUE. Act One is twenty minutes of castle and it sets
+       the weight you carry for the rest of the game; that is worth playing
+       once and no more. Skipping it marks it done and hands you the fifty
+       kilos he would have eaten his way to anyway, so the pens see the same
+       man either way. */
+    items.push({ label: 'SKIP THE PROLOGUE', act: () => {
+      KD.State.wipe();
+      if (KD.Act1) KD.Act1.skipAll();
+      KD.Game.go('yard', {});
+    } });
     items.push({ label: 'HOW TO PLAY', act: () => KD.Game.go('help', { from: 'title' }) });
     items.push({ label: KD.Sfx.isMuted() ? 'SOUND OFF' : 'SOUND ON', act: () => KD.Sfx.mute() });
     if (sel >= items.length) sel = items.length - 1;
@@ -646,12 +656,13 @@ KD.Scenes.victory = (function () {
       'It does not fit like it used to.',
       'Nothing does. That is the point.',
       '',
+      'You bought a chair with five cards and one dolphin',
+      'that the dealer could not give away.',
       'The keg wanted to come home. You said no.',
-      'The manta never asked for anything.',
       'And the long table has two chairs at it again,',
       'which is not the same as being forgiven.'
     ];
-    lines.forEach((l, i) => KD.Text.draw(l, cx, vtop + 22 + i * 12, i > 3 ? 'GOLD.2' : 'BONE.1', { align: 'center' }));
+    lines.forEach((l, i) => KD.Text.draw(l, cx, vtop + 20 + i * 12, i > 3 ? 'GOLD.2' : 'BONE.1', { align: 'center' }));
     if (KD.PX.has('it_crown')) KD.PX.blit(ctx, 'it_crown', cx - 7, KD.H - 46, { anchor: false });
     if (t > 1 && KD.UI.button(cx - 40, KD.H - 26, 80, 13, 'THE END', { key: 'Enter' })) KD.Game.go('title', {});
   }

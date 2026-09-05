@@ -68,7 +68,8 @@ KD.Scenes.help = (function () {
         ['TABS', 'THE POD, DRILLS and THE DEALER.'],
         ['IN A FIGHT', 'Tap a move, then tap again in the green.'],
         ['', 'Miss and it costs you half again in breath.'],
-        ['THE TURN', 'Fills as you land hits. At full it is a fifth move.']
+        ['THE TURN', 'Fills as you land hits. At full it is a fifth move.'],
+        ['SKIP', 'Top right of any cutscene. It never asks twice.']
       ];
     }
     return [
@@ -79,7 +80,7 @@ KD.Scenes.help = (function () {
       ['Q', 'Down to the quarry, to tonight\'s card.'],
       ['R', 'Swim with the one that is up.'],
       ['Z', 'Sleep. It is the only thing that mends them.'],
-      ['ESC', 'Back, or pause.']
+      ['ESC', 'Back, pause, or SKIP the cutscene you are in.']
     ];
   }
 

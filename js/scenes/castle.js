@@ -451,7 +451,7 @@ KD.Scenes.castle = (function () {
     goT = 0;
     /* did they point at somebody? */
     for (const e of castHere()) {
-      if (Math.abs(e.c.x - wx) < 26) { goTo = e.c.x + (e.c.x > P.x ? -20 : 20); goWhat = e.id; return; }
+      if (Math.abs(e.c.x - wx) < 40) { goTo = e.c.x + (e.c.x > P.x ? -20 : 20); goWhat = e.id; return; }
     }
     /* the long table and the throne are things you interact with too */
     const hall = ROOMS[1], thr = ROOMS[0];
@@ -559,11 +559,23 @@ KD.Scenes.castle = (function () {
     return out;
   }
 
+  /* THE REACH.
+     Twenty-six pixels, on a cast whose sprites are forty wide. You could
+     be standing shoulder to shoulder with the queen, press E, and have
+     nothing happen at all - which reads as broken dialogue rather than as
+     a missed hitbox. Measured live: walking up to her and stopping put him
+     forty-six pixels away, so even doubling it was not enough. Sixty-two,
+     the nearest one wins rather than the first one in the table, and a tag
+     over their head says when you are in range. They stand two hundred
+     apart, so there is nothing to be ambiguous about. */
+  const TALK_REACH = 62;
   function nearCast() {
+    let best = null, bd = TALK_REACH;
     for (const e of castHere()) {
-      if (Math.abs(e.c.x - P.x) < 26) return e;
+      const d = Math.abs(e.c.x - P.x);
+      if (d < bd) { bd = d; best = e; }
     }
-    return null;
+    return best;
   }
 
   function interact() {
@@ -890,6 +902,33 @@ KD.Scenes.castle = (function () {
   /* ================================================================
      DRAW
      ================================================================ */
+  /* WHO YOU CAN TALK TO.
+     You could walk up to somebody, press E, and get nothing, with no way
+     to tell whether you were out of reach or whether there was simply
+     nothing to say. A tag over whoever is in reach, naming them and the
+     key, so a conversation is never a guess. */
+  function talkPrompt() {
+    const near = nearCast();
+    if (!near) return;
+    if (inFight()) return;
+    const b = A1.beat();
+    const story = b.kind === 'talk' && b.who === near.id;
+    const name = (A1.CAST[near.id] && A1.CAST[near.id].name) || near.id;
+    const key = KD.touch ? 'TALK' : 'E';
+    const lab = key + '   ' + name.toUpperCase();
+    const w = KD.Text.width(lab, { tiny: true }) + 10;
+    const x = Math.round(near.c.x - cam.x - w / 2);
+    const y = Math.round(FLOOR - cam.y - 62 + Math.sin(t * 3) * 1.5);
+    const col = story ? 'GOLD.3' : 'BONE.2';
+    KD.Screen.rect(x - 1, y - 1, w + 2, 13, 'INK.0');
+    KD.Screen.rect(x, y, w, 11, story ? 'DEEP.1' : 'INK.1');
+    KD.Screen.rect(x + 1, y + 1, w - 2, 1, story ? 'DEEP.3' : 'INK.2');
+    KD.Screen.frame(x, y, w, 11, story ? 'GOLD.1' : 'INK.2');
+    KD.Text.draw(lab, x + (w >> 1), y + 3, col, { tiny: true, align: 'center' });
+    /* a little tail pointing at them */
+    for (let k = 0; k < 3; k++) KD.Screen.rect(x + (w >> 1) - 2 + k, y + 11 + k, 5 - k * 2, 1, 'INK.0');
+  }
+
   function draw(ctx) {
     KD.Screen.clear('INK.0');
     /* the castle, one blit */
@@ -913,13 +952,18 @@ KD.Scenes.castle = (function () {
     for (const p of thrown) drawPlate(ctx, p);
     drawKing(ctx);
     if (!cut) beatMark();
+    /* after the objective diamond, and lower than it, so the two markers
+       over the same person do not sit on top of each other */
+    if (!cut && !talk) talkPrompt();
 
     /* UI. A cutscene keeps the stick and drops everything else: the quest
        scroll, the health, the objective marker and the action buttons all
        land exactly where the letterbox and the words go, and none of them
        is anything he can act on mid-scene. */
     if (roomT > 0 && !cut) roomBanner();
-    if (!cut) hud();
+    /* the quest scroll goes away while somebody is talking to you: it is
+       telling you to go and find the person you are mid-sentence with */
+    if (!cut && !talk) hud();
     if (talk) KD.Convo.draw();
     if (KD.touch) {
       layoutButtons();
