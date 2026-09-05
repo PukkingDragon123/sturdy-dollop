@@ -1,44 +1,117 @@
 # CROWNDEEP
 
-A hand-drawn pixel-art sandbox RPG in a drowned Atlantis. Train, dig, build,
-craft and fight your way east through eight zones of ocean to take your crown
-back off the man who is sitting in your chair. It opens with a castle prologue
-you walk through, and it ends with him.
-
-Think **Terraria**, underwater, with a fat king and a weight problem.
+A hand-drawn pixel-art **dolphin fighting game** in a drowned Atlantis. Collect
+them, train them, swim with them, and take them down to an illegal five-tier
+card in a flooded quarry that nobody official knows about. It opens with a
+castle prologue you walk through, and it ends with the man who is sitting in
+your chair.
 
 > You were KING OF THE ATLANTIC. Then you met her: a beer keg in a little dress
 > with a crooked tiara. You got fat, you lost the fight, and The Deep took your
 > crown, your throne and your ocean, and put an army of octopuses in it.
 
+Now you run six pens on the lip of a flooded quarry, and once a night the
+quarry runs a card. Five tiers of it. The last three names on that card are
+people you already know.
+
+**Play it:** open `index.html` in any browser. No build step, no dependencies,
+no server — it runs straight off the filesystem. `npm start` if you want one.
+
+---
+
+## The game
+
+**The animal is the whole game, so the animal is drawn properly.** Every
+dolphin is built to a 112x52 canvas, pixel by pixel, from a hand-authored
+outline table — sixteen control points down the body with separate top and
+bottom profiles, because a dolphin blended from four spans is a barracuda. Six
+species, eight coats, five markings and six poses, cached per animal. Nothing
+in this game is a small sprite scaled up: the melon crease, the eye with its
+lid and corner fold, the blowhole, the ink crease under the dorsal root and the
+pectoral rooted seven pixels inside the belly are all drawn at the size you see
+them.
+
+**The fight is something you DO.** Two animals in a pit, alternating turns.
+Pick a move, and then a bar sweeps across a window and you stop it: land it in
+the middle and the strike is CLEAN, land it in the band either side and you
+GRAZE, miss it altogether and you swing through nothing and it costs you half
+again in breath. A clean strike is worth two and a half grazes, and that margin
+is the entire reason you can take an animal rated worse than the one across
+from you and still walk out with the purse. The window is different per move —
+a headbutt is generous, a breach is a sliver — and the sweep gets faster the
+higher the card, so the Iron Gate is a different game from the Shallow Card
+with the same three buttons.
+
+**Breath is the resource, not mana.** Every move costs air, a miss costs half
+again, and an animal that runs out has to surface — which is a free hit for the
+other one. HOLD is a real move: it costs nothing, gives you 22 air back and
+halves what lands on you.
+
+**THE TURN.** A meter fills with the damage you deal, and at full it unlocks a
+fifth move worth four times a headbutt, on a nine-per-cent window. It is the
+one button in the game that can steal a fight you are losing, and it is exactly
+as hard to hit as that implies.
+
+**Bond is the gate on moves, so swimming with them is the game, not a nicety.**
+An animal you have never got in the water with knows how to headbutt something,
+and that is all. Sonar at thirty, corkscrew at forty-five, breach at seventy.
+The mechanic is the one thing a dolphin does that nothing else in the sea does:
+it PORPOISES, and if you are alongside it you can go up with it. Press at the
+top of the arc and you break the surface together; a chain of them is worth
+more than the sum, because the point is the two of you getting into a rhythm.
+
+**Six pens and a dealer who does not tell you anything.** He brings three
+animals every morning and prices them off what they are worth on paper. He does
+not tell you their temperament — steady, wild, sulky, game, proud — and
+temperament is what decides whether the thing bonds with you, whether it holds
+its breath, and whether it can hit a window at all. That is what the price is
+for.
+
+**Four drills, and each is a different shape of decision.** Sprints raise
+speed, weight raises power, holds raise stamina and the ring raises spirit;
+every one of them eats a chunk of the day, and the gain shrinks as the stat
+climbs, so a stat in the fifties is four sessions and a stat in the eighties is
+a fortnight.
+
+**A day is the unit of play.** Six in the morning to two the next, about four
+real minutes. ENERGY is the budget and only sleep gives it back, so how much
+you can make of one animal in one day is a decision rather than a formality.
+Overnight everything hurt mends a day and the cart restocks.
+
+**Five tiers, fifteen handlers, and every one of them has a name and a line,**
+because a man with a name and a line is somebody you want to beat and a
+procedurally generated one is a number in a list. You cannot enter a tier until
+you have beaten everybody in the one below, so the ladder is the progression
+and the money is only how you keep up with it. Their animals are gated on bond
+too: on the Shallow Card they only know how to headbutt and slap, the sonar
+arrives on the Long Pen, the corkscrew at the Quarry, and nobody breaches at
+you until the Deep Card.
+
+---
+
+## Act One
+
 **Act One is playable, not narrated.** The game opens inside your castle, four
 rooms end to end, back when you still had it: take the queen to dinner, eat it,
 fight the sharks that come in off the sea balcony, throw the leftovers at the
 cook. Then a keg texts you. You put the trident down, you drink, you cheat, and
-you lose all of it in one night - the queen, the keg, the throne and the room
+you lose all of it in one night — the queen, the keg, the throne and the room
 you are standing in. Whatever weight you put on in there is the weight you are
 carrying when a manta pulls you out of the sand, so the prologue is not a
 cutscene you skip: it sets your starting number.
 
-**What you say is the mechanic.** The night the keg comes over used to be two
-timing bars - pour the beer, then hit a rhythm meter for the kiss. Both were the
-same button pressed to a moving marker and neither of them said anything, so
-they are one conversation now. Every scene that matters gives you lines to
+**What you say is the mechanic.** Every scene that matters gives you lines to
 choose between: how warm you are to the queen at the alarm, whether you are
 cruel to the cook about his crab, whether you take the drink, whether you put
 the trident down when she asks.
 
 **Cutscenes are things you stand in.** A cutscene here is not a scene of its
-own - it is a layer over whatever you were already playing, so the room keeps
+own — it is a layer over whatever you were already playing, so the room keeps
 its own time and you keep every control you had a second ago. The night she
 walks in on the two of you happens in the throne room you are standing in: she
 comes up the stairs, crosses the floor to you, and throws you out of the room
 while you can walk anywhere in it you like. There is nowhere in the room to go,
-which is the point of being able to try. The cook comes all the way up from the
-kitchens without being asked, and the room he offers you is not narrated
-either - it is a locked brick cellar with five tables in it and four seasons on
-the clock, and the hundred kilos you start the game with is something you did
-one plate at a time.
+which is the point of being able to try.
 
 **And everybody leaves you for the specific reason you gave them.** Those four
 answers are read back out in the scene where you lose everything. Promise the
@@ -47,92 +120,11 @@ and she tells you she sat there anyway. Be cruel to the cook and he takes the
 castle with the exact sentence he warned you with; be civil and he says he
 remembered, and that it is the difference between the gate and the pot. Put the
 trident down for the keg and she tells you that was the night she stopped being
-interested. The prologue also reads them when it works out what you weigh, which
-is your starting number for the rest of the game.
-
-**What is on your throne.** The cook runs the castle now, and at the bottom of
-the Drop he is sitting in your chair with the keg on a cushion beside him. He
-fights his own fight, and the fight is him taking his armour off: four phases,
-one outfit each - scale armour, then gold plate, then ink, then no armour at
-all - and the outfit you can see is the telegraph for what he is about to do.
-Beating him is the end of the story the prologue started.
-
-**The ocean is drawn through a lens.** The scene you play used to read
-lower-fidelity than its own cutscenes, and the reason was arithmetic: the
-castle's cast are sixty pixels tall in a two-hundred-and-forty pixel frame and
-the ocean's king was thirty-six. So the world is drawn into its own buffer at
-half the frame's size and blitted back over it at 2x - one drawImage, nearest
-neighbour, still perfectly square pixels. Tiles land at sixteen screen pixels,
-the king at 48x72, and the fish are big enough to have faces. The interface
-draws after the lens closes, at 1:1, so the type stays crisp; anything with
-letters in it that is pinned to somebody in the world - a speech balloon, a
-name plate, a prompt - queues up and comes out at the right size.
-
-**Fish behave like fish.** Every fish used to travel in a straight line at a
-constant speed with a sine wave on its height, at whatever depth it was dropped
-at. Now a fish lives in its own water - clownfish are reef fish, cuttlefish
-live at the ruins and below, and a shoal that wanders out of its own band comes
-back as something that does live where you are. It SURGES rather than glides,
-because fish beat their tail and coast. The school holds its place loosely, so
-it breathes and squeezes when the leader turns. It wanders, turns round and
-darts. And it gets out of your way: swim into a shoal and it scatters, which is
-the moment the ocean stops being scenery.
-
-**He is dressed for the water.** Ninety per cent of this game happens
-underwater and the king used to swim through it in a t-shirt. He has a dive
-mask pushed up on his forehead, a wetsuit, an air tank over his shoulder and
-flippers - with the crown still on top of the mask, because he has not stopped
-being the king about it. Crown plus goggles is a silhouette you can pick out at
-twenty-four pixels wide, which is all he gets.
-
-**A day is the unit of play.** The ocean used to have no shape to it: you
-could swim east for as long as you liked and nothing ever asked you to stop,
-come back, or decide what today was for. Now the clock runs from six in the
-morning to two the next, about four real minutes. ENERGY is the budget - every
-swing of the pick and every swing of the trident spends some, and only sleep
-gives it back, so how far east you dare go is a decision rather than a
-formality. What you leave in the shipping bin is sold overnight. What you
-planted comes on one day at a time. And getting into bed adds the day up and
-hands it back to you on a card, which is the actual trick: it is what turns "I
-dug some rock" into "that was a good Tuesday".
-
-**The cove is yours.** A flat shelf at the west end of the map, hand-carved
-rather than generated: a shack with a bed and three lanterns in it, a shipping
-bin, a seed crate, a notice board, and forty tiles of seabed marked out as
-yours. The same dig button that breaks rock cuts that seabed into furrows.
-Three things grow in them and they differ in what KIND of decision they are -
-kelp is two days and always worth planting, glowpods take three and light the
-plot after dark, pearl vine takes five and pays for the week. Every day starts
-there and ends there.
-
-**The map is small on purpose.** It went up four times chasing "make the ocean
-bigger" and reached seven thousand tiles by nine hundred, which is two and a
-half million tiles of the same rock and no reason to be at any particular one
-of them. Three thousand by six hundred now, and shaped like a game rather than
-like a noise function: the cove, the village, the old mine, the Sea Gate, and
-then the reef, the kelp forest, the sunken city, the blue and the Drop - each
-one small enough that you can see both ends of it. The seabed is anchored to
-the zones, so every place has the floor its own contents need and swimming east
-really is descending.
-
-**The gauge on the right is the loop.** The ocean is nine hundred tiles deep
-and going down it is the game, so there is a column down the right edge with
-the whole thing on it: the layer bands in the colours the water actually is,
-your bead, and a hard red line at the depth your current gear will survive. It
-used to be a number in the corner, and the crush depth - the thing that kills
-you - was not shown at all. You simply started taking damage.
-
-**The goal is the scales.** You start at 100kg and the world is gated on what
-you weigh and how much you have trained. The Sea Gate will not open for you at
-a hundred kilos. Neither will the Drop. Neither, in the end, will the King -
-walk into his throne room out of shape and he does not get up.
+interested.
 
 **New here?** There is a HOW TO PLAY on the title screen: what happened, what
 you do about it, and which button does it, with the control page showing the
 layout you actually have rather than listing both.
-
-**Play it:** open `index.html` in any browser. No build step, no dependencies,
-no server — it runs straight off the filesystem. `npm start` if you want one.
 
 ---
 
@@ -167,7 +159,7 @@ What that means in practice:
   picked per tile by light level. Dithering near-black over a mid tone at 50%
   is just noise — a pixel artist reaches for a darker colour instead. Dither
   is kept for what it is good at: transition bands and translucency.
-- **Integer scaling only.** The game renders into a 288px-tall buffer and is
+- **Integer scaling only.** The game renders into a 240px-tall buffer and is
   blitted to the page at a whole-number scale of DEVICE pixels with smoothing
   off, so pixels stay square at every window size. The buffer's WIDTH follows
   from the scale rather than from the window aspect - derive it from the aspect
@@ -177,194 +169,21 @@ What that means in practice:
 
 ---
 
-## The world
-
-7000 x 900 tiles at 8px, generated fresh from a seed in about four seconds
-and rebuildable from it. About **forty per cent of it is open water** - two
-and a half million swimmable tiles - because the seabed is a SHELF that falls
-away eastward, from something you can stand on at the village to six hundred
-and forty tiles down at the Drop.
-
-That shelf is the whole difference. Before it the seabed sat at 44-76 across
-the entire map and everything under it was solid rock, so a world seven
-hundred tiles deep had about fifteen tiles of water in it and the other six
-hundred and fifty were something you dug through - a mine with a puddle on
-top. The ocean read as small however wide it got, because the number that
-matters is not how far you can travel, it is how much water there is to be in.
-Swimming east IS descending now.
-
-**Every depth in the game comes from one table**, `KD.Zones.D`. It used to be
-copied by hand into five files - the layer table and the ore bands in the
-generator, the sunlight falloff and the ambient floor in the light, the water
-colour bands in the parallax, and every mob's spawn range - and twice the
-ocean was made deeper while only some of the copies moved. Both times the same
-bug came out wearing a different hat: the reef ended up below the last of the
-daylight and painted in trench navy, and the whole game read as a cave.
-
-It runs **west to east**, not just down: eight named zones, each with its own
-rock, ore density, cave density, light level and spawn table.
-
-| Zone | Tiles | What is there |
-|---|---|---|
-| The Old Mine | 0–1110 | where the village digs. Ore, crawlers, bandits, and you can build in it |
-| Fruitfall | 1110–1930 | twelve hollowed giant fruit on three terraces, and everyone you owe money to |
-| The Sea Gate | 1930–2110 | shut until you are light enough to be let through |
-| Shallow Reef | 2110–3200 | warm, loud with clownfish and parrotfish, and mantis shrimp that punch |
-| The Kelp Forest | 3200–4210 | you cannot see far in here. Morays lunge, cuttlefish spit |
-| The Sunken City | 4210–5220 | somebody built all this. Sentinels, lionfish, barracuda |
-| The Open Blue | 5220–6090 | no floor for a long way. Manta rays pass through |
-| The Drop | 6090–7000 | down. Just down. And the throne room at the bottom |
-
-Scattered through the open water: **shipwrecks** with lanterns still lit and
-chests in the hold, **whale falls** on the deep shelf, **thermal vents** that
-glow all the way up their chimneys because they are the only thing burning in
-the trench and they are what you steer by, and **rock spires** so the column
-has something in it to swim around.
-
-**Fruitfall** is laid out procedurally on three terraces, and each fruit is
-carved from **its own sprite's pixel mask** - the collision is the silhouette,
-so the skin can never sit crooked on its box. Twelve trades, each with a
-hanging sign, a lantern on the street and a room behind the door. Villagers
-pace the terraces and have opinions.
-
-Every house is **its own scene**, not a room in the tile world: a dressed
-interior per trade with plush pets, furniture, a counter, an NPC who talks and
-hands out work, and a door at each end. That is also why you can never be
-sealed inside one.
-
-**Light** is a tile flood fill, applied as banded shade. Sunlight dims through
-water and is gone by the bottom of the reef; below that you bring your own.
-Caves are genuinely black.
-
-**Water** is cellular, eight levels per tile - and it is **dithered, not
-opaque**, which is what gives the ocean depth: the far reef, the kelp forest
-and the god rays all read through the column, and the veil thickens with depth
-until the abyss really is solid. Each parallax layer is then veiled by the
-water in front of it, because things wash out toward the water colour with
-distance down there - they do not go black.
-
-Dig into a reservoir and your tunnel floods. Sealed rooms stay dry, which is
-what makes an air pocket worth building.
-
----
-
-## Losing the weight
-
-You start at **100kg**. Three disciplines - strength, wind, grit - trained at
-Brine's Gym, which is a one-button timing minigame: a marker sweeps a bar, you
-hit it inside a window, and the window shrinks as the set goes on. Reps become
-discipline levels; sets, swimming, swinging and digging burn weight.
-
-Six milestones gate the map, each on **both** a weight and a training total:
-
-| Milestone | Weight | Levels |
-|---|---|---|
-| The Sea Gate | 82kg | 3 |
-| Shallow Reef | 68kg | 8 |
-| The Kelp Forest | 54kg | 14 |
-| The Sunken City | 40kg | 20 |
-| The Open Blue | 26kg | 26 |
-| The Drop | 18kg | 30 |
-
----
-
-## Things that fight back
-
-Seventeen creatures, each nameable from its silhouette before any colour
-arrives. Every one telegraphs, strikes, then recovers, so a fight is readable
-instead of a coin flip. Shy things scatter; dashers wind up out of reach and
-cross the whole gap in one committed lunge.
-
-**Five champions**, one per zone - Old Scar, The Tangle, The Last Warden, The
-Long Shadow, The Rockjaw. Each stands at a fixed spot in its own zone and waits
-there until it is killed. Each drops a crown fragment.
-
-**The King** is at the bottom of the Drop, in four phases, and the phase is
-the outfit: teal scale mail, then full gold plate with a plume he did not earn,
-then hooded purple once the octopus riding his shoulder has taken him over,
-then bare skin with wounds where the straps were and the stolen crown cracked.
-He summons five kinds of octopus soldier - helmeted grunts, plated brutes,
-hooded casters with lit orbs, hatchling swarms and dripping ink sacs - and
-between rounds he stops to admire himself, which is when he is open.
-
----
-
-## Quests
-
-Ten of them, from "bring me twenty stone" through the Gate and the five
-champions to the crown itself. A quest is a written line, a check that reads
-the game state, and a reward - no state machine, so a quest cannot get stuck
-half-finished and an old save never loads into an impossible step. Shopkeepers
-carry a mark when they have work or want it back, and the HUD keeps one line
-saying what you are supposed to be doing.
-
----
-
 ## Playing it
 
-| Key | Action |
-|-----|--------|
-| `WASD` / arrows | walk, swim, climb |
-| `Space` | jump, or rise while swimming |
-| hold left mouse / `J` | dig the tile under the cursor |
-| `F` / right mouse | swing what you are holding |
-| `E` | place, open a chest, use a station, open a door |
-| `1`–`8`, wheel | pick a hotbar slot |
-| `C` | crafting · `V` skills · `I` bag · `Esc` pause |
-| `F2` (title) | sprite viewer |
+| Key | |
+|---|---|
+| Arrows / WASD | move the cursor through a list |
+| SPACE | choose; in a fight it commits the move, then stops the timing bar |
+| TAB / 1 2 3 | THE POD, DRILLS, THE DEALER |
+| Q | down to the quarry, to tonight's card |
+| R | swim with the one that is up |
+| Z | sleep |
+| ESC | back, or pause |
 
-**Touch** is detected automatically and stays deliberately small: a stick
-that appears wherever your left thumb lands, and on the right **one big
-contextual button plus one jump**, with three small tabs out of the way. The
-big one reads what you are pointing at and becomes `DIG`, `HIT`, `USE` or
-`ENTER` on its own, so there is never a row of six buttons to hunt through. A
-tap that never travels still counts as a tap, so a stab inside the stick zone
-still clicks.
-
-### Procedural crafting
-
-A recipe is a **shape**, not a fixed output. The materials you feed it decide
-what comes out.
-
-```
-pick     = 1 handle-material + 2 head-material    at bare hands
-cleaver  = 1 handle-material + 3 edge-material    at an anvil
-```
-
-Damage, speed, reach, crit, durability, sprite colours and the item's *name*
-are all derived from the materials, then a weighted prefix is rolled on top —
-from Rusted (−15%) through no prefix at all (the most common outcome) to Kingly
-(+30%), plus three legendary prefixes that grant a real effect rather than just
-numbers. 22 materials across 12 roles and 37 shapes, so **crafting the same
-recipe twice never gives you the same item**. A *Sturdy Copper Pick* and a
-*Dull Iron Cleaver* were generated, not written.
-
-Stations: workbench, furnace, anvil, loom, alchemy vat, reroll anvil, cook pot.
-Each is a craftable placeable that unlocks its own recipe list when you stand
-next to it. Bare hands can make a pick, a shovel, a torch, a block and a
-workbench — that is the first two minutes.
-
-### Levels and skills
-
-XP from mining, crafting, kills and looting. Each level pays a skill point,
-plus a bonus every fifth. 27 nodes across three trunks — **DELVER** (mining
-speed, ore luck, light, breath, fall safety), **BRAWLER** (damage, crit,
-armour, knockback, lifesteal) and **TIDECALLER** (swim, grapple, mounts, water
-control) — laid out on one shared grid with cross-links, so hybrids exist.
-Each node carries its own mark, because twenty-seven identical discs is a wall
-rather than a tree.
-
-### Combat and the crown
-
-Seventeen creatures, all telegraph → strike → recover, all spawning off screen
-and gated by the zone they are in — so where you are is legible from what is
-swimming at you, and a lit room is a safe room. Armour is worn in real slots.
-Beer buffs your damage and adds weight; weight slows you and burns off as you
-swim, swing and dig.
-
-Five **crown fragments**, one per champion. Then the throne room — but only if
-you are under 18kg with thirty levels of training behind you, and only if you
-have taken the pressure skill, because the Drop crushes anybody who has not.
+On a phone every one of those is a button: tap a pen to make that animal the
+one that fights, then QUARRY, SWIM or SLEEP, and in a fight tap a move and tap
+again in the green.
 
 ---
 
@@ -375,17 +194,22 @@ index.html            the script list, in load order
 css/style.css         page chrome; everything visible is drawn pixels
 js/px/                engine: palette, sprite atlas, render target, dither,
                       pixel text, input, sound, particles
-js/art/               SPRITE DATA ONLY - font, tiles, built pieces, actors,
-                      items, UI, the reef and its animals, the fruit village,
-                      interiors, the King and his army
-js/world/             zones, tile table, tile store, generator, the village
-                      planner, lighting, water, parallax, renderer
-js/sim/               player physics and verbs, enemies, villagers, the King
-js/rpg/               materials, recipes, prefixes, skills, the weight-loss
-                      goal system, quests, game state and save
-js/ui/                widgets, HUD, bag / crafting / skill-tree panels
-js/scenes/            title, generation, play, interiors, the gym, pause,
-                      death, victory, sprite test
+js/art/               SPRITE DATA ONLY - font, built pieces, actors, items,
+                      UI, the reef, the fruit village, interiors, the deep,
+                      and the Act One cast
+js/world/castle.js    the castle kit the prologue is built out of
+js/rpg/dolphart.js    the 112x52 dolphin: species, coats, markings, poses
+js/rpg/pod.js         stats, temperaments, moves, drills, the market, and
+                      the fifteen handlers on the card
+js/rpg/day.js         the clock and the energy budget
+js/rpg/state.js       inventory, money, and the localStorage round trip
+js/rpg/act1.js        the prologue's state and its four answers
+js/ui/                widgets, dialogue, conversation, markers
+js/scenes/pens.js     the yard: six pens, the drills, the dealer
+js/scenes/circuit.js  tonight's card, five tiers deep
+js/scenes/battle.js   the fight
+js/scenes/swim.js     porpoising, and the bond it buys
+js/scenes/            title, pause, the prologue rooms, help, sprite test
 js/game.js            boot, scene manager, frame loop
 MASTER_PROMPT.md      the full spec this was built from
 ```
@@ -393,27 +217,27 @@ MASTER_PROMPT.md      the full spec this was built from
 ## Dev tools
 
 ```bash
-npm run check                          # parse + load audit + THE ART RULE lint
-node tools/sprite.js js/art/tiles.js   # ASCII + a PNG contact sheet of any art file
-node tools/sprite.js js/art/actors.js king    # filter to inspect one thing large
-node tools/worldmap.js 12345           # generate a world headlessly, write a PNG map,
-                                       # print layer openness, tile mix and ore totals
-node tools/smoke.js script.json        # headless Chromium; fails on any console error
-MOBILE=1 node tools/smoke.js s.json    # the same, in touch emulation
+npm run check                            # parse + load audit + THE ART RULE lint
+node tools/sprite.js js/art/actors.js    # ASCII + a PNG contact sheet of any art file
+node tools/sprite.js js/art/actors.js king   # filter to inspect one thing large
+node tools/smoke.js script.json          # headless Chromium; fails on any console error
+MOBILE=1 node tools/smoke.js s.json      # the same, in touch emulation
 VIEW=700x620 node tools/smoke.js s.json  # force a viewport to test a layout width
 ```
 
 `tools/sprite.js` exists because **art authored blind is bad art**. Every
-sprite in this game was rendered to a contact sheet and looked at.
-`tools/worldmap.js` exists for the same reason: the first generated world was
-too closed to walk through and almost pitch black, and only the map showed it.
+sprite in this game was rendered to a contact sheet and looked at. So was every
+dolphin: the rig went through a barracuda, a tail fin that was widest where it
+met the body, a dorsal floating clear of the back, and a flipper drawn before
+the body so only its tip showed, and each of those was found by looking at a
+picture rather than by reading the code.
 
-`tools/load.js` runs the browser scripts in a Node VM where `window` *is* the
-global, so the data tables can be fuzzed — 12,741 crafts and rerolls across
-every shape × material × luck combination, and a 20,000-sample check that luck
-bends the prefix table without ever guaranteeing the top tier.
+`tools/smoke.js` drives the real game in a real browser — key presses, taps,
+waits, screenshots, arbitrary `eval` — and fails on any console error. Every
+scene in this repo was walked through with it at 1280x720, 1024x600, 844x390
+and 390x844.
 
 ## Saving
 
-localStorage, key `crowndeep.save.v1`. The world is run-length encoded, so a
-588,000-tile map fits comfortably. NEW WORLD wipes it.
+localStorage, key `crowndeep.save.v1`. The pod, the money, the standing on the
+card, the day and where Act One got to. NEW GAME wipes it.

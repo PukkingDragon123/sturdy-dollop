@@ -785,7 +785,7 @@ KD.Scenes.castle = (function () {
      leave it. */
   function handOff() {
     A1.save();
-    KD.Game.go('gen', {});
+    KD.Game.go('yard', {});
   }
 
   /* ================================================================

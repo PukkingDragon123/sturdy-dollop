@@ -87,8 +87,8 @@ async function main() {
   }
   const state = await page.evaluate(() => ({
     scene: KD.Game.scene, fps: KD.Game.fps, W: KD.W, H: KD.H,
-    hp: KD.Player.P.hp, depth: (KD.Player.P.y / 8) | 0,
-    lvl: KD.State.S.level, clams: KD.State.S.clams, mobs: KD.Mobs.count(),
+    day: KD.Day ? KD.Day.day() : 0, energy: KD.Day ? KD.Day.energy() : 0,
+    clams: KD.State.S.clams, pod: KD.Pod ? KD.Pod.pod().length : 0,
     sprites: KD.PX.names().length, parts: KD.Fx.count
   })).catch((e) => ({ evalError: String(e) }));
   console.log('\nSTATE: ' + JSON.stringify(state));

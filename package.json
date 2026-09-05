@@ -2,7 +2,7 @@
   "name": "king-of-atlantic",
   "version": "2.0.0",
   "private": true,
-  "description": "King of Atlantic - a goofy side-scrolling underwater RPG: raise and race sea mounts, spear fish, gamble stat rolls, buy beer, win back your crown.",
+  "description": "CROWNDEEP - a hand-drawn pixel-art dolphin fighting game: collect them, train them, swim with them, and take them down to an illegal five-tier card in a flooded quarry.",
   "scripts": {
     "start": "python3 -m http.server 8080",
     "serve": "python3 -m http.server 8080",

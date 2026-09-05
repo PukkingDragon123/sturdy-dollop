@@ -26,7 +26,12 @@ KD.Scenes.sleep = (function () {
   function update(dt) {
     t += dt;
     if (phase === 'out') {
-      if (t > 0.9) { res = KD.Day.sleep('bed'); phase = 'card'; t = 0; }
+      if (t > 0.9) {
+        res = KD.Day.sleep('bed');
+        /* the animals mend, and the dealer restocks the cart */
+        KD.Pod.newDay();
+        phase = 'card'; t = 0;
+      }
       return;
     }
     if (phase === 'card') {
@@ -35,7 +40,7 @@ KD.Scenes.sleep = (function () {
       if (go || t > 9) {
         KD.In.consumedClick();
         KD.State.save();
-        KD.Game.go('play', {});
+        KD.Game.go('pens', {});
       }
     }
   }
@@ -57,7 +62,7 @@ KD.Scenes.sleep = (function () {
 
     /* ---- the card ---------------------------------------------- */
     const w = Math.min(300, KD.W - 40);
-    const h = 128;
+    const h = 146;
     const x = Math.round((KD.W - w) / 2);
     const y = Math.round((KD.H - h) / 2) - 6;
     const k = KD.Juice.outCubic(Math.min(1, t / 0.35));
@@ -76,15 +81,19 @@ KD.Scenes.sleep = (function () {
     KD.Screen.frame(x + (w - lw) / 2, yy - 7, lw, 13, 'GOLD.0');
     KD.Text.draw(lab, x + w / 2, yy - 4, 'GOLD.3', { align: 'center', shadow: 'INK.0' });
 
+    const P = KD.Pod;
+    const pod = P.pod();
+    const hurt = pod.filter((d) => !P.fit(d));
+    const fit = pod.length - hurt.length;
+    const beat = P.CARD.filter(P.beaten).length;
     const rows = [];
-    rows.push(['The bin', res.pay > 0 ? '+' + res.pay + 'c' : 'empty',
-               res.pay > 0 ? 'GOLD.3' : 'INK.3']);
-    rows.push(['Growing', res.grew + (res.grew === 1 ? ' plant came on' : ' plants came on'),
-               res.grew ? 'KELP.3' : 'INK.3']);
-    const ripe = countRipe();
-    rows.push(['Ready to pick', ripe ? ripe + ' in the plot' : 'nothing yet',
-               ripe ? 'CORAL.3' : 'INK.3']);
-    rows.push(['Clams', KD.State.S.clams + 'c', 'BONE.2']);
+    rows.push(['In the pens', pod.length + ' / ' + P.PENS, 'BONE.2']);
+    rows.push(['Fit to enter', fit ? String(fit) : 'none',
+               fit ? 'KELP.3' : 'BLOOD.3']);
+    rows.push(['Mending', hurt.length ? hurt.map((d) => d.name).join(', ') : 'nobody',
+               hurt.length ? 'BLOOD.2' : 'INK.3']);
+    rows.push(['Handlers beaten', beat + ' / ' + P.CARD.length, 'ROT.3']);
+    rows.push(['Clams', KD.State.S.clams + 'c', 'GOLD.3']);
 
     rows.forEach(([a, b, col], i) => {
       const ry = yy + 20 + i * 16;
@@ -97,13 +106,6 @@ KD.Scenes.sleep = (function () {
     KD.Text.draw(nx, x + w / 2, yy + h - 18, 'WATER.3', { align: 'center', shadow: 'INK.0' });
     KD.Text.draw(KD.touch ? 'tap to get up' : 'SPACE to get up',
                  x + w / 2, yy + h + 8, 'INK.3', { tiny: true, align: 'center' });
-  }
-
-  function countRipe() {
-    let n = 0;
-    const c = KD.State.S.crops || {};
-    for (const k in c) if (KD.Day.ripe(c[k])) n++;
-    return n;
   }
 
   return { enter, update, draw };

@@ -422,14 +422,13 @@ KD.Scenes.title = (function () {
     if (KD.State.hasSave()) {
       items.push({ label: 'CONTINUE', act: () => {
         if (KD.State.load()) {
-          /* Somebody who quit halfway through Act One has a save but no
-             generated world, so sending them to `play` dropped them into an
-             empty one. The prologue is where they left off. */
+          /* Somebody who quit halfway through Act One goes back to the
+             prologue; anybody past it goes back to the pens. */
           const a = KD.State.S.act1;
-          KD.Game.go(a && !a.done ? 'castle' : 'play', {});
+          KD.Game.go(a && !a.done ? 'castle' : 'pens', {});
         } else KD.State.say('That save is broken.', 'BLOOD.2');
       } });
-      items.push({ label: 'NEW WORLD', act: () => {
+      items.push({ label: 'START OVER', act: () => {
         KD.State.wipe();
         if (!KD.Cine.play('intro')) KD.Game.go('wake', {});
       } });
@@ -497,92 +496,99 @@ KD.Scenes.title = (function () {
   return { enter, update, draw };
 })();
 
-/* ---------------- world generation, with a progress bar ---------------- */
-KD.Scenes.gen = (function () {
-  let step = null, total = 1, t = 0, seed = 0, done = false;
-  function enter(args) {
-    t = 0; done = false;
-    seed = (args && args.seed) || ((Math.random() * 2147483647) | 0);
-    total = KD.Gen.begin(KD.Zones.WORLD_W, KD.Zones.WORLD_H, seed);
-    step = { done: 0, total, label: 'waking up' };
+/* ---------------- into the pens ----------------------------------------
+   This used to be a world generator with a progress bar: seven thousand
+   tiles by nine hundred, carved, flooded, salted with ore and lit, and
+   then you woke up in it with a pick. There is no world any more - the
+   game is a stable and a fight card - so all this has to do is set the
+   man up with one animal and open the yard gate.
+   ------------------------------------------------------------------ */
+KD.Scenes.yard = (function () {
+  let t = 0, ready = false;
+  function enter() {
+    t = 0; ready = false;
     KD.State.fresh();
-    KD.Mobs.clear();
-    KD.Fx.reset();
-  }
-  function update(dt) {
-    t += dt;
-    if (done) return;
-    /* one generator step per frame keeps the bar moving */
-    const s = KD.Gen.step();
-    if (s) { step = s; return; }
-    done = true;
-    KD.Water.init();
-    KD.Render.flush();
-    const sp = KD.Gen.meta.spawn;
-    KD.Player.spawn(sp.x, sp.y);
-    KD.State.S.seed = seed;
-    /* Act One is where the weight comes from, and it has to land HERE -
-       enter() above calls State.fresh(), which resets weight to the starting
-       figure, so adding it in the castle before switching scenes wrote a
-       number that was thrown away one frame later. */
+    KD.Day.init();
+    KD.Pod.init();
+    /* what Act One did to him is the only thing that carries over: the
+       weight is why nobody will look at him, and the pens are the only
+       place in the ocean that does not care. */
     if (KD.Act1 && KD.Act1.A.fat > 0) {
       KD.State.S.weight += KD.Act1.A.fat;
       KD.State.S.fat = KD.State.S.weight;
     }
     KD.State.recalc();
     KD.State.save();
-    KD.Game.go('play', {});
   }
-  function draw(ctx) {
+  function update(dt) {
+    t += dt;
+    if (t > 1.1) ready = true;
+    if (ready && (KD.In.isHit('Space', 'Enter', 'KeyE') || KD.In.mouse.click || t > 5.5)) {
+      KD.In.consumedClick();
+      KD.Game.go('pens', {});
+    }
+  }
+  function draw() {
     KD.Screen.clear('INK.0');
     const cx = KD.W / 2;
-    KD.Text.draw('DROWNING A CITY', cx, KD.H / 2 - 26, 'GOLD.3', { align: 'center', space: 1 });
-    KD.Text.draw(step.label, cx, KD.H / 2 - 10, 'BONE.1', { align: 'center' });
-    const bw = Math.min(160, KD.W - 40);
-    KD.UI.bar(cx - bw / 2, KD.H / 2 + 4, bw, 8, step.done / step.total, 'WATER.2');
-    KD.Text.draw('seed ' + seed, cx, KD.H / 2 + 18, 'INK.3', { tiny: true, align: 'center' });
-    /* something to watch: a row of dithered blocks filling up */
-    for (let i = 0; i < 20; i++) {
-      const on = i / 20 < step.done / step.total;
-      KD.Screen.rect(cx - 50 + i * 5, KD.H / 2 + 30, 4, 4, on ? 'SAND.2' : 'INK.1');
+    for (let i = 0; i < 30; i++) {
+      const x = Math.round((i * 149 + t * (5 + (i % 5) * 3)) % KD.W);
+      const y = Math.round((i * 71 - t * 6 + KD.H * 6) % KD.H);
+      KD.Screen.rect(x, y, 1, 1, i % 3 ? 'DEEP.1' : 'DEEP.2');
+    }
+    KD.Text.draw('THE DEEPWATER CIRCUIT', cx, KD.H / 2 - 30, 'ROT.3',
+                 { align: 'center', space: 1, shadow: 'INK.0' });
+    KD.Text.draw('a flooded quarry, and nobody official knows about it',
+                 cx, KD.H / 2 - 14, 'BONE.1', { tiny: true, align: 'center' });
+    KD.Text.draw('Six pens, one animal nobody else wanted,', cx, KD.H / 2 + 4,
+                 'BONE.0', { tiny: true, align: 'center' });
+    KD.Text.draw('and five cards between you and the man in your chair.',
+                 cx, KD.H / 2 + 14, 'BONE.0', { tiny: true, align: 'center' });
+    if (ready) {
+      KD.Text.draw(KD.touch ? 'tap to go in' : 'SPACE to go in', cx, KD.H / 2 + 34,
+                   Math.sin(t * 4) > 0 ? 'GOLD.3' : 'GOLD.1',
+                   { align: 'center', shadow: 'INK.0' });
     }
   }
   return { enter, update, draw };
 })();
 
-/* ---------------- pause ---------------- */
+/* ---------------- pause ------------------------------------------------
+   It used to list blocks mined, things crafted and how deep you were,
+   because the game was a mine. It is a stable now, so it lists the
+   stable. ---------------------------------------------------------- */
 KD.Scenes.pause = (function () {
   function enter() { KD.UI.guard(0.2); }
   function update(dt) {
-    if (KD.In.isHit('Escape')) KD.Game.go('play', {});
+    if (KD.In.isHit('Escape')) KD.Game.go('pens', {});
   }
   function draw(ctx) {
-    KD.Scenes.play.draw(ctx);
-    KD.Screen.rect(0, 0, KD.W, KD.H, 'INK.0');
+    KD.Screen.clear('INK.0');
     for (let yy = 0; yy < KD.H; yy += 4) {
       for (let xx = (yy & 4) ? 0 : 2; xx < KD.W; xx += 8) KD.Screen.rect(xx, yy, 1, 1, 'DEEP.1');
     }
-    const S = KD.State.S;
-    const w = Math.min(190, KD.W - 20), h = 120;
+    const S = KD.State.S, P = KD.Pod;
+    const w = Math.min(200, KD.W - 20), h = 116;
     const x = ((KD.W - w) >> 1), y = ((KD.H - h) >> 1);
-    const p = KD.UI.titled(x, y, w, h, 'THE STATE OF THE KINGDOM');
+    const p = KD.UI.titled(x, y, w, h, 'THE BOOKS');
+    const st = P.standing();
+    let wins = 0, losses = 0;
+    for (const d of P.pod()) { wins += d.wins || 0; losses += d.losses || 0; }
+    const beat = P.CARD.filter(P.beaten).length;
     const rows = [
-      ['Crown fragments', S.frags.length + ' / 5'],
-      ['Level', S.level + '   (' + S.points + ' pts)'],
+      ['Day', String(KD.Day.day())],
       ['Clams', String(S.clams)],
-      ['Fat', Math.round(S.fat) + '%'],
-      ['Blocks mined', String(S.mined)],
-      ['Things crafted', String(S.crafted)],
-      ['Enemies felled', String(S.kills)],
-      ['Deaths', String(S.deaths)],
-      ['Depth', ((KD.Player.P.y / 8) | 0) + 'm'],
-      ['Seed', String(S.seed)]
+      ['Standing', P.TIERS[st].name],
+      ['Handlers beaten', beat + ' / ' + P.CARD.length],
+      ['Record', wins + 'W  ' + losses + 'L'],
+      ['In the pens', P.pod().length + ' / ' + P.PENS],
+      ['Weight', Math.round(S.weight) + 'kg']
     ];
     rows.forEach((r, i) => {
-      KD.Text.draw(r[0], x + 6, p.iy + i * 9, 'BONE.0', { tiny: true });
-      KD.Text.draw(r[1], x + w - 6, p.iy + i * 9, 'BONE.2', { tiny: true, align: 'right' });
+      KD.Text.draw(r[0], x + 6, p.iy + i * 10, 'BONE.0', { tiny: true });
+      KD.Text.draw(r[1], x + w - 6, p.iy + i * 10, 'BONE.2', { tiny: true, align: 'right' });
     });
-    if (KD.UI.button(x + 6, y + h - 15, (w - 18) / 2, 12, 'BACK', {})) KD.Game.go('play', {});
+    if (KD.UI.button(x + 6, y + h - 15, (w - 18) / 2, 12, 'BACK', {})) KD.Game.go('pens', {});
     if (KD.UI.button(x + 12 + (w - 18) / 2, y + h - 15, (w - 18) / 2, 12, 'SAVE + QUIT', {})) {
       KD.State.save(); KD.Game.go('title', {});
     }
@@ -590,26 +596,27 @@ KD.Scenes.pause = (function () {
   return { enter, update, draw };
 })();
 
-/* ---------------- death ---------------- */
+/* ---------------- a bad night --------------------------------------
+   Nothing kills the man any more - he is standing on a gantry watching
+   an animal fight. This is what a wipe-out looks like instead: no
+   dolphin fit to enter, and no money to buy one. ------------------- */
 KD.Scenes.death = (function () {
-  let t = 0, from = '';
-  function enter(args) { t = 0; from = (args && args.from) || 'the deep'; KD.UI.guard(0.5); KD.Sfx.play('die'); }
+  let t = 0;
+  function enter() { t = 0; KD.UI.guard(0.5); KD.Sfx.play('die'); }
   function update(dt) { t += dt; }
   function draw(ctx) {
     KD.Screen.clear('INK.0');
-    KD.Dither.fill(ctx, 0, 0, KD.W, KD.H, 'BLOOD.0', Math.min(0.5, t * 0.4));
     const cx = KD.W / 2;
-    KD.Text.draw('YOU DIED', cx, KD.H / 2 - 30, 'BLOOD.3', { align: 'center', space: 2 });
-    KD.Text.draw('killed by ' + from, cx, KD.H / 2 - 14, 'BONE.1', { align: 'center' });
-    KD.Text.draw('you wake up at home, damper and poorer', cx, KD.H / 2 - 2, 'INK.3', { tiny: true, align: 'center' });
-    if (t > 0.7 && KD.UI.button(cx - 44, KD.H / 2 + 12, 88, 14, 'GET UP', { key: 'Enter' })) {
-      const sp = KD.Gen.meta.spawn;
-      KD.Player.spawn(sp.x, sp.y);
-      KD.Player.P.hp = KD.Player.P.hpMax;
-      KD.Player.P.breath = 1;
-      KD.State.S.clams = Math.floor(KD.State.S.clams * 0.7);
-      KD.Scenes.play.snapCam();
-      KD.Game.go('play', {});
+    KD.Text.draw('NOTHING FIT TO ENTER', cx, KD.H / 2 - 34, 'BLOOD.3',
+                 { align: 'center', space: 1 });
+    KD.Text.draw('Every animal in your pens is hurt, and the cart', cx, KD.H / 2 - 16,
+                 'BONE.1', { tiny: true, align: 'center' });
+    KD.Text.draw('wants more than you have.', cx, KD.H / 2 - 6,
+                 'BONE.1', { tiny: true, align: 'center' });
+    KD.Text.draw('Sleep it off. They mend.', cx, KD.H / 2 + 8, 'INK.3',
+                 { tiny: true, align: 'center' });
+    if (t > 0.6 && KD.UI.button(cx - 44, KD.H / 2 + 24, 88, 14, 'SLEEP', { key: 'Enter' })) {
+      KD.Game.go('sleep', {});
     }
   }
   return { enter, update, draw };

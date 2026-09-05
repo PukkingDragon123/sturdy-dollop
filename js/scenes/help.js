@@ -39,45 +39,47 @@ KD.Scenes.help = (function () {
     'The queen left. The keg left. THE DEEP came up the stairs',
     'with an army of octopuses and threw you out of your own gate.',
     '',
-    'A manta ray called Santa found you face down in the sand',
-    'and took you to a village made of hollowed-out fruit.'
+    'Now you run six pens on the edge of a flooded quarry, and',
+    'once a night the quarry runs a card nobody official knows',
+    'about. Five tiers of it. Win them all and you buy your way',
+    'back through your own front door.'
   ];
 
   const LOOP = [
-    ['1', 'TRAIN', 'Sit-ups, laps and the heavy shell at the gym.',
-     'Every session burns kilos and earns discipline.'],
-    ['2', 'FIGHT', 'Everything in the ocean bites. Wait for the',
-     'wind-up, sidestep the lunge, hit it while it turns.'],
-    ['3', 'DIG', 'The seabed comes apart. Ore, clams and coral pay',
-     'for gear, and gear is how you survive deeper water.'],
-    ['4', 'GO EAST', 'Eight zones. Each gate weighs you and reads',
-     'your level. Too heavy and it stays shut.'],
-    ['5', 'TAKE IT BACK', 'At the bottom of the Drop, in your chair,',
-     'is an octopus wearing your crown.']
+    ['1', 'THE POD', 'Six pens. The dealer brings three animals',
+     'every morning and never tells you their temperament.'],
+    ['2', 'DRILLS', 'Sprints, weight, holds and the ring. Each one',
+     'raises one stat and eats a chunk of the day.'],
+    ['3', 'SWIM WITH IT', 'BOND is the gate on its moves. Press at',
+     'the top of every arc and it learns to fight for you.'],
+    ['4', 'THE QUARRY', 'Pick a move, then hit the timing window.',
+     'A clean strike is worth two and a half grazes.'],
+    ['5', 'THE IRON GATE', 'Tier five, and the last three names on',
+     'the card are people you already know.']
   ];
 
   function keyRows() {
     if (KD.touch) {
       return [
-        ['STICK, BOTTOM LEFT', 'Swim and walk. Drag it.'],
-        ['TAP THE WATER', 'He goes there. Tap a person to go and talk.'],
-        ['BIG BUTTON', 'Whatever makes sense here - DIG, STRIKE,'],
-        ['', 'USE or ENTER. It changes to suit.'],
-        ['STRIKE', 'Appears whenever something is hunting you,'],
-        ['', 'and turns green the moment it is open.'],
-        ['UP', 'Jump, or kick upward in water.'],
-        ['TABS, TOP RIGHT', 'Bag, body, skills, tasks and Santa.']
+        ['TAP A PEN', 'That animal is the one that fights.'],
+        ['QUARRY', 'Tonight\'s card. Five tiers, three handlers each.'],
+        ['SWIM', 'Get in the water with it and raise its bond.'],
+        ['SLEEP', 'End the day. Everything hurt mends one day.'],
+        ['TABS', 'THE POD, DRILLS and THE DEALER.'],
+        ['IN A FIGHT', 'Tap a move, then tap again in the green.'],
+        ['', 'Miss and it costs you half again in breath.'],
+        ['THE TURN', 'Fills as you land hits. At full it is a fifth move.']
       ];
     }
     return [
-      ['W A S D  /  ARROWS', 'Swim and walk.'],
-      ['SPACE', 'Jump. In water it is a kick - it costs stamina.'],
-      ['LEFT MOUSE  (hold)', 'Dig the tile under the cursor.'],
-      ['F', 'Swing the trident. It aims at what is nearest.'],
-      ['E', 'Talk, open, enter a door, use a station.'],
-      ['1 - 8  /  WHEEL', 'Pick a hotbar slot.'],
-      ['I   C   V   Q', 'Bag, body, skills, tasks.'],
-      ['ESC', 'Pause.']
+      ['ARROWS  /  W A S D', 'Move the cursor through a list.'],
+      ['SPACE', 'Choose. In a fight it commits the move, then'],
+      ['', 'stops the timing bar - hit it in the green.'],
+      ['TAB  /  1 2 3', 'THE POD, DRILLS, THE DEALER.'],
+      ['Q', 'Down to the quarry, to tonight\'s card.'],
+      ['R', 'Swim with the one that is up.'],
+      ['Z', 'Sleep. It is the only thing that mends them.'],
+      ['ESC', 'Back, or pause.']
     ];
   }
 

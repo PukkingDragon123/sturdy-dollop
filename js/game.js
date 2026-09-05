@@ -75,9 +75,8 @@ KD.Game = (function () {
     const info = KD.PX.build();
     KD.State.buildResources();
     KD.State.recalc();
-    KD.Water.init();
-    window.addEventListener('resize', () => { KD.Screen.fit(); KD.Render.flush(); });
-    window.addEventListener('orientationchange', () => setTimeout(() => { KD.Screen.fit(); KD.Render.flush(); }, 120));
+    window.addEventListener('resize', () => KD.Screen.fit());
+    window.addEventListener('orientationchange', () => setTimeout(() => KD.Screen.fit(), 120));
     /* first input unlocks audio on every browser that needs it */
     const unlock = () => { KD.Sfx.resume(); window.removeEventListener('pointerdown', unlock); };
     window.addEventListener('pointerdown', unlock);

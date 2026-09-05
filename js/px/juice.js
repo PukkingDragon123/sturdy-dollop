@@ -67,7 +67,7 @@ KD.Juice = (function () {
      way at the same moment, which is the difference between weather and
      six unrelated sine waves. */
   const sway = (t, seed, amp, rate) =>
-    (KD.Parallax ? KD.Parallax.wind * amp * 0.7 : 0) +
+    Math.sin(t * 0.23) * (amp || 1) * 0.7 +
     Math.sin(t * (rate || 0.6) + (seed % 17) * 0.9) * (amp || 1);
 
   return { back, outCubic, outQuad, wobble, hit, scale, stopped,

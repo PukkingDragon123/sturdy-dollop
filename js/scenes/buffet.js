@@ -355,7 +355,7 @@ KD.Scenes.buffet = (function () {
           text: 'Found you face down in the sand, big fella. Nobody sent me and nobody is paying me. Come on. I know a village.' },
         { kind: 'fade', to: 1, t: 1.0 }
       ],
-      after: () => { A1.advance(); A1.save(); KD.Game.go('gen', {}); }
+      after: () => { A1.advance(); A1.save(); KD.Game.go('yard', {}); }
     };
   }
 
