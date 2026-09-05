@@ -43,11 +43,25 @@ KD.Scenes.pens = (function () {
     KD.State.tick(dt);
     KD.Fx.update(dt);
 
+    /* the guide, first: it eats the press that dismisses it so a tap
+       cannot both close a tip and do the thing underneath it */
+    if (KD.Coach.update(dt)) return;
+    if (!KD.Coach.active()) {
+      const d0 = P.active();
+      if (d0) {
+        if (KD.Coach.tip('pens_hero')) return;
+        if ((d0.pts || 0) > 0 && KD.Coach.tip('pens_tree')) return;
+        if ((d0.bond || 0) < 30 && KD.Coach.tip('pens_swim')) return;
+        if (KD.Coach.tip('pens_keys')) return;
+      }
+    }
+
     if (KD.In.isHit('Tab')) { tab = (tab + 1) % TABS.length; sel = 0; KD.Sfx.play('click'); }
     if (KD.In.isHit('Digit1')) { tab = 0; sel = 0; }
     if (KD.In.isHit('Digit2')) { tab = 1; sel = 0; }
     if (KD.In.isHit('Digit3')) { tab = 2; sel = 0; }
     if (KD.In.isHit('KeyQ')) { KD.Game.go('circuit', {}); return; }
+    if (KD.In.isHit('KeyT')) { KD.Game.go('tree', {}); return; }
     if (KD.In.isHit('KeyR')) { swimOff(); return; }
     if (KD.In.isHit('KeyZ')) { bed(); return; }
 
@@ -72,10 +86,14 @@ KD.Scenes.pens = (function () {
       return;
     }
     if (tab === 1) {
+      /* a drill is a round you play now, not a number you collect */
       const dr = P.DRILLS[sel];
       const d = P.active();
-      const g = P.train(d, dr);
-      if (g) say(d.name + ': ' + dr.stat.toUpperCase() + ' +' + g + '.', 'KELP.3');
+      if (!d) return;
+      if (!P.fit(d)) { say(d.name + ' is not fit to work.', 'BLOOD.2'); return; }
+      if (KD.Day.energy() < dr.cost) { say('Nothing left in the day.', 'BLOOD.2'); return; }
+      KD.Day.spend(dr.cost);
+      KD.Game.go('drill', { drill: dr });
       return;
     }
     const row = P.market()[sel];
@@ -258,36 +276,56 @@ KD.Scenes.pens = (function () {
   /* ================================================================
      THE PANEL
      ================================================================ */
-  function statBar(x, y, w, label, v, col) {
-    KD.Text.draw(label, x, y, 'INK.3', { tiny: true });
-    R(x + 22, y, w, 5, 'INK.1');
+  /* A stat is an ICON and a bar. SPD / POW / STA / SPI were four
+     three-letter abbreviations you had to learn before the panel meant
+     anything; a wing, a hammer, a lung and a flame mean it on sight. */
+  const STAT_ICON = { spd: 'ic_spd', pow: 'ic_pow', sta: 'ic_sta', spi: 'ic_spi' };
+  function statBar(ctx, x, y, w, key, v, col) {
+    const ic = STAT_ICON[key];
+    if (ic && KD.PX.has(ic)) KD.PX.blit(ctx, ic, x, y - 5, { anchor: false });
+    R(x + 18, y, w, 5, 'INK.1');
     const f = Math.max(0, Math.min(1, v / 60));
-    R(x + 22, y, Math.round(w * f), 5, col);
-    R(x + 22, y, Math.round(w * f), 1, KD.PAL.shift(col, 1));
-    KD.Text.draw(String(v), x + 22 + w + 3, y, 'BONE.2', { tiny: true });
+    R(x + 18, y, Math.round(w * f), 5, col);
+    R(x + 18, y, Math.round(w * f), 1, KD.PAL.shift(col, 1));
+    KD.Text.draw(String(v), x + 18 + w + 3, y, 'BONE.2', { tiny: true });
   }
 
-  function card(d, x, y, w) {
+  function card(ctx, d, x, y, w) {
     if (!d) return;
     const T = P.temperOf(d.temper);
     KD.Text.draw(d.name.toUpperCase(), x, y, 'GOLD.3', { shadow: 'INK.0' });
     KD.Text.draw(P.BIAS[d.sp].name + '  -  ' + T.name, x, y + 11, 'BONE.1', { tiny: true });
     KD.Text.draw('LV ' + (d.lvl || 1) + '   ' + (d.wins || 0) + 'W ' + (d.losses || 0) + 'L',
                  x + w, y, 'BONE.0', { tiny: true, align: 'right' });
-    statBar(x, y + 22, 54, 'SPD', d.spd, 'WATER.2');
-    statBar(x, y + 30, 54, 'POW', d.pow, 'BLOOD.2');
-    statBar(x, y + 38, 54, 'STA', d.sta, 'KELP.2');
-    statBar(x, y + 46, 54, 'SPI', d.spi, 'ROT.2');
-    /* bond, and what it has unlocked */
-    KD.Text.draw('BOND', x + 96, y + 22, 'INK.3', { tiny: true });
-    R(x + 96, y + 30, 60, 5, 'INK.1');
-    R(x + 96, y + 30, Math.round(60 * (d.bond || 0) / 100), 5, 'CORAL.2');
-    const mv = P.movesOf(d).filter((m) => !m.guard).map((m) => m.name).join(', ');
-    KD.Text.draw(mv, x + 96, y + 38, 'BONE.0', { tiny: true, max: w - 100 });
-    KD.Text.draw(T.note || '', x + 96, y + 48, 'INK.3', { tiny: true, max: w - 100 });
+    /* a point waiting to be spent is the loudest thing on the card */
+    const pts = KD.Tree ? KD.Tree.points(d) : 0;
+    if (pts > 0) {
+      const px = x + w - 26;
+      for (let k = 0; k < Math.min(3, pts); k++) R(px + k * 8, y + 12, 6, 6, 'GOLD.3');
+      KD.Text.draw('T', x + w, y + 12, 'GOLD.2', { tiny: true, align: 'right' });
+    }
+    statBar(ctx, x, y + 22, 48, 'spd', d.spd, 'WATER.2');
+    statBar(ctx, x, y + 32, 48, 'pow', d.pow, 'BLOOD.2');
+    statBar(ctx, x, y + 42, 48, 'sta', d.sta, 'KELP.2');
+    statBar(ctx, x + 88, y + 22, 48, 'spi', d.spi, 'ROT.2');
+    /* bond, and the moves it has bought - as the move ICONS, so you can
+       see what this animal can actually do without reading a list */
+    if (KD.PX.has('ic_bond')) KD.PX.blit(ctx, 'ic_bond', x + 88, y + 27, { anchor: false });
+    R(x + 106, y + 32, 48, 5, 'INK.1');
+    R(x + 106, y + 32, Math.round(48 * (d.bond || 0) / 100), 5, 'CORAL.2');
+    const mv = P.movesOf(d);
+    for (let k = 0; k < mv.length; k++) {
+      const C = P.CLS[mv[k].cls] || P.CLS.hold;
+      const mx = x + 88 + k * 19;
+      R(mx, y + 41, 17, 17, 'INK.1');
+      KD.Screen.frame(mx, y + 41, 17, 17, C.dim);
+      if (KD.PX.has(mv[k].icon)) KD.PX.blit(ctx, mv[k].icon, mx, y + 41, { anchor: false });
+    }
+    KD.Text.draw(T.note || '', x + 88 + mv.length * 19 + 6, y + 46, 'INK.3',
+                 { tiny: true, max: Math.max(40, w - 100 - mv.length * 19) });
   }
 
-  function panel() {
+  function panel(ctx) {
     const W = KD.W, H = KD.H;
     const pw = W - 12, ph = 76;
     const x = 6, y = H - ph - 4;
@@ -310,7 +348,7 @@ KD.Scenes.pens = (function () {
       tx += tw + 2;
     });
 
-    if (tab === 0) card(P.pod()[sel] || P.active(), x + 8, y + 8, pw - 16);
+    if (tab === 0) card(ctx, P.pod()[sel] || P.active(), x + 8, y + 8, pw - 16);
     else if (tab === 1) drills(x + 8, y + 8, pw - 16);
     else dealer(x + 8, y + 8, pw - 16);
   }
@@ -366,8 +404,15 @@ KD.Scenes.pens = (function () {
       const d = row.d;
       KD.Text.draw(d.name.toUpperCase(), x + 5, ry + 2, can ? 'BONE.2' : 'INK.3', { tiny: true });
       KD.Text.draw(P.BIAS[d.sp].name, x + 62, ry + 2, 'BONE.0', { tiny: true });
-      KD.Text.draw('SPD ' + d.spd + '  POW ' + d.pow + '  STA ' + d.sta + '  SPI ' + d.spi,
-                   x + 110, ry + 2, 'WATER.2', { tiny: true });
+      /* the four stats as tiny bars in their own colours - a shape you can
+         compare between three rows without reading twelve numbers */
+      const SB = [[d.spd, 'WATER.2'], [d.pow, 'BLOOD.2'], [d.sta, 'KELP.2'], [d.spi, 'ROT.2']];
+      for (let k = 0; k < SB.length; k++) {
+        const bx = x + 112 + k * 16;
+        R(bx, ry + 2, 12, 11, 'INK.1');
+        const bh = Math.max(1, Math.round(11 * Math.min(1, SB[k][0] / 60)));
+        R(bx, ry + 13 - bh, 12, bh, can ? SB[k][1] : 'INK.2');
+      }
       KD.Text.draw(row.price + 'c', x + w - 4, ry + 2,
                    can ? 'GOLD.3' : 'BLOOD.3', { tiny: true, align: 'right' });
     });
@@ -388,36 +433,40 @@ KD.Scenes.pens = (function () {
     R(0, 15, Math.round(W * f), 2, f > 0.4 ? 'KELP.2' : f > 0.15 ? 'GOLD.2' : 'BLOOD.2');
   }
 
-  function keys() {
-    if (KD.touch) return;                 /* the buttons say it instead */
-    /* on a plate of its own, in bone, because a hint you cannot read is
-       not a hint */
-    const s = 'Q the quarry   -   R swim with it   -   Z sleep   -   TAB tabs';
-    const tw = KD.Text.width(s, { tiny: true }) + 12;
-    const ty = PENY + PENH + 6;
-    R((KD.W - tw) / 2, ty, tw, 12, 'INK.0');
-    KD.Screen.frame((KD.W - tw) / 2, ty, tw, 12, 'INK.2');
-    KD.Text.draw(s, KD.W / 2, ty + 3, 'BONE.1', { tiny: true, align: 'center' });
-  }
-
-  /* three big buttons for a thumb */
-  function touchBtns() {
-    if (!KD.touch) return;
-    const W = KD.W;
-    const bs = [['QUARRY', () => KD.Game.go('circuit', {}), 'ROT.2'],
-                ['SWIM', swimOff, 'WATER.1'],
-                ['SLEEP', bed, 'DEEP.2']];
-    const bw = 62, gap = 4;
-    let bx = Math.round((W - (bw * 3 + gap * 2)) / 2);
-    for (const [lab, fn, col] of bs) {
-      const by = PENY + PENH + 7;
-      const hot = KD.UI.inside(bx, by, bw, 16);
-      R(bx, by, bw, 16, hot ? col : 'INK.0');
-      KD.Screen.frame(bx, by, bw, 16, col);
-      KD.Text.draw(lab, bx + bw / 2, by + 4, hot ? 'INK.0' : 'BONE.2',
-                   { tiny: true, align: 'center' });
-      if (hot && KD.In.mouse.click && !KD.UI.blocked()) { KD.In.consumedClick(); fn(); }
-      bx += bw + gap;
+  /* The four things you can do, as buttons with pictures on them - the
+     same four on a keyboard and on a phone, so there is one layout to
+     learn. This was a line of prose reading "Q the quarry - R swim with
+     it - Z sleep - TAB tabs", which is a manual, not a control. */
+  const ACTS = [
+    { key: 'Q', icon: 'ic_quarry', col: 'ROT.3',   act: () => KD.Game.go('circuit', {}) },
+    { key: 'R', icon: 'ic_swim',   col: 'WATER.2', act: () => swimOff() },
+    { key: 'T', icon: 'ic_sk_crit', col: 'GOLD.3', act: () => KD.Game.go('tree', {}) },
+    { key: 'Z', icon: 'ic_sleep',  col: 'BONE.1',  act: () => bed() }
+  ];
+  function keys(ctx) {
+    const bw = 42, bh = 24, gap = 5;
+    const total = ACTS.length * (bw + gap) - gap;
+    const x0 = Math.round((KD.W - total) / 2);
+    const y = PENY + PENH + 4;
+    const d = P.active();
+    const pts = d && KD.Tree ? KD.Tree.points(d) : 0;
+    for (let i = 0; i < ACTS.length; i++) {
+      const a = ACTS[i];
+      const x = x0 + i * (bw + gap);
+      const hot = KD.UI.inside(x, y, bw, bh);
+      if (hot && KD.In.mouse.click && !KD.UI.blocked()) { KD.In.consumedClick(); a.act(); }
+      R(x, y, bw, bh, hot ? 'DEEP.1' : 'INK.0');
+      R(x + 1, y + 1, bw - 2, 1, hot ? 'DEEP.3' : 'INK.2');
+      KD.Screen.frame(x, y, bw, bh, hot ? 'GOLD.3' : a.col);
+      if (KD.PX.has(a.icon)) KD.PX.blit(ctx, a.icon, x + 4, y + 4, { anchor: false });
+      if (!KD.touch) {
+        KD.Text.draw(a.key, x + bw - 5, y + 9, a.col, { align: 'right' });
+      }
+      /* the tree button wears the points waiting on it */
+      if (a.key === 'T' && pts > 0) {
+        const n = Math.min(3, pts);
+        for (let k = 0; k < n; k++) R(x + bw - 5 - k * 5, y + bh - 6, 4, 4, 'GOLD.3');
+      }
     }
   }
 
@@ -427,9 +476,8 @@ KD.Scenes.pens = (function () {
     hero(ctx);
     bays(ctx);
     head();
-    touchBtns();
-    keys();
-    panel();
+    keys(ctx);
+    panel(ctx);
     if (msgT > 0) {
       const tw = KD.Text.width(msg) + 14;
       const tx = Math.round((KD.W - tw) / 2);
@@ -437,6 +485,7 @@ KD.Scenes.pens = (function () {
       KD.Screen.frame(tx, HEAD + 2, tw, 14, flashT > 0 ? 'WHITE' : 'GOLD.0');
       KD.Text.draw(msg, KD.W / 2, HEAD + 5, 'BONE.2', { align: 'center' });
     }
+    KD.Coach.draw();
   }
 
   return { enter, update, draw, _tab: (i) => { tab = i; sel = 0; }, _sel: (i) => { sel = i; },

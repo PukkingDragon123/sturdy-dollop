@@ -54,19 +54,48 @@ KD.Pod = (function () {
      `win` is the width of the clean-hit window as a fraction of the
      timing bar, so a big move is a smaller target. That is the whole
      risk curve of the fight: everything strong is hard to land. */
+  /* ---- the moves ------------------------------------------------------
+     Every move has a CLASS, and the classes beat each other in a ring:
+
+         QUICK  beats  SOUND  beats  HEAVY  beats  QUICK
+
+     which is what turns a round from "pick the biggest number" into a
+     read. The other animal shows you what it is winding up BEFORE you
+     choose, so picking the move that beats it is a decision you can
+     actually make rather than a coin you flip. HOLD sits outside the
+     ring: it never counters and is never countered, it just eats the
+     hit and gives you your breath back.
+
+     Colours are the class, everywhere in the game, so you learn the
+     ring by looking at it rather than by reading a table.
+     -------------------------------------------------------------------- */
+  const CLS = {
+    quick: { id: 'quick', name: 'QUICK', col: 'WATER.2', dim: 'WATER.0', beats: 'sound' },
+    heavy: { id: 'heavy', name: 'HEAVY', col: 'BLOOD.3', dim: 'BLOOD.1', beats: 'quick' },
+    sound: { id: 'sound', name: 'SOUND', col: 'ROT.3',   dim: 'ROT.1',   beats: 'heavy' },
+    hold:  { id: 'hold',  name: 'HOLD',  col: 'KELP.3',  dim: 'KELP.1',  beats: null }
+  };
+  const beats = (a, b) => !!(a && b && CLS[a] && CLS[a].beats === b);
+
   const MOVES = {
     ram:    { id: 'ram',    name: 'Headbutt',   air: 12, mul: 1.00, win: 0.30, bond: 0,
+              cls: 'quick', icon: 'ic_ram',
               note: 'Straight in off the melon. Always there.' },
     tail:   { id: 'tail',   name: 'Tail Slap',  air: 17, mul: 1.40, win: 0.21, bond: 0,
+              cls: 'heavy', icon: 'ic_tail',
               note: 'The flukes come round. More power, less margin.' },
     sonar:  { id: 'sonar',  name: 'Sonar Burst', air: 14, mul: 0.80, win: 0.26, bond: 30,
-              stun: 1, note: 'Weak, but it cannot be dodged and it rattles them.' },
+              cls: 'sound', icon: 'ic_sonar', stun: 1,
+              note: 'Weak, but it cannot be dodged and it rattles them.' },
     spin:   { id: 'spin',   name: 'Corkscrew',  air: 23, mul: 1.75, win: 0.15, bond: 45,
+              cls: 'quick', icon: 'ic_spin',
               note: 'Comes up under them spinning. Hard to time.' },
     breach: { id: 'breach', name: 'Breach',     air: 32, mul: 2.50, win: 0.10, bond: 70,
+              cls: 'heavy', icon: 'ic_breach',
               note: 'All the way up and all the way down. If it lands.' },
     guard:  { id: 'guard',  name: 'Hold',       air: 0,  mul: 0,    win: 0.40, bond: 0,
-              guard: 1, note: 'Take the hit on the shoulder and get your breath back.' }
+              cls: 'hold', icon: 'ic_guard', guard: 1,
+              note: 'Take the hit on the shoulder and get your breath back.' }
   };
   const MOVE_IDS = ['ram', 'tail', 'sonar', 'spin', 'breach', 'guard'];
 
@@ -81,22 +110,47 @@ KD.Pod = (function () {
     return out;
   }
 
+  /* An opponent spends its own points without a player. It leans the way
+     its stats already lean, so a Pilot buys lungs and a Bull buys power -
+     which is the only reason a tier-four handler feels different from a
+     tier-one handler with bigger numbers. */
+  function autoSpend(d) {
+    if (!KD.Tree) return;
+    const lean = (d.pow >= d.spd && d.pow >= d.sta) ? ['fit', 'power', 'crit', 'counter']
+               : (d.sta >= d.spd) ? ['fit', 'lungs', 'shoulder', 'grit']
+               : ['fit', 'window', 'air', 'combo'];
+    let guard = 0;
+    while ((d.pts || 0) > 0 && guard++ < 60) {
+      let took = false;
+      for (const id of lean) {
+        if (KD.Tree.canTake(d, id)) { KD.Tree.take(d, id); took = true; break; }
+      }
+      if (!took) break;
+    }
+  }
+
   /* ---- derived numbers --------------------------------------------- */
-  const hpMax = (d) => Math.round(46 + (d.sta || 10) * 1.7 + (d.lvl || 1) * 3);
+  /* The four derived numbers all read the skill tree, so a point spent
+     there shows up in the fight rather than on a sheet. */
+  const sk = (d, k) => (KD.Tree ? KD.Tree.val(d, k) : 0);
+  const hpMax = (d) => Math.round(46 + (d.sta || 10) * 1.7 + (d.lvl || 1) * 3 + sk(d, 'hp'));
   function airMax(d) {
     const t = temperOf(d.temper);
-    return Math.round((58 + (d.sta || 10) * 0.9) * (t.breath || 1));
+    return Math.round((58 + (d.sta || 10) * 0.9) * (t.breath || 1) + sk(d, 'airmax'));
   }
   const dodge = (d) => Math.min(0.34, (d.spd || 10) * 0.0042);
   function crit(d) {
     const t = temperOf(d.temper);
-    return Math.min(0.42, (d.spi || 10) * 0.0038 * (t.spi || 1));
+    return Math.min(0.55, (d.spi || 10) * 0.0038 * (t.spi || 1) + sk(d, 'crit'));
   }
   function power(d) {
     const t = temperOf(d.temper);
-    return (7 + (d.pow || 10) * 0.62) * (t.pow || 1);
+    return (7 + (d.pow || 10) * 0.62) * (t.pow || 1) * (1 + sk(d, 'power'));
   }
-  const winScale = (d) => temperOf(d.temper).win || 1;
+  /* THE EYE is the most valuable thing on the board: a wider window is
+     a different game, not a bigger number. */
+  const winScale = (d) => (temperOf(d.temper).win || 1) * (1 + sk(d, 'window'));
+  const airScale = (d) => Math.max(0.5, 1 - sk(d, 'air'));
   const rating = (d) => Math.round(((d.spd || 0) + (d.pow || 0) + (d.sta || 0) + (d.spi || 0)) / 4);
   const fit = (d) => !d.hurt || d.hurt <= 0;
 
@@ -127,8 +181,14 @@ KD.Pod = (function () {
       sta: Math.max(3, Math.round(B.sta * j() * q)),
       spi: Math.max(3, Math.round(B.spi * j() * q)),
       lvl: o.lvl || 1, xp: 0, bond: o.bond || 0,
-      hurt: 0, wins: 0, losses: 0
+      hurt: 0, wins: 0, losses: 0,
+      /* its own skill board, and a point to open it with - a board you
+         cannot touch until level two is a board nobody looks at */
+      sk: {}, pts: 1 + Math.max(0, (o.lvl || 1) - 1)
     };
+    /* an opponent has already spent its own points, weighted to the way
+       its stats lean, so a Bull on the Deep Card really has bought power */
+    if (o.auto) autoSpend(d);
     return d;
   }
   function SPECIES_PICK() {
@@ -193,9 +253,20 @@ KD.Pod = (function () {
     return g;
   }
 
+  /* Every level is a POINT, and a point is a decision on the animal's own
+     board. Returns how many it just gained, so the scene that triggered
+     the level can say so. */
   function levelCheck(d) {
-    const need = 40 + (d.lvl || 1) * 26;
-    while (d.xp >= need) { d.xp -= need; d.lvl = (d.lvl || 1) + 1; }
+    let got = 0, guard = 0;
+    let need = 40 + (d.lvl || 1) * 26;
+    while (d.xp >= need && guard++ < 40) {
+      d.xp -= need;
+      d.lvl = (d.lvl || 1) + 1;
+      d.pts = (d.pts || 0) + 1;
+      got++;
+      need = 40 + d.lvl * 26;
+    }
+    return got;
   }
 
   /* bonding: what swimming with one buys you */
@@ -284,7 +355,8 @@ KD.Pod = (function () {
          stranger in a pond. */
       const d = roll({ sp: entry.sp, coat: entry.coat, mark: entry.mark,
                        name: entry.dolph, temper: entry.temper,
-                       q: T.q, lvl: T.lvl, bond: 12 + entry.t * 22 });
+                       q: T.q, lvl: T.lvl, bond: 12 + entry.t * 22,
+                       auto: true });
       st.foes[key] = d;
     }
     return st.foes[key];
@@ -362,8 +434,8 @@ KD.Pod = (function () {
     restock();
   }
 
-  return { BIAS, TEMPER, temperOf, MOVES, MOVE_IDS, movesOf, DRILLS, TIERS, CARD,
-           hpMax, airMax, dodge, crit, power, winScale, rating, fit,
+  return { BIAS, TEMPER, temperOf, MOVES, MOVE_IDS, movesOf, CLS, beats, DRILLS, TIERS, CARD,
+           hpMax, airMax, dodge, crit, power, winScale, airScale, rating, fit,
            roll, pod, active, setActive, add, release, PENS,
            train, trainGain, bondUp, levelCheck,
            foeOf, beaten, markBeaten, tierCard, tierClear, tierOpen, standing,

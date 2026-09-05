@@ -44,6 +44,9 @@ KD.Scenes.swim = (function () {
     if (hitT > 0) hitT -= dt;
     camX += dt * 46;
     KD.Fx.update(dt);
+    if (KD.Coach.update(dt)) return;
+    if (!KD.Coach.active() && phase === 'run' && KD.Coach.tip('swim_top')) return;
+    if (KD.Coach.active()) return;
 
     if (phase === 'in') {
       if (pt > 1.2 || press()) { phase = 'run'; pt = 0; arcT = 0; }
@@ -295,6 +298,7 @@ KD.Scenes.swim = (function () {
     }
     KD.Text.draw(KD.touch ? 'tap to go back' : 'SPACE to go back',
                  KD.W / 2, yy + h + 8, 'INK.3', { tiny: true, align: 'center' });
+    KD.Coach.draw();
   }
 
   return { enter, update, draw };

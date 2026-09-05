@@ -48,39 +48,37 @@ KD.Scenes.help = (function () {
   const LOOP = [
     ['1', 'THE POD', 'Six pens. The dealer brings three animals',
      'every morning and never tells you their temperament.'],
-    ['2', 'DRILLS', 'Sprints, weight, holds and the ring. Each one',
-     'raises one stat and eats a chunk of the day.'],
-    ['3', 'SWIM WITH IT', 'BOND is the gate on its moves. Press at',
-     'the top of every arc and it learns to fight for you.'],
-    ['4', 'THE QUARRY', 'Pick a move, then hit the timing window.',
-     'A clean strike is worth two and a half grazes.'],
-    ['5', 'THE IRON GATE', 'Tier five, and the last three names on',
-     'the card are people you already know.']
+    ['2', 'DRILLS', 'Six beats. Answer each one on time; a sloppy',
+     'round costs the same day as a perfect one.'],
+    ['3', 'SWIM WITH IT', 'Bond unlocks moves. Press at the top of',
+     'every arc and it learns to fight for you.'],
+    ['4', 'READ THE RING', 'They telegraph. QUICK beats SOUND beats',
+     'HEAVY beats QUICK. Answer it and you counter for double.'],
+    ['5', 'THE BOARD', 'Every level is a point. Three branches, and',
+     'none of them is just a bigger number.']
   ];
 
   function keyRows() {
     if (KD.touch) {
       return [
         ['TAP A PEN', 'That animal is the one that fights.'],
-        ['QUARRY', 'Tonight\'s card. Five tiers, three handlers each.'],
-        ['SWIM', 'Get in the water with it and raise its bond.'],
-        ['SLEEP', 'End the day. Everything hurt mends one day.'],
-        ['TABS', 'THE POD, DRILLS and THE DEALER.'],
+        ['THE FOUR BUTTONS', 'Quarry, swim, board, sleep.'],
         ['IN A FIGHT', 'Tap a move, then tap again in the green.'],
-        ['', 'Miss and it costs you half again in breath.'],
+        ['THE BUBBLE', 'What they are winding up. Colour is the class.'],
+        ['A GOLD RING', 'That move counters what they are doing.'],
+        ['LAND IT CLEAN', 'You get another one at half the breath.'],
         ['THE TURN', 'Fills as you land hits. At full it is a fifth move.'],
         ['SKIP', 'Top right of any cutscene. It never asks twice.']
       ];
     }
     return [
-      ['ARROWS  /  W A S D', 'Move the cursor through a list.'],
-      ['SPACE', 'Choose. In a fight it commits the move, then'],
-      ['', 'stops the timing bar - hit it in the green.'],
-      ['TAB  /  1 2 3', 'THE POD, DRILLS, THE DEALER.'],
-      ['Q', 'Down to the quarry, to tonight\'s card.'],
-      ['R', 'Swim with the one that is up.'],
-      ['Z', 'Sleep. It is the only thing that mends them.'],
-      ['ESC', 'Back, pause, or SKIP the cutscene you are in.']
+      ['ARROWS  /  W A S D', 'Move the cursor.'],
+      ['SPACE', 'Choose. In a fight it commits, then stops the bar.'],
+      ['Q  R  T  Z', 'Quarry, swim, the board, sleep.'],
+      ['TAB  /  1 2 3', 'The pod, the drills, the dealer.'],
+      ['ESC', 'Back, pause, or SKIP the cutscene you are in.'],
+      ['', ''],
+      ['THE GUIDE', 'Comes to you, once, when it is relevant.']
     ];
   }
 

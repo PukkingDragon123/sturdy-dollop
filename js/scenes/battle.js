@@ -43,6 +43,11 @@ KD.Scenes.battle = (function () {
   let hitFx = [], nums = [];
   let round = 1, log = [];
   let result = null;
+  /* what the other animal is winding up this round, decided BEFORE you
+     pick so that reading it is the game */
+  let plan = null, planHid = false, tellT = 0;
+  let combo = 0, comboMax = 1;      /* how many extra strikes this round */
+  let lastQ = '';                   /* what the last strike was, for the banner */
   const BTNS = [];
 
   /* ---- entering ----------------------------------------------------- */
@@ -56,6 +61,9 @@ KD.Scenes.battle = (function () {
     A = live(mine, false);
     B = live(foe, true);
     moves = P.movesOf(mine);
+    combo = 0;
+    comboMax = 1 + (KD.Tree ? KD.Tree.val(mine, 'combo') : 0);
+    plan = null; planHid = false; lastQ = '';
     phase = 'in';
     say(entry.who + ': ' + (entry.line || '...'));
     KD.Sfx.play('open');
@@ -76,16 +84,28 @@ KD.Scenes.battle = (function () {
 
   /* ---- the round ---------------------------------------------------- */
   function beginPick() {
-    phase = 'pick'; pt = 0;
-    sel = Math.min(sel, moves.length - 1);
+    phase = 'pick'; pt = 0; sel = 0;
+    combo = 0;
+    /* THE TELEGRAPH. The other animal decides now, and shows it. A
+       cagey one (high spirit, high card) sometimes hides what it is
+       doing, and hiding it is the only thing that makes the Iron Gate
+       frightening once you can read the ring. */
+    plan = foePlan();
+    const cag = Math.min(0.55, (B.d.spi || 10) * 0.006 + entry.t * 0.07);
+    planHid = Math.random() < cag;
+    tellT = 0;
   }
 
   function armBar(move, who) {
-    const w = move.win * P.winScale(who.d);
-    bar.win = Math.max(0.06, Math.min(0.55, w));
+    let w = move.win * P.winScale(who.d);
+    /* a follow-up in a combo is HARDER: the window closes by a fifth for
+       every strike you have already landed this round, so pushing a chain
+       is a real decision and not free damage */
+    if (combo > 0) w *= Math.max(0.45, 1 - combo * 0.2);
+    bar.win = Math.max(0.05, Math.min(0.55, w));
     /* the sweep gets faster the higher the card, so the Iron Gate is a
        different game from the Shallow Card with the same buttons */
-    bar.sp = 0.95 + entry.t * 0.16;
+    bar.sp = (0.95 + entry.t * 0.16) * (1 + combo * 0.18);
     bar.x = 0; bar.dir = 1; bar.live = true;
   }
 
@@ -100,17 +120,41 @@ KD.Scenes.battle = (function () {
 
   function resolveStrike(att, def, move, quality) {
     bar.live = false;
+    /* THE COUNTER. If you answered the telegraph with the move that
+       beats it, the strike lands as a counter: the other animal's swing
+       comes apart and yours lands for double. This is the whole reason
+       the telegraph is worth looking at, and it is why an animal rated
+       worse than the one across from you can take the purse. */
+    const answering = (att === A && plan && !move.guard && quality !== 'miss');
+    const countered = answering && P.beats(move.cls, plan.cls);
+    if (countered) { plan = null; B.stun = Math.max(B.stun, 1); }
     /* Timing has to be worth something or the bar is decoration: a clean
        strike is worth two and a half grazes, and that margin is the whole
        reason you can take an animal rated worse than the one across from
        you and still walk out with the purse. */
     let mul = quality === 'clean' ? 1.35 : quality === 'graze' ? 0.5 : 0.15;
-    const airCost = Math.round(move.air * (quality === 'miss' ? 1.5 : 1));
+    if (countered) mul *= 2.0 + (att === A && KD.Tree ? KD.Tree.val(att.d, 'counter') : 0);
+    let airCost = Math.round(move.air * (quality === 'miss' ? 1.5 : 1) * P.airScale(att.d));
+    if (att === A && combo > 0) airCost = Math.round(airCost * 0.5);
     att.air = Math.max(0, att.air - airCost);
     if (move.guard) {
       att.guard = 1;
-      att.air = Math.min(att.airMax, att.air + 22);
+      const gsk = KD.Tree ? KD.Tree.val(att.d, 'guard') : 0;
+      att.air = Math.min(att.airMax, att.air + Math.round(22 * (1 + gsk)));
       att.pose = 'cruise1';
+      /* Holding through something HEAVY does not just soften it - you
+         take it on the shoulder and it costs them. */
+      if (att === A && plan && plan.cls === 'heavy') {
+        const back = Math.max(2, Math.round(P.power(att.d) * (0.5 + gsk * 0.5)));
+        def.hp = Math.max(0, def.hp - back);
+        def.shake = 4;
+        nums.push({ v: back, x: def.foe ? 320 : 120, y: 108, t: 0, crit: false });
+        lastQ = 'shoulder';
+        say(att.d.name + ' takes it on the shoulder. ' + back + ' back.');
+        KD.Sfx.play('hit');
+        return;
+      }
+      lastQ = 'hold';
       say(att.d.name + ' holds, and gets its breath back.');
       return;
     }
@@ -145,19 +189,21 @@ KD.Scenes.battle = (function () {
       KD.Sfx.play('deny');
     }
 
-    if (dodged) say(def.d.name + ' slips it.');
-    else if (quality === 'miss') say(att.d.name + ' swings through nothing.');
-    else if (critHit) say('CLEAN. ' + move.name + ' for ' + dmg + '.');
-    else if (quality === 'graze') say('Grazed it. ' + dmg + '.');
-    else say(move.name + ' lands. ' + dmg + '.');
+    if (dodged) { lastQ = 'slip'; say(def.d.name + ' slips it.'); }
+    else if (quality === 'miss') { lastQ = 'miss'; say(att.d.name + ' swings through nothing.'); }
+    else if (countered) { lastQ = 'counter'; say('COUNTERED. ' + dmg + '.'); }
+    else if (critHit) { lastQ = 'crit'; say('CLEAN. ' + dmg + '.'); }
+    else if (quality === 'graze') { lastQ = 'graze'; say('Grazed it. ' + dmg + '.'); }
+    else { lastQ = 'clean'; say(move.name + ' lands. ' + dmg + '.'); }
+    if (countered) { KD.Fx.flash('GOLD.3', 0.14); KD.Fx.shake(6); }
   }
 
-  /* the other handler's animal picks and times its own move */
-  function foeMove() {
+  /* The other handler's animal CHOOSES at the top of the round. It does
+     not swing until after you have, which is what makes the telegraph
+     worth showing: you get to answer it. */
+  function foePlan() {
     const list = P.movesOf(B.d).filter((m) => m.air <= B.air || m.guard);
-    if (!list.length) { surface(B, A); return; }
-    /* it spends what it has: the more breath it is sitting on, the more
-       likely it is to reach for something ruinous */
+    if (!list.length) return null;
     const rich = B.air / B.airMax;
     let pick = list[0];
     const heavy = list.filter((m) => !m.guard).sort((a, b) => b.mul - a.mul);
@@ -167,15 +213,20 @@ KD.Scenes.battle = (function () {
       else pick = heavy[heavy.length - 1];
     }
     if (rich < 0.22 && Math.random() < 0.6) pick = P.MOVES.guard;
-    /* its timing is its spirit: a proud animal on the Iron Gate rarely
-       misses, a wild one on the Shallow Card is a coin toss */
+    return pick;
+  }
+
+  /* and then it swings, at the timing its spirit and its card allow */
+  function foeMove() {
+    const pick = plan || foePlan();
+    if (!pick) { surface(B, A); return; }
     /* It starts sloppy. On the Shallow Card it lands one clean strike in
-       five; by the Iron Gate it lands two in three, and by then you had
-       better be able to hit the window every time. */
+       five; by the Iron Gate it lands two in three. */
     const skill = 0.12 + (B.d.spi || 10) * 0.008 + entry.t * 0.11;
     const r = Math.random();
     const q = r < skill ? 'clean' : r < skill + 0.40 ? 'graze' : 'miss';
     resolveStrike(B, A, pick, q);
+    plan = null;
   }
 
   function surface(who, other) {
@@ -192,6 +243,20 @@ KD.Scenes.battle = (function () {
     t += dt; pt += dt;
     if (msgT > 0) msgT -= dt;
     KD.Fx.update(dt);
+    /* the guide eats its own dismissal, so closing a tip never also
+       commits a move */
+    if (KD.Coach.update(dt)) return;
+    if (!KD.Coach.active()) {
+      if (phase === 'pick' && plan && !planHid) {
+        if (KD.Coach.tip('fight_ring')) return;
+        if (KD.Coach.tip('fight_pick')) return;
+      }
+      if (phase === 'time' && KD.Coach.tip('fight_bar')) return;
+      if (phase === 'pick' && combo > 0 && KD.Coach.tip('fight_combo')) return;
+      if (phase === 'pick' && A && A.air < A.airMax * 0.3 &&
+          KD.Coach.tip('fight_air')) return;
+    }
+    if (KD.Coach.active()) return;      /* the fight holds while it is up */
     for (const f of [A, B]) {
       if (!f) continue;
       f.bob += dt;
@@ -218,10 +283,13 @@ KD.Scenes.battle = (function () {
       if (KD.In.isHit('ArrowDown', 'KeyS')) { sel = (sel + 1) % n; KD.Sfx.play('click'); }
       const mv = moveAt(sel);
       if (hit()) {
-        if (!mv.guard && mv.air > A.air) { say('Not enough breath for that.'); KD.Sfx.play('deny'); return; }
+        const cost = Math.round(mv.air * P.airScale(A.d) * (combo > 0 ? 0.5 : 1));
+        if (!mv.guard && cost > A.air) { say('Not enough breath for that.'); KD.Sfx.play('deny'); return; }
         armBar(mv, A);
         phase = 'time'; pt = 0;
       }
+      /* you can always bank a combo instead of pushing it */
+      if (combo > 0 && KD.In.isHit('Escape')) { combo = 0; phase = 'foe'; pt = 0; }
       return;
     }
     if (phase === 'noair') {
@@ -248,6 +316,17 @@ KD.Scenes.battle = (function () {
       if (pt < 0.9) return;
       if (B.hp <= 0) { finish(true); return; }
       if (A.stun > 0) { A.stun--; say(A.d.name + ' is still rattled.'); phase = 'foe2'; pt = 0; return; }
+      /* THE COMBO WINDOW. A clean strike buys you another one, at half
+         the breath and a window a fifth narrower. Push it or bank it. */
+      if ((lastQ === 'clean' || lastQ === 'crit' || lastQ === 'counter') &&
+          combo < comboMax && A.air >= 6) {
+        combo++;
+        phase = 'pick'; pt = 0; sel = 0;
+        KD.Sfx.play('levelup');
+        say('OPEN. Another one, half the breath.');
+        return;
+      }
+      combo = 0;
       phase = 'foe'; pt = 0;
       return;
     }
@@ -513,50 +592,155 @@ KD.Scenes.battle = (function () {
     R(x + 5, y + 25, Math.round(bw * Math.max(0, f.air / f.airMax)), 3, 'WATER.2');
   }
 
+  /* ================================================================
+     THE TELEGRAPH
+
+     What the other animal is winding up, held over its head from the
+     moment the round opens. Reading it and answering it is the game;
+     everything else in the fight is timing. A cagey animal hides it,
+     and a hidden one shows a question mark instead - which is its own
+     information, because it means you cannot counter this round.
+     ================================================================ */
+  function telegraph(ctx) {
+    if (!plan || phase === 'done' || phase === 'in') return;
+    const bx = KD.W - KD.Dolph.W - 6 + 40;
+    const by = Math.round(KD.H * 0.50) - KD.Dolph.H / 2 - 24 +
+               Math.round(Math.sin(t * 3) * 1.5);
+    const C = P.CLS[plan.cls] || P.CLS.hold;
+    /* the bubble */
+    R(bx - 3, by - 3, 26, 26, 'INK.0');
+    R(bx - 2, by - 2, 24, 24, planHid ? 'INK.1' : 'DEEP.0');
+    R(bx - 1, by - 1, 22, 1, planHid ? 'INK.2' : 'DEEP.2');
+    KD.Screen.frame(bx - 2, by - 2, 24, 24, planHid ? 'INK.3' : C.col);
+    /* the tail, pointing down at them */
+    for (let k = 0; k < 4; k++) R(bx + 8 - k, by + 22 + k, 5 + k * 2, 1, 'INK.0');
+    if (planHid) {
+      KD.Text.draw('?', bx + 9, by + 5, 'BONE.0', { align: 'center' });
+    } else if (KD.PX.has(plan.icon)) {
+      KD.PX.blit(ctx, plan.icon, bx + 2, by + 2, { anchor: false });
+    }
+  }
+
+  /* The ring: three chips in a triangle with the arrows between them, so
+     what beats what is on screen all fight. A rule you have to remember
+     is a rule you get wrong at the worst moment. The chip of whatever
+     they are winding up lights red; the one that answers it lights gold. */
+  function ring(ctx) {
+    const bw = 60, bh = 62;
+    const x = 5, y = Math.round(KD.H * 0.50) - bh / 2 + 8;
+    R(x, y, bw, bh, 'INK.0');
+    KD.Screen.frame(x, y, bw, bh, 'INK.2');
+    R(x + 1, y + 1, bw - 2, 1, 'INK.3');
+    const CH = 18;
+    const SPOT = {
+      quick: [Math.round((bw - CH) / 2), 3],
+      heavy: [4, bh - CH - 4],
+      sound: [bw - CH - 4, bh - CH - 4]
+    };
+    const ICON = { quick: 'ic_spd', heavy: 'ic_pow', sound: 'ic_sonar' };
+    /* the arrows first, under the chips: quick -> sound -> heavy -> quick */
+    const arrow = (fx, fy, tx, ty, col) => {
+      const steps = 5;
+      for (let k = 1; k < steps; k++) {
+        R(fx + (tx - fx) * k / steps - 1, fy + (ty - fy) * k / steps - 1, 2, 2, col);
+      }
+      R(tx - 1, ty - 1, 3, 3, col);
+    };
+    const mid = (id) => [x + SPOT[id][0] + CH / 2, y + SPOT[id][1] + CH / 2];
+    const [qx, qy] = mid('quick'), [hx, hy] = mid('heavy'), [sx, sy] = mid('sound');
+    arrow(qx + 6, qy + 4, sx - 2, sy - 6, P.CLS.quick.dim);
+    arrow(sx - 8, sy + 2, hx + 8, hy + 2, P.CLS.sound.dim);
+    arrow(hx - 2, hy - 6, qx - 6, qy + 4, P.CLS.heavy.dim);
+    for (const id in SPOT) {
+      const [dx, dy] = SPOT[id];
+      const C = P.CLS[id];
+      const theirs = plan && !planHid && plan.cls === id;
+      const yours = plan && !planHid && P.beats(id, plan.cls);
+      const cx = x + dx, cy = y + dy;
+      R(cx, cy, CH, CH, theirs ? 'BLOOD.0' : (yours ? 'GOLD.0' : 'INK.1'));
+      KD.Screen.frame(cx, cy, CH, CH,
+                      theirs ? 'BLOOD.3' : (yours ? 'GOLD.3' : C.dim));
+      if (KD.PX.has(ICON[id])) KD.PX.blit(ctx, ICON[id], cx + 1, cy + 1, { anchor: false });
+    }
+  }
+
   /* ---- the move card and the timing bar ------------------------------ */
-  function picker() {
+  /* one icon, framed, in its class colour - the unit the whole fight
+     interface is built out of */
+  function chip(ctx, icon, x, y, cls, lit, dead) {
+    const C = P.CLS[cls] || P.CLS.hold;
+    R(x - 1, y - 1, 22, 22, 'INK.0');
+    R(x, y, 20, 20, lit ? 'DEEP.1' : 'INK.1');
+    R(x + 1, y + 1, 18, 1, lit ? 'DEEP.3' : 'INK.2');
+    KD.Screen.frame(x, y, 20, 20, dead ? 'INK.2' : (lit ? C.col : C.dim));
+    if (icon && KD.PX.has(icon)) KD.PX.blit(ctx, icon, x + 2, y + 2, { anchor: false });
+    if (dead) for (let k = 0; k < 20; k += 2) R(x, y + k, 20, 1, 'INK.0');
+  }
+
+  function picker(ctx) {
     const n = moves.length + (A.meter >= 100 ? 1 : 0);
-    const cw = 62, ch = 26, gap = 3;
-    const cols = Math.min(n, Math.floor((KD.W - 12) / (cw + gap)));
-    const rows = Math.ceil(n / cols);
-    const totalW = cols * (cw + gap) - gap;
+    const cw = 34, ch = 34, gap = 4;
+    const totalW = n * (cw + gap) - gap;
     const x0 = Math.round((KD.W - totalW) / 2);
-    const y0 = KD.H - rows * (ch + gap) - 26;
+    const y0 = KD.H - ch - 30;
     BTNS.length = 0;
     for (let i = 0; i < n; i++) {
       const m = moveAt(i);
-      const cx = x0 + (i % cols) * (cw + gap);
-      const cy = y0 + Math.floor(i / cols) * (ch + gap);
+      const cx = x0 + i * (cw + gap);
       const on = i === sel;
-      const can = m.guard || m.finish || m.air <= A.air;
-      const hot = KD.UI.inside(cx, cy, cw, ch);
+      const cost = Math.round(m.air * P.airScale(A.d) * (combo > 0 ? 0.5 : 1));
+      const can = m.guard || m.finish || cost <= A.air;
+      const hot = KD.UI.inside(cx, y0, cw, ch);
       if (hot && KD.In.mouse.click && !KD.UI.blocked()) {
         KD.In.consumedClick(); sel = i;
         if (can) { armBar(m, A); phase = 'time'; pt = 0; }
         else KD.Sfx.play('deny');
       }
-      R(cx, cy, cw, ch, on ? 'DEEP.1' : 'INK.0');
-      KD.Screen.frame(cx, cy, cw, ch, m.finish ? 'ROT.3' : (on ? 'GOLD.2' : 'INK.2'));
-      if (on) R(cx + 1, cy + 1, cw - 2, 1, 'GOLD.1');
-      KD.Text.draw(m.name.toUpperCase(), cx + cw / 2, cy + 3,
-                   !can ? 'INK.3' : (m.finish ? 'ROT.3' : (on ? 'GOLD.3' : 'BONE.1')),
-                   { tiny: true, align: 'center' });
-      /* the window, drawn as the width of the target it gives you - the
-         one number that actually decides whether to pick it */
-      const ww = Math.round((cw - 16) * Math.min(1, m.win * P.winScale(A.d) * 2.4));
-      R(cx + 8, cy + 12, cw - 16, 4, 'INK.1');
-      R(cx + 8, cy + 12, ww, 4, m.finish ? 'ROT.2' : 'KELP.2');
-      KD.Text.draw(m.air ? m.air + ' AIR' : (m.finish ? 'READY' : 'FREE'),
-                   cx + cw / 2, cy + 18,
-                   m.air > A.air && !m.guard ? 'BLOOD.3' : 'WATER.2',
-                   { tiny: true, align: 'center' });
+      const C = P.CLS[m.finish ? 'sound' : m.cls] || P.CLS.hold;
+      /* the plate */
+      R(cx, y0, cw, ch, on ? 'DEEP.1' : 'INK.0');
+      KD.Screen.frame(cx, y0, cw, ch, !can ? 'INK.2' : (on ? 'GOLD.3' : C.dim));
+      if (on) R(cx + 1, y0 + 1, cw - 2, 1, 'GOLD.2');
+      /* the picture, which is the whole label now */
+      const ic = m.finish ? 'ic_turn' : m.icon;
+      if (ic && KD.PX.has(ic)) {
+        KD.PX.blit(ctx, ic, cx + 9, y0 + 3, { anchor: false });
+      }
+      /* THE WINDOW, as a bar the width of the target it gives you. This
+         is the one number that decides whether to pick it, so it is the
+         only number left on the card. */
+      const ww = Math.round((cw - 8) * Math.min(1, m.win * P.winScale(A.d) *
+                            (combo > 0 ? Math.max(0.45, 1 - combo * 0.2) : 1) * 2.4));
+      R(cx + 4, y0 + 21, cw - 8, 3, 'INK.1');
+      R(cx + 4, y0 + 21, ww, 3, can ? C.col : 'INK.2');
+      /* the breath it costs, in pips rather than a number */
+      const pips = Math.min(8, Math.ceil(cost / 5));
+      for (let k = 0; k < pips; k++) {
+        R(cx + 4 + k * 3, y0 + 27, 2, 4, can ? 'WATER.1' : 'BLOOD.1');
+      }
+      if (m.finish) {
+        R(cx + 4, y0 + 27, cw - 8, 4, A.meter >= 100 ? 'ROT.3' : 'INK.2');
+      }
+      /* does it beat what they are winding up? a gold ring says so */
+      if (plan && !planHid && P.beats(m.cls, plan.cls)) {
+        const pl = 1 + Math.round(Math.abs(Math.sin(t * 5)));
+        KD.Screen.frame(cx - pl, y0 - pl, cw + pl * 2, ch + pl * 2, 'GOLD.3');
+      }
     }
+    /* the one line of prose left in the fight: what the selected move is */
     const m = moveAt(sel);
-    R(0, KD.H - 23, KD.W, 23, 'INK.0');
-    KD.Text.draw(m.note || '', KD.W / 2, KD.H - 20, 'BONE.1',
+    R(0, KD.H - 26, KD.W, 26, 'INK.0');
+    const CN = P.CLS[m.finish ? 'sound' : m.cls] || P.CLS.hold;
+    KD.Text.draw(m.name.toUpperCase(), KD.W / 2 - 2, KD.H - 23, CN.col,
+                 { tiny: true, align: 'right' });
+    KD.Text.draw(m.finish ? 'FINISHER' : CN.name, KD.W / 2 + 4, KD.H - 23, 'BONE.0',
+                 { tiny: true });
+    KD.Text.draw(m.note || '', KD.W / 2, KD.H - 14, 'BONE.0',
                  { tiny: true, align: 'center', max: KD.W - 20 });
-    KD.Text.draw(KD.touch ? 'tap a move' : 'ARROWS choose   -   SPACE commit',
-                 KD.W / 2, KD.H - 10, 'INK.3', { tiny: true, align: 'center' });
+    if (combo > 0) {
+      KD.Text.draw('CHAIN ' + combo + '  -  half the breath  -  ESC to bank it',
+                   KD.W / 2, KD.H - 6, 'GOLD.3', { tiny: true, align: 'center' });
+    }
   }
 
   function timing() {
@@ -649,11 +833,13 @@ KD.Scenes.battle = (function () {
                    { tiny: true, align: 'center' });
     }
 
-    if (phase === 'pick') picker();
+    if (phase !== 'done') { telegraph(ctx); ring(ctx); }
+    if (phase === 'pick') picker(ctx);
     else if (phase === 'time') timing();
     else if (phase === 'done') endCard();
 
     if (KD.touch) KD.UI.touchPad([], { noStick: true });
+    KD.Coach.draw();
   }
 
   return { enter, update, draw, _A: () => A, _B: () => B,
