@@ -51,12 +51,16 @@ KD.Scenes.tree = (function () {
     if (popT > 0) popT -= dt;
     KD.State.tick(dt);
     KD.Fx.update(dt);
+    /* THE WAY OUT COMES FIRST. It used to sit after the guide's early
+       return, so a tip on screen swallowed Escape and the skill board
+       became a room you could not leave. Nothing may ever be checked
+       before the exit. */
+    if (KD.In.isHit('Escape') || KD.In.isHit('KeyT')) { KD.Game.go('pens', {}); return; }
+
     if (KD.Coach.update(dt)) return;
     if (!KD.Coach.active() && !T.open(d, T.NODES[sel].id) &&
         KD.Coach.tip('tree_open')) return;
     if (KD.Coach.active()) return;
-
-    if (KD.In.isHit('Escape') || KD.In.isHit('KeyT')) { KD.Game.go('pens', {}); return; }
 
     const N = T.NODES;
     /* the arrows walk the board by POSITION, not by index, so left really

@@ -65,7 +65,7 @@ KD.Scenes.battle = (function () {
     comboMax = 1 + (KD.Tree ? KD.Tree.val(mine, 'combo') : 0);
     plan = null; planHid = false; lastQ = '';
     phase = 'in';
-    say(entry.who + ': ' + (entry.line || '...'));
+    say(entry.who.toUpperCase() + ' AND ' + foe.name.toUpperCase());
     KD.Sfx.play('open');
   }
 
@@ -80,7 +80,7 @@ KD.Scenes.battle = (function () {
     };
   }
 
-  const say = (s) => { shownMsg = s; msgT = 3.4; };
+  const say = (s) => { shownMsg = s; msgT = 1.9; };
 
   /* ---- the round ---------------------------------------------------- */
   function beginPick() {
@@ -400,7 +400,7 @@ KD.Scenes.battle = (function () {
      ================================================================ */
   function arena() {
     const W = KD.W, H = KD.H;
-    const RING0 = Math.round(H * 0.28), RING1 = Math.round(H * 0.72);
+    const RING0 = Math.round(H * 0.26), RING1 = Math.round(H * 0.78);
 
     /* Water in solid bands. The middle band is BRIGHTER than the two
        around it because that is where the lamps are pointed - the ring
@@ -408,8 +408,8 @@ KD.Scenes.battle = (function () {
        against or it is just a hole in the picture. */
     R(0, 0, W, RING0, 'DEEP.1');
     R(0, RING0, W, RING1 - RING0, 'DEEP.2');
-    R(0, RING1, W, Math.round(H * 0.88) - RING1, 'DEEP.0');
-    R(0, Math.round(H * 0.88), W, H, 'INK.1');
+    R(0, RING1, W, Math.round(H * 0.92) - RING1, 'DEEP.0');
+    R(0, Math.round(H * 0.92), W, H, 'INK.1');
     /* the lit lip of the ring, top and bottom, one step up */
     R(0, RING0, W, 1, 'DEEP.3');
     R(0, RING1 - 1, W, 1, 'INK.0');
@@ -533,7 +533,7 @@ KD.Scenes.battle = (function () {
   /* ---- the fighters -------------------------------------------------- */
   function fighters(ctx) {
     const W = KD.W;
-    const midY = Math.round(KD.H * 0.50);
+    const midY = Math.round(KD.H * 0.52);
     const DW = KD.Dolph.W;
     for (const f of [B, A]) {
       if (!f) continue;
@@ -569,9 +569,10 @@ KD.Scenes.battle = (function () {
   }
 
   /* ---- the plates ---------------------------------------------------- */
-  function plate(f, x, y, w, right) {
-    R(x, y, w, 30, 'INK.0');
-    KD.Screen.frame(x, y, w, 30, right ? 'BLOOD.0' : 'GOLD.0');
+  function plate(ctx2, f, x, y, w, right) {
+    const ph = f.foe ? 30 : 37;
+    R(x, y, w, ph, 'INK.0');
+    KD.Screen.frame(x, y, w, ph, right ? 'BLOOD.0' : 'GOLD.0');
     R(x + 1, y + 1, w - 2, 1, right ? 'BLOOD.1' : 'GOLD.1');
     const nm = f.d.name.toUpperCase();
     KD.Text.draw(nm, right ? x + w - 5 : x + 5, y + 3,
@@ -590,6 +591,17 @@ KD.Scenes.battle = (function () {
     /* breath */
     R(x + 5, y + 25, bw, 3, 'INK.1');
     R(x + 5, y + 25, Math.round(bw * Math.max(0, f.air / f.airMax)), 3, 'WATER.2');
+    /* and on YOUR plate only: the round, and how full THE TURN is */
+    if (!f.foe) {
+      KD.Text.draw('R' + round, x + w - 5, y + 3, 'BONE.0',
+                   { tiny: true, align: 'right' });
+      const ready = A.meter >= 100;
+      R(x + 5, y + 31, bw, 3, 'INK.1');
+      R(x + 5, y + 31, Math.round(bw * A.meter / 100), 3, ready ? 'ROT.3' : 'ROT.1');
+      if (ready && KD.PX.has('ic_turn')) {
+        KD.PX.blit(ctx2, 'ic_turn', x + w - 19, y + 20, { anchor: false });
+      }
+    }
   }
 
   /* ================================================================
@@ -618,49 +630,6 @@ KD.Scenes.battle = (function () {
       KD.Text.draw('?', bx + 9, by + 5, 'BONE.0', { align: 'center' });
     } else if (KD.PX.has(plan.icon)) {
       KD.PX.blit(ctx, plan.icon, bx + 2, by + 2, { anchor: false });
-    }
-  }
-
-  /* The ring: three chips in a triangle with the arrows between them, so
-     what beats what is on screen all fight. A rule you have to remember
-     is a rule you get wrong at the worst moment. The chip of whatever
-     they are winding up lights red; the one that answers it lights gold. */
-  function ring(ctx) {
-    const bw = 60, bh = 62;
-    const x = 5, y = Math.round(KD.H * 0.50) - bh / 2 + 8;
-    R(x, y, bw, bh, 'INK.0');
-    KD.Screen.frame(x, y, bw, bh, 'INK.2');
-    R(x + 1, y + 1, bw - 2, 1, 'INK.3');
-    const CH = 18;
-    const SPOT = {
-      quick: [Math.round((bw - CH) / 2), 3],
-      heavy: [4, bh - CH - 4],
-      sound: [bw - CH - 4, bh - CH - 4]
-    };
-    const ICON = { quick: 'ic_spd', heavy: 'ic_pow', sound: 'ic_sonar' };
-    /* the arrows first, under the chips: quick -> sound -> heavy -> quick */
-    const arrow = (fx, fy, tx, ty, col) => {
-      const steps = 5;
-      for (let k = 1; k < steps; k++) {
-        R(fx + (tx - fx) * k / steps - 1, fy + (ty - fy) * k / steps - 1, 2, 2, col);
-      }
-      R(tx - 1, ty - 1, 3, 3, col);
-    };
-    const mid = (id) => [x + SPOT[id][0] + CH / 2, y + SPOT[id][1] + CH / 2];
-    const [qx, qy] = mid('quick'), [hx, hy] = mid('heavy'), [sx, sy] = mid('sound');
-    arrow(qx + 6, qy + 4, sx - 2, sy - 6, P.CLS.quick.dim);
-    arrow(sx - 8, sy + 2, hx + 8, hy + 2, P.CLS.sound.dim);
-    arrow(hx - 2, hy - 6, qx - 6, qy + 4, P.CLS.heavy.dim);
-    for (const id in SPOT) {
-      const [dx, dy] = SPOT[id];
-      const C = P.CLS[id];
-      const theirs = plan && !planHid && plan.cls === id;
-      const yours = plan && !planHid && P.beats(id, plan.cls);
-      const cx = x + dx, cy = y + dy;
-      R(cx, cy, CH, CH, theirs ? 'BLOOD.0' : (yours ? 'GOLD.0' : 'INK.1'));
-      KD.Screen.frame(cx, cy, CH, CH,
-                      theirs ? 'BLOOD.3' : (yours ? 'GOLD.3' : C.dim));
-      if (KD.PX.has(ICON[id])) KD.PX.blit(ctx, ICON[id], cx + 1, cy + 1, { anchor: false });
     }
   }
 
@@ -804,26 +773,17 @@ KD.Scenes.battle = (function () {
     fighters(ctx);
     /* the plates */
     const pw = Math.min(120, (KD.W - 24) / 2);
-    plate(A, 6, 4, pw, false);
-    plate(B, KD.W - pw - 6, 4, pw, true);
-    /* The round, and the finisher, laid out as one horizontal strip in
-       the middle of the header so neither can land on the other. */
-    const ready = A.meter >= 100;
-    const lab = ready ? 'THE TURN IS READY' : 'THE TURN';
-    const lw = KD.Text.width(lab, { tiny: true });
-    const mw = 54;
-    const strip = lw + 5 + mw;
-    const sx = Math.round((KD.W - strip) / 2);
-    R(sx - 4, 10, strip + 8, 11, 'INK.0');
-    KD.Text.draw('ROUND ' + round, KD.W / 2, 2, 'BONE.1',
-                 { tiny: true, align: 'center', shadow: 'INK.0' });
-    KD.Text.draw(lab, sx, 12, ready ? 'ROT.3' : 'INK.3', { tiny: true });
-    const mx = sx + lw + 5;
-    R(mx, 12, mw, 6, 'INK.1');
-    R(mx + 1, 13, Math.round((mw - 2) * A.meter / 100), 4,
-      ready ? 'ROT.3' : 'ROT.1');
-    KD.Screen.frame(mx, 12, mw, 6, ready ? 'ROT.2' : 'INK.2');
+    plate(ctx, A, 6, 4, pw, false);
+    plate(ctx, B, KD.W - pw - 6, 4, pw, true);
+    /* The round and the finisher used to be a strip of their own across
+       the middle of the header, between two name plates - a third HUD
+       element competing with the two either side of it. They belong to
+       your animal, so they live on your animal's plate. */
 
+    /* The handler's line is a WALK-ON. It used to sit across the middle
+       of the pit for three and a half seconds of every round that said
+       anything, which is a sentence you have already read competing
+       with the move you are trying to pick. */
     if (msgT > 0 && phase !== 'done' && phase !== 'time') {
       const tw = KD.Text.width(shownMsg, { tiny: true }) + 14;
       const tx = Math.round((KD.W - tw) / 2);
@@ -833,7 +793,7 @@ KD.Scenes.battle = (function () {
                    { tiny: true, align: 'center' });
     }
 
-    if (phase !== 'done') { telegraph(ctx); ring(ctx); }
+    if (phase !== 'done') telegraph(ctx);
     if (phase === 'pick') picker(ctx);
     else if (phase === 'time') timing();
     else if (phase === 'done') endCard();

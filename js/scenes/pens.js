@@ -25,11 +25,11 @@ KD.Scenes.pens = (function () {
   const P = KD.Pod;
   const R = (x, y, w, h, c) => KD.Screen.rect(Math.round(x), Math.round(y),
                                               Math.round(w), Math.round(h), c);
-  let t = 0, tab = 0, sel = 0, msg = '', msgT = 0, flashT = 0;
+  let t = 0, tab = -1, sel = 0, msg = '', msgT = 0, flashT = 0;
   const TABS = ['THE POD', 'DRILLS', 'THE DEALER'];
 
   function enter() {
-    t = 0; sel = 0;
+    t = 0; sel = 0; tab = -1;
     P.init();
     KD.Day.init();
     if (!KD.State.S.market) P.restock();
@@ -56,13 +56,19 @@ KD.Scenes.pens = (function () {
       }
     }
 
-    if (KD.In.isHit('Tab')) { tab = (tab + 1) % TABS.length; sel = 0; KD.Sfx.play('click'); }
+    /* TAB opens the drawer and walks the tabs; ESC shuts it. */
+    if (KD.In.isHit('Tab')) {
+      tab = tab + 1 >= TABS.length ? -1 : tab + 1;
+      sel = 0; KD.Sfx.play('click');
+    }
+    if (panelOpen() && KD.In.isHit('Escape')) { tab = -1; KD.Sfx.play('click'); return; }
     if (KD.In.isHit('Digit1')) { tab = 0; sel = 0; }
     if (KD.In.isHit('Digit2')) { tab = 1; sel = 0; }
     if (KD.In.isHit('Digit3')) { tab = 2; sel = 0; }
     if (KD.In.isHit('KeyQ')) { KD.Game.go('circuit', {}); return; }
     if (KD.In.isHit('KeyT')) { KD.Game.go('tree', {}); return; }
     if (KD.In.isHit('KeyR')) { swimOff(); return; }
+    if (KD.In.isHit('KeyE') && !panelOpen()) { tab = 1; sel = 0; KD.Sfx.play('open'); return; }
     if (KD.In.isHit('KeyZ')) { bed(); return; }
 
     const n = rowCount();
@@ -74,12 +80,14 @@ KD.Scenes.pens = (function () {
   }
 
   function rowCount() {
+    if (tab < 0) return 0;
     if (tab === 0) return P.pod().length;
     if (tab === 1) return P.DRILLS.length;
     return P.market().length;
   }
 
   function commit() {
+    if (tab < 0) return;
     if (tab === 0) {
       const d = P.pod()[sel];
       if (d) { P.setActive(d); say(d.name + ' is up.', 'GOLD.3'); KD.State.save(); }
@@ -129,38 +137,55 @@ KD.Scenes.pens = (function () {
        134     the keys
        140+    the panel
      ================================================================ */
-  const HEAD = 16, BIGY = 20, BIGH = 64, PENY = 88, PENH = 42;
+  /* THREE BANDS, not seven.
+
+     The yard had grown a strip per feature: a header, a bright teal
+     water band, a rope walk, six pens, a button row, a tab row and a
+     panel - seven horizontal slabs in two hundred and forty rows, none
+     of them looking more important than any other, and five identical
+     EMPTY boxes taking a third of the screen.
+
+       0-14     the day, the money, what is left of it
+       14-158   THE YARD: one water column, the shed, the cart, and the
+                animal that is up, big, in the middle of it, with your
+                pod along the bottom - the ones you OWN, and one slot.
+       158-240  four things you can do. The card, the drills and the
+                dealer live in a drawer that only exists while open.
+     ------------------------------------------------------------------ */
+  const HEAD = 14, BAR = 150;
+  const BIGY = 26, BIGH = 74, PENY = 108, PENH = 38;
 
   function water() {
     const W = KD.W, H = KD.H;
-    const BANDS = [[0, 'WATER.1'], [0.10, 'WATER.0'], [0.30, 'DEEP.2'],
-                   [0.55, 'DEEP.1'], [0.80, 'DEEP.0']];
+    /* ONE ramp, top to bottom. It opened on WATER.1 - a bright cyan -
+       and dropped to DEEP.0 a third of the way down, which read as two
+       different games stitched together at the waterline. */
+    const BANDS = [[0, 'DEEP.3'], [0.16, 'DEEP.2'], [0.42, 'DEEP.1'],
+                   [0.66, 'DEEP.0'], [0.88, 'INK.1']];
     for (let i = 0; i < BANDS.length; i++) {
       const y0 = Math.round(H * BANDS[i][0]);
       const y1 = i + 1 < BANDS.length ? Math.round(H * BANDS[i + 1][0]) : H;
       R(0, y0, W, y1 - y0, BANDS[i][1]);
     }
-    /* light off the surface, in solid bars - three, not four, because this
-       scene draws a 112x52 animal every frame and the budget is real */
     for (let i = 0; i < 3; i++) {
       const x = Math.round(((i * 151 + t * 5) % (W + 90)) - 45);
-      for (let k = 0; k < 12; k++) {
+      for (let k = 0; k < 10; k++) {
         const w = Math.max(2, 9 - (k >> 1));
-        R(x + k * 3, k * 5, w, 4, k < 5 ? 'WATER.2' : 'WATER.1');
+        R(x + k * 3, HEAD + k * 5, w, 4, k < 4 ? 'DEEP.4' : 'DEEP.3');
       }
     }
     for (let i = 0; i < 20; i++) {
       const x = Math.round((i * 191 + t * 6) % W);
       const y = Math.round((i * 71 - t * 4 + H * 6) % H);
-      R(x, y, 1, 1, i % 3 ? 'WATER.0' : 'WATER.2');
+      R(x, y, 1, 1, i % 3 ? 'DEEP.3' : 'WATER.0');
     }
   }
 
   /* the shed on the left and the dealer's cart on the right, both up in
      the band with the big animal so nothing lands on a pen */
   function buildings() {
-    shed(4, BIGY + 6);
-    cart(KD.W - 60, BIGY + 12);
+    shed(4, BIGY + 2);
+    cart(KD.W - 60, BIGY + 8);
   }
 
   function shed(x, y) {
@@ -198,9 +223,6 @@ KD.Scenes.pens = (function () {
     const pose = Math.floor(t * 1.3) % 2 ? 'cruise1' : 'cruise0';
     const x = Math.round((KD.W - KD.Dolph.W) / 2);
     const y = BIGY + Math.round((BIGH - KD.Dolph.H) / 2) + bob;
-    /* a shadow on the sand under it, so it is IN the water and not on it */
-    const sw = 70 - Math.abs(bob) * 3;
-    R((KD.W - sw) / 2, BIGY + BIGH - 3, sw, 3, 'DEEP.0');
     KD.Dolph.draw(ctx, d, pose, x, y, {});
     /* bubbles off the blowhole */
     for (let i = 0; i < 4; i++) {
@@ -219,52 +241,49 @@ KD.Scenes.pens = (function () {
   }
 
   /* ---- the six bays ------------------------------------------------- */
+  /* YOUR POD, as portraits of the animals you actually have, plus one
+     slot with a plus in it. Six identical boxes reading EMPTY was a
+     third of the screen spent telling you about things you do not own. */
   function bays(ctx) {
     const W = KD.W;
-    const bayW = Math.floor((W - 10) / P.PENS);
-    const shelfY = PENY;
-    R(0, shelfY - 3, W, 3, 'STONE.1');
-    R(0, shelfY, W, PENH + 6, 'STONE.0');
-    const act = P.active();
     const pod = P.pod();
-    for (let i = 0; i < P.PENS; i++) {
-      const x = 5 + i * bayW;
-      const bw = bayW - 3;
-      R(x, shelfY + 2, bw, PENH, 'DEEP.0');
-      R(x, shelfY + 2, bw, 1, 'INK.0');
-      KD.Screen.frame(x, shelfY + 2, bw, PENH, 'STONE.0');
-      /* a post and a slack rope over each bay */
-      R(x - 1, shelfY - 9, 3, 11, 'WOOD.1');
-      R(x - 1, shelfY - 9, 3, 2, 'WOOD.3');
-      for (let k = 0; k < bw; k += 3) {
-        R(x + k, shelfY - 8 + Math.round(Math.sin(k * 0.5 + t) * 1), 2, 1, 'SAND.1');
-      }
+    const act = P.active();
+    const n = Math.min(P.PENS, pod.length + 1);
+    const bw = Math.min(62, Math.floor((W - 20) / n) - 4), gap = 4;
+    const total = n * (bw + gap) - gap;
+    const x0 = Math.round((W - total) / 2);
+    R(0, PENY - 4, W, 2, 'STONE.0');
+    R(0, PENY - 2, W, PENH + 6, 'INK.1');
+    for (let i = 0; i < n; i++) {
+      const x = x0 + i * (bw + gap);
       const d = pod[i];
+      const on = d && act && act.uid === d.uid;
+      const hot = KD.UI.inside(x, PENY, bw, PENH);
+      R(x, PENY, bw, PENH, on ? 'DEEP.1' : 'INK.0');
+      R(x + 1, PENY + 1, bw - 2, 1, on ? 'DEEP.3' : 'INK.2');
+      KD.Screen.frame(x, PENY, bw, PENH, on ? 'GOLD.3' : (hot ? 'BONE.0' : 'INK.2'));
       if (!d) {
-        KD.Text.draw('EMPTY', x + bw / 2, shelfY + 18, 'INK.2',
-                     { tiny: true, align: 'center' });
+        const cx = x + (bw >> 1), cy = PENY + (PENH >> 1);
+        R(cx - 7, cy - 2, 15, 4, 'INK.2');
+        R(cx - 2, cy - 7, 4, 15, 'INK.2');
         continue;
       }
       const c = KD.Dolph.get(d, (i + Math.floor(t * 1.4)) % 2 ? 'cruise1' : 'cruise0');
-      const dw = Math.min(bw - 6, 54), dh = Math.round(dw * KD.Dolph.H / KD.Dolph.W);
+      const dw = bw - 8, dh = Math.round(dw * KD.Dolph.H / KD.Dolph.W);
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(c, 0, 0, KD.Dolph.W, KD.Dolph.H,
-                    Math.round(x + (bw - dw) / 2),
-                    Math.round(shelfY + 8 + Math.sin(t * 1.3 + i) * 2), dw, dh);
-      const on = act && act.uid === d.uid;
-      if (on) {
-        KD.Screen.frame(x, shelfY + 2, bw, PENH, 'GOLD.2');
-        R(x + bw / 2 - 5, shelfY - 3, 10, 3, 'GOLD.3');
-      }
-      if (!P.fit(d)) {
-        KD.Text.draw(d.hurt + 'd', x + bw - 3, shelfY + 5, 'BLOOD.3',
-                     { tiny: true, align: 'right', shadow: 'INK.0' });
-      }
-      KD.Text.draw(d.name.toUpperCase(), x + bw / 2, shelfY + PENH - 9,
+                    Math.round(x + 4), Math.round(PENY + 5 + Math.sin(t * 1.3 + i) * 2),
+                    dw, dh);
+      KD.Text.draw(d.name.toUpperCase(), x + (bw >> 1), PENY + PENH - 8,
                    on ? 'GOLD.3' : 'BONE.1',
                    { tiny: true, align: 'center', shadow: 'INK.0' });
-      /* clicking a bay puts that one up */
-      if (KD.UI.inside(x, shelfY + 2, bw, PENH) && KD.In.mouse.click && !KD.UI.blocked()) {
+      /* mending, or a point waiting - the only two marks worth making */
+      if (!P.fit(d) && KD.PX.has('ic_hurt')) {
+        KD.PX.blit(ctx, 'ic_hurt', x + bw - 16, PENY + 1, { anchor: false });
+      } else if (KD.Tree && KD.Tree.points(d) > 0) {
+        R(x + bw - 7, PENY + 3, 4, 4, 'GOLD.3');
+      }
+      if (hot && KD.In.mouse.click && !KD.UI.blocked()) {
         KD.In.consumedClick();
         P.setActive(d); sel = i; tab = 0;
         say(d.name + ' is up.', 'GOLD.3');
@@ -325,29 +344,45 @@ KD.Scenes.pens = (function () {
                  { tiny: true, max: Math.max(40, w - 100 - mv.length * 19) });
   }
 
+  /* The card, the drills and the dealer live in a DRAWER now. It used to
+     be nailed to the bottom of the screen whether you wanted it or not,
+     which is why the yard had no room left to be a yard. Nothing is open
+     by default; a tab opens one over everything, ESC shuts it. */
+  const panelOpen = () => tab >= 0;
   function panel(ctx) {
+    if (!panelOpen()) return;
     const W = KD.W, H = KD.H;
-    const pw = W - 12, ph = 76;
-    const x = 6, y = H - ph - 4;
+    const pw = W - 12, ph = 112;
+    const x = 6, y = H - ph - 6;
+    /* a SOLID blackout behind it - what is underneath is not competing */
+    R(0, 0, W, H, 'INK.0');
     R(x - 1, y - 1, pw + 2, ph + 2, 'INK.0');
     R(x, y, pw, ph, 'DEEP.0');
     KD.Screen.frame(x, y, pw, ph, 'GOLD.0');
     R(x + 1, y + 1, pw - 2, 1, 'DEEP.2');
-    /* tabs */
     let tx = x + 4;
     TABS.forEach((lab, i) => {
       const tw = KD.Text.width(lab, { tiny: true }) + 10;
       const on = i === tab;
-      R(tx, y - 8, tw, 10, on ? 'GOLD.0' : 'INK.0');
-      KD.Screen.frame(tx, y - 8, tw, 10, on ? 'GOLD.2' : 'INK.2');
-      KD.Text.draw(lab, tx + tw / 2, y - 6, on ? 'GOLD.3' : 'INK.3',
+      R(tx, y - 10, tw, 12, on ? 'GOLD.0' : 'INK.1');
+      KD.Screen.frame(tx, y - 10, tw, 12, on ? 'GOLD.2' : 'INK.2');
+      KD.Text.draw(lab, tx + tw / 2, y - 7, on ? 'GOLD.3' : 'BONE.0',
                    { tiny: true, align: 'center' });
-      if (KD.UI.inside(tx, y - 8, tw, 10) && KD.In.mouse.click && !KD.UI.blocked()) {
+      if (KD.UI.inside(tx, y - 10, tw, 12) && KD.In.mouse.click && !KD.UI.blocked()) {
         KD.In.consumedClick(); tab = i; sel = 0; KD.Sfx.play('click');
       }
       tx += tw + 2;
     });
-
+    KD.Text.draw(KD.touch ? 'tap away' : 'ESC', x + pw - 4, y - 7, 'INK.3',
+                 { tiny: true, align: 'right' });
+    /* the animal this is about, up top where the yard was */
+    const d0 = P.active();
+    if (d0 && tab !== 2) {
+      const c = KD.Dolph.get(d0, Math.floor(t * 1.3) % 2 ? 'cruise1' : 'cruise0');
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(c, 0, 0, KD.Dolph.W, KD.Dolph.H,
+                    Math.round((W - 96) / 2), 24, 96, 45);
+    }
     if (tab === 0) card(ctx, P.pod()[sel] || P.active(), x + 8, y + 8, pw - 16);
     else if (tab === 1) drills(x + 8, y + 8, pw - 16);
     else dealer(x + 8, y + 8, pw - 16);
@@ -438,53 +473,61 @@ KD.Scenes.pens = (function () {
      learn. This was a line of prose reading "Q the quarry - R swim with
      it - Z sleep - TAB tabs", which is a manual, not a control. */
   const ACTS = [
-    { key: 'Q', icon: 'ic_quarry', col: 'ROT.3',   act: () => KD.Game.go('circuit', {}) },
-    { key: 'R', icon: 'ic_swim',   col: 'WATER.2', act: () => swimOff() },
-    { key: 'T', icon: 'ic_sk_crit', col: 'GOLD.3', act: () => KD.Game.go('tree', {}) },
-    { key: 'Z', icon: 'ic_sleep',  col: 'BONE.1',  act: () => bed() }
+    { key: 'Q', icon: 'ic_quarry', col: 'ROT.3',   lab: 'FIGHT',
+      act: () => KD.Game.go('circuit', {}) },
+    { key: 'R', icon: 'ic_swim',   col: 'WATER.2', lab: 'SWIM',  act: () => swimOff() },
+    { key: 'E', icon: 'ic_dr_pow', col: 'KELP.3',  lab: 'TRAIN',
+      act: () => { tab = 1; sel = 0; KD.Sfx.play('open'); } },
+    { key: 'Z', icon: 'ic_sleep',  col: 'BONE.1',  lab: 'SLEEP', act: () => bed() }
   ];
+
+  /* FOUR THINGS YOU CAN DO, big enough to be the answer to "what now".
+     This was a row of small chips wedged between the pens and a tab
+     strip, over a panel that was always open - so the screen ended in
+     three bands of interface with no hierarchy between them. */
   function keys(ctx) {
-    const bw = 42, bh = 24, gap = 5;
-    const total = ACTS.length * (bw + gap) - gap;
-    const x0 = Math.round((KD.W - total) / 2);
-    const y = PENY + PENH + 4;
-    const d = P.active();
-    const pts = d && KD.Tree ? KD.Tree.points(d) : 0;
+    const W = KD.W;
+    const gap = 5;
+    const bw = Math.floor((W - 12 - gap * 3) / 4), bh = 56;
+    const x0 = Math.round((W - (bw * 4 + gap * 3)) / 2), y = BAR + 4;
     for (let i = 0; i < ACTS.length; i++) {
-      const a = ACTS[i];
+      const a2 = ACTS[i];
       const x = x0 + i * (bw + gap);
       const hot = KD.UI.inside(x, y, bw, bh);
-      if (hot && KD.In.mouse.click && !KD.UI.blocked()) { KD.In.consumedClick(); a.act(); }
-      R(x, y, bw, bh, hot ? 'DEEP.1' : 'INK.0');
+      if (hot && KD.In.mouse.click && !KD.UI.blocked()) { KD.In.consumedClick(); a2.act(); }
+      R(x, y, bw, bh, hot ? 'DEEP.1' : 'INK.1');
       R(x + 1, y + 1, bw - 2, 1, hot ? 'DEEP.3' : 'INK.2');
-      KD.Screen.frame(x, y, bw, bh, hot ? 'GOLD.3' : a.col);
-      if (KD.PX.has(a.icon)) KD.PX.blit(ctx, a.icon, x + 4, y + 4, { anchor: false });
-      if (!KD.touch) {
-        KD.Text.draw(a.key, x + bw - 5, y + 9, a.col, { align: 'right' });
+      KD.Screen.frame(x, y, bw, bh, hot ? 'GOLD.3' : a2.col);
+      if (KD.PX.has(a2.icon)) {
+        KD.PX.blit(ctx, a2.icon, x + Math.round((bw - 16) / 2), y + 9, { anchor: false });
       }
-      /* the tree button wears the points waiting on it */
-      if (a.key === 'T' && pts > 0) {
-        const n = Math.min(3, pts);
-        for (let k = 0; k < n; k++) R(x + bw - 5 - k * 5, y + bh - 6, 4, 4, 'GOLD.3');
+      KD.Text.draw(a2.lab, x + (bw >> 1), y + 30, hot ? 'GOLD.3' : a2.col,
+                   { align: 'center', shadow: 'INK.0' });
+      if (!KD.touch) {
+        KD.Text.draw(a2.key, x + (bw >> 1), y + 43, 'INK.3',
+                     { tiny: true, align: 'center' });
+      }
+      if (a2.key === 'E') {
+        const d0 = P.active();
+        if (d0 && KD.Tree && KD.Tree.points(d0) > 0) R(x + bw - 8, y + 3, 5, 5, 'GOLD.3');
       }
     }
+    /* under the buttons, where nothing else lives */
+    KD.Text.draw(KD.touch ? 'tap a pen to change who fights'
+                          : 'TAB  the card   -   T  its board',
+                 W / 2, KD.H - 9, 'BONE.0', { tiny: true, align: 'center' });
   }
 
   function draw(ctx) {
     water();
-    buildings();
-    hero(ctx);
-    bays(ctx);
-    head();
-    keys(ctx);
-    panel(ctx);
-    if (msgT > 0) {
-      const tw = KD.Text.width(msg) + 14;
-      const tx = Math.round((KD.W - tw) / 2);
-      R(tx, HEAD + 2, tw, 14, 'INK.0');
-      KD.Screen.frame(tx, HEAD + 2, tw, 14, flashT > 0 ? 'WHITE' : 'GOLD.0');
-      KD.Text.draw(msg, KD.W / 2, HEAD + 5, 'BONE.2', { align: 'center' });
+    if (!panelOpen()) {
+      buildings();
+      hero(ctx);
+      bays(ctx);
+      keys(ctx);
     }
+    head();
+    panel(ctx);
     KD.Coach.draw();
   }
 

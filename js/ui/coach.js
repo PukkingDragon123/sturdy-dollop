@@ -21,22 +21,22 @@ KD.Coach = (function () {
      tip that is not about anywhere in particular. */
   const TIPS = {
     pens_hero: { text: 'This one fights. Pick a pen to change it.',
-                 at: () => ({ x: KD.W / 2, y: 84 }) },
-    pens_keys: { text: 'Q takes you down to the card.',
-                 at: () => ({ x: KD.W / 2, y: 136 }) },
-    pens_tree: { text: 'It levelled. T spends the point.',
-                 at: () => ({ x: KD.W / 2, y: 136 }) },
-    pens_swim: { text: 'Bond unlocks moves. R gets in the water.',
-                 at: () => ({ x: KD.W / 2, y: 136 }) },
+                 at: () => ({ x: KD.W / 2, y: 44 }) },
+    pens_keys: { text: 'FIGHT takes you down to tonight\'s card.',
+                 at: () => ({ x: KD.W * 0.16, y: 150 }) },
+    pens_tree: { text: 'It levelled. TRAIN spends the point.',
+                 at: () => ({ x: KD.W * 0.62, y: 150 }) },
+    pens_swim: { text: 'Bond unlocks moves. SWIM raises it.',
+                 at: () => ({ x: KD.W * 0.39, y: 150 }) },
 
-    fight_ring: { text: 'They telegraph. This ring says what beats it.',
-                  at: () => ({ x: 34, y: Math.round(KD.H * 0.5) + 8 }) },
-    fight_pick: { text: 'Answer it. A gold ring means that move counters.',
-                  at: () => ({ x: KD.W / 2, y: KD.H - 40 }) },
+    fight_ring: { text: 'They wind up first. That is what they will throw.',
+                  at: () => ({ x: KD.W - 60, y: 74 }) },
+    fight_pick: { text: 'A gold ring round a move means it beats that.',
+                  at: () => ({ x: KD.W / 2, y: KD.H - 66 }) },
     fight_bar:  { text: 'Stop it in the green.',
-                  at: () => ({ x: KD.W / 2, y: KD.H - 60 }) },
-    fight_combo: { text: 'Clean hit. Go again at half the breath.',
-                   at: () => ({ x: KD.W / 2, y: KD.H - 40 }) },
+                  at: () => ({ x: KD.W / 2, y: KD.H - 70 }) },
+    fight_combo: { text: 'Clean. Go again at half the breath.',
+                   at: () => ({ x: KD.W / 2, y: KD.H - 66 }) },
     fight_air:  { text: 'Low breath. HOLD gets some back.',
                   at: () => ({ x: 60, y: 30 }) },
 
@@ -49,6 +49,11 @@ KD.Coach = (function () {
   };
 
   let live = null, t = 0, life = 0, arrow = null;
+  /* WHICH SCENE the live tip belongs to. A tip fired in the pens was still
+     on screen in the middle of a fight, pointing at nothing, because
+     nothing ever cleared it - so the guide became the single most
+     out-of-place thing in the game. */
+  let scene = '';
 
   const seenBag = () => {
     const S = KD.State && KD.State.S;
@@ -63,6 +68,7 @@ KD.Coach = (function () {
     if (!TIPS[id] || seen(id) || live) return false;
     seenBag()[id] = 1;
     live = TIPS[id]; t = 0; life = 4.6;
+    scene = KD.Game ? KD.Game.scene : '';
     arrow = live.at ? live.at() : null;
     KD.Sfx.play('open');
     if (KD.State.save) KD.State.save();
@@ -73,6 +79,8 @@ KD.Coach = (function () {
 
   function update(dt) {
     if (!live) return false;
+    /* it belongs to the room it was fired in, and nowhere else */
+    if (KD.Game && KD.Game.scene !== scene) { live = null; return false; }
     t += dt;
     life -= dt;
     /* any commit key puts it away, but not before it has been on screen
@@ -91,23 +99,36 @@ KD.Coach = (function () {
     const R = KD.Screen.rect;
     const k = Math.min(1, t * 6);
     const words = live.text;
-    const tw = KD.Text.width(words, { tiny: true }) + 22;
+    /* room for the words AND the dismiss hint, or the two overlap - which
+       is exactly what "CHANGE" running into "SPACE" was */
+    const hint = KD.touch ? 'tap' : 'SPACE';
+    const tw = Math.min(KD.W - 12,
+                        KD.Text.width(words, { tiny: true }) +
+                        KD.Text.width(hint, { tiny: true }) + 26);
     const h = 17;
     const x = Math.round((KD.W - tw) / 2);
     /* the plate sits under whatever it points at, or at the foot of the
        frame when the tip is about nothing in particular */
-    let y = arrow ? Math.round(arrow.y) + 14 : KD.H - 40;
-    if (y + h > KD.H - 6) y = Math.round(arrow ? arrow.y : KD.H) - h - 16;
+    /* POINT UP AT THE TOP HALF, DOWN AT THE BOTTOM HALF. A callout that
+       always hangs below its target covers whatever it is pointing at
+       the moment the target is a button near the foot of the screen -
+       which is exactly what buried SWIM and TRAIN under their own tip. */
+    const below = !arrow || arrow.y < KD.H * 0.52;
+    let y = arrow ? (below ? Math.round(arrow.y) + 14
+                           : Math.round(arrow.y) - h - 14)
+                  : KD.H - 40;
+    y = Math.max(4, Math.min(KD.H - h - 4, y));
     const yy = Math.round(y + (1 - k) * 6);
 
     /* the arrow, three solid steps, pointing back up at the thing */
     if (arrow) {
       const ax = Math.round(arrow.x);
       const ay = Math.round(arrow.y) + 3 + Math.round(Math.sin(t * 6) * 2);
-      const up = yy > ay;
+      /* the arrow narrows toward whatever it names */
       for (let i = 0; i < 5; i++) {
         const w = 9 - i * 2;
-        R(ax - (w >> 1), up ? ay + i * 2 : ay - i * 2, w, 2, i < 2 ? 'GOLD.3' : 'GOLD.1');
+        R(ax - (w >> 1), below ? ay + i * 2 : ay - 4 - i * 2, w, 2,
+          i < 2 ? 'GOLD.3' : 'GOLD.1');
       }
     }
     R(x - 2, yy - 2, tw + 4, h + 4, 'INK.0');
@@ -119,7 +140,7 @@ KD.Coach = (function () {
     R(x + 5, yy + 10, 3, 2, 'GOLD.3');
     KD.Text.draw(words, x + 13, yy + 5, 'BONE.2', { tiny: true });
     if (t > 0.5) {
-      KD.Text.draw(KD.touch ? 'tap' : 'SPACE', x + tw - 5, yy + 6, 'INK.3',
+      KD.Text.draw(hint, x + tw - 5, yy + 6, 'INK.3',
                    { tiny: true, align: 'right' });
     }
   }
