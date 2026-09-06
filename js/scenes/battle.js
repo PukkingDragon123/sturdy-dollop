@@ -46,6 +46,14 @@ KD.Scenes.battle = (function () {
   /* what the other animal is winding up this round, decided BEFORE you
      pick so that reading it is the game */
   let plan = null, planHid = false, tellT = 0;
+  /* THE WAY OUT. There was none: once you were in the pit you were in it
+     until somebody dropped, and Escape did nothing at all. */
+  let quitting = false;
+  /* the two answers on the leave plate, laid out by the card and read
+     by the update - a tap has to be able to say YES, not only NO. */
+  const QYES = { x: 0, y: 0, w: 0, h: 0 }, QNO = { x: 0, y: 0, w: 0, h: 0 };
+  /* the hit-stop, the crowd, and the shards a landed blow throws */
+  let freeze = 0, roar = 0, shards = [];
   let combo = 0, comboMax = 1;      /* how many extra strikes this round */
   let lastQ = '';                   /* what the last strike was, for the banner */
   const BTNS = [];
@@ -64,6 +72,7 @@ KD.Scenes.battle = (function () {
     combo = 0;
     comboMax = 1 + (KD.Tree ? KD.Tree.val(mine, 'combo') : 0);
     plan = null; planHid = false; lastQ = '';
+    quitting = false; freeze = 0; roar = 0; shards = [];
     phase = 'in';
     say(entry.who.toUpperCase() + ' AND ' + foe.name.toUpperCase());
     KD.Sfx.play('open');
@@ -75,7 +84,7 @@ KD.Scenes.battle = (function () {
       hp: P.hpMax(d), hpMax: P.hpMax(d),
       air: P.airMax(d), airMax: P.airMax(d),
       pose: 'cruise0', poseT: 0,
-      stun: 0, guard: 0, meter: 0,
+      stun: 0, guard: 0, meter: 0, dash: 0,
       x: isFoe ? 0 : 0, bob: Math.random() * 6, shake: 0
     };
   }
@@ -181,11 +190,33 @@ KD.Scenes.battle = (function () {
     if (dmg > 0) {
       def.pose = 'hit'; def.poseT = 0.45;
       def.shake = critHit ? 7 : 4;
-      KD.Fx.shake(critHit ? 6 : 3);
-      hitFx.push({ x: def.foe ? 300 : 120, y: 118, t: 0, crit: critHit });
-      nums.push({ v: dmg, x: def.foe ? 320 : 120, y: 108, t: 0, crit: critHit });
+      /* THE LUNGE. A strike used to nudge the attacker ten pixels. It
+         crosses most of the pit now, connects, and is dragged back - so
+         the two animals actually meet. */
+      att.dash = 1;
+      /* THE HIT-STOP: the whole frame holds for a beat on contact. */
+      freeze = countered ? 0.16 : (critHit ? 0.13 : (quality === 'clean' ? 0.09 : 0.04));
+      KD.Fx.shake(critHit || countered ? 7 : 4);
+      const hx = def.foe ? KD.W - 120 : 120, hy = Math.round(KD.H * 0.52);
+      hitFx.push({ x: hx, y: hy, t: 0, crit: critHit });
+      nums.push({ v: dmg, x: hx, y: hy - 12, t: 0, crit: critHit });
+      /* solid shards off the point of contact, thrown toward the defender */
+      const n = countered ? 16 : (critHit ? 13 : (quality === 'clean' ? 9 : 5));
+      const away = def.foe ? 1 : -1;
+      for (let i = 0; i < n; i++) {
+        const a2 = (i / n) * Math.PI * 2;
+        const sp = 60 + (i % 5) * 46;
+        shards.push({ x: hx, y: hy, vx: Math.cos(a2) * sp + away * 70,
+                      vy: Math.sin(a2) * sp, t: 0, life: 0.30 + (i % 4) * 0.09,
+                      w: 1 + (i % 3),
+                      col: countered ? 'GOLD.3' : (critHit ? 'BONE.2' : 'WATER.3') });
+      }
+      /* and the crowd gets up */
+      if (countered || critHit) roar = 0.9;
       KD.Sfx.play(critHit ? 'crit' : 'hit');
     } else {
+      att.dash = 0.55;                 /* a swing through nothing still moves */
+      freeze = 0.03;
       KD.Sfx.play('deny');
     }
 
@@ -240,9 +271,50 @@ KD.Scenes.battle = (function () {
 
   /* ---- update ------------------------------------------------------- */
   function update(dt) {
+    /* THE WAY OUT COMES FIRST, before the guide, before the phases, before
+       anything that could swallow it. */
+    if (quitting) {
+      const click = KD.In.mouse.click && !KD.UI.blocked();
+      const on = (r) => click && r.w > 0 && KD.UI.inside(r.x, r.y, r.w, r.h);
+      if (KD.In.isHit('Escape') || KD.In.isHit('KeyY') || on(QYES)) {
+        KD.In.consumedClick(); forfeit(); return;
+      }
+      if (KD.In.isHit('Space', 'Enter', 'KeyE', 'KeyN') || on(QNO) || click) {
+        KD.In.consumedClick(); quitting = false; KD.Sfx.play('click');
+      }
+      t += dt;
+      return;
+    }
+    if (phase !== 'done' && KD.In.isHit('Escape') && combo === 0) {
+      quitting = true; KD.Sfx.play('deny');
+      return;
+    }
+
+    /* HIT-STOP. A landed blow holds the whole frame for a beat before the
+       world starts again, which is most of what makes a hit feel like
+       contact rather than like a number changing. */
+    if (freeze > 0) {
+      freeze -= dt;
+      t += dt * 0.15;
+      for (const sp of shards) { sp.t += dt * 0.15; }
+      return;
+    }
+
     t += dt; pt += dt;
     if (msgT > 0) msgT -= dt;
+    if (roar > 0) roar -= dt;
     KD.Fx.update(dt);
+    /* the shards a blow throws off */
+    for (let i = shards.length - 1; i >= 0; i--) {
+      const sp = shards[i];
+      sp.t += dt; sp.x += sp.vx * dt; sp.y += sp.vy * dt; sp.vy += 120 * dt;
+      if (sp.t > sp.life) shards.splice(i, 1);
+    }
+    /* the lunge each fighter is part-way through */
+    for (const f of [A, B]) {
+      if (!f) continue;
+      if (f.dash > 0) f.dash = Math.max(0, f.dash - dt * 2.6);
+    }
     /* the guide eats its own dismissal, so closing a tip never also
        commits a move */
     if (KD.Coach.update(dt)) return;
@@ -371,6 +443,16 @@ KD.Scenes.battle = (function () {
   const hit = () => KD.In.isHit('Space', 'Enter', 'KeyE') || KD.In.mouse.click ||
                     KD.In.actHit('act', 'use');
 
+  /* Walking out costs you the fee you already paid and a day of the
+     animal's time - the same as losing, because that is what it is. */
+  function forfeit() {
+    mine.losses = (mine.losses || 0) + 1;
+    mine.hurt = 1 + Math.floor(entry.t / 2);
+    KD.State.save();
+    KD.Sfx.play('deny');
+    KD.Game.go('circuit', {});
+  }
+
   function finish(won) {
     phase = 'done'; pt = 0;
     result = { won: won };
@@ -452,10 +534,16 @@ KD.Scenes.battle = (function () {
       const bx = s ? W - w + 3 + ((i * 7) % span) : 3 + ((i * 11) % span);
       const by = B0 + k * 10;
       const sway = Math.round(Math.sin(t * 1.2 + i * 1.7) * 1.4);
+      /* THEY GET UP when something lands properly - the only thing in the
+         picture that reacts to what you did */
+      const jump = roar > 0 ? Math.round(Math.abs(Math.sin(t * 14 + i)) * roar * 6) : 0;
       const c = i % 3 ? 'INK.0' : 'INK.1';
-      R(bx + sway, by - 6, 4, 6, c);          /* shoulders */
-      R(bx + sway, by - 9, 3, 3, c);          /* head */
-      if (i % 5 === 0) R(bx + sway + (s ? -2 : 3), by - 7, 2, 2, c);  /* an arm up */
+      R(bx + sway, by - 6 - jump, 4, 6, c);          /* shoulders */
+      R(bx + sway, by - 9 - jump, 3, 3, c);          /* head */
+      if (i % 5 === 0 || roar > 0) {
+        R(bx + sway + (s ? -2 : 3), by - 8 - jump - (roar > 0 ? 2 : 0), 2,
+          roar > 0 ? 4 : 2, c);                      /* an arm up */
+      }
     }
 
     /* lamps hung off the gantry, swinging, each with a solid cone that
@@ -542,11 +630,26 @@ KD.Scenes.battle = (function () {
       let x, flip;
       if (f.foe) { x = W - DW - 6; flip = true; }
       else { x = 6; flip = false; }
-      /* they lean in when they strike */
-      if (f.pose === 'strike') x += f.foe ? -10 : 10;
-      if (f.pose === 'hit') x += f.foe ? 8 : -8;
+      /* THE LUNGE. dash runs 1 -> 0 over a fifth of a second; the curve
+         throws the animal most of the way across the pit and drags it
+         back, so a strike is two animals meeting rather than a number
+         changing on a plate. */
+      if (f.dash > 0) {
+        const k = f.dash > 0.55 ? (1 - f.dash) / 0.45 : f.dash / 0.55;
+        const reach = (W - DW * 2 - 12) * 0.62;
+        x += (f.foe ? -1 : 1) * Math.round(KD.Juice.outCubic(Math.min(1, k)) * reach);
+      }
+      if (f.pose === 'hit') x += f.foe ? 10 : -10;
       KD.Dolph.draw(ctx, f.d, f.pose, x + sh, midY - KD.Dolph.H / 2 + bob, { flip: flip });
     }
+    /* the shards a blow throws off, solid and fading by count not alpha */
+    for (const sp of shards) {
+      const k = sp.t / sp.life;
+      if (k > 1) continue;
+      const w = Math.max(1, Math.round(sp.w * (1 - k * 0.6)));
+      R(sp.x, sp.y, w, w, k > 0.7 ? 'INK.3' : sp.col);
+    }
+
     /* the hits */
     for (const h of hitFx) {
       const k = h.t / 0.4;
@@ -736,6 +839,34 @@ KD.Scenes.battle = (function () {
                  KD.W / 2, y + h + 7, 'BONE.1', { tiny: true, align: 'center' });
   }
 
+  function quitCard() {
+    const w = Math.min(224, KD.W - 40), h = 62;
+    const x = Math.round((KD.W - w) / 2), y = Math.round((KD.H - h) / 2);
+    R(0, 0, KD.W, KD.H, 'INK.0');
+    R(x - 2, y - 2, w + 4, h + 4, 'INK.0');
+    R(x, y, w, h, 'DEEP.0');
+    R(x + 1, y + 1, w - 2, 1, 'DEEP.2');
+    KD.Screen.frame(x, y, w, h, 'BLOOD.2');
+    KD.Text.draw('LEAVE THE PIT?', KD.W / 2, y + 8, 'BLOOD.3',
+                 { align: 'center', space: 1, shadow: 'INK.0' });
+    KD.Text.draw('It counts as a loss, and ' + mine.name + ' takes a day.',
+                 KD.W / 2, y + 26, 'BONE.1', { tiny: true, align: 'center', max: w - 16 });
+    /* two answers you can hit with a finger as well as a key */
+    const bw = Math.round((w - 30) / 2), bh = 14, by = y + h - 20;
+    QYES.x = x + 10;         QYES.y = by; QYES.w = bw; QYES.h = bh;
+    QNO.x = x + w - 10 - bw; QNO.y = by;  QNO.w = bw;  QNO.h = bh;
+    for (const b of [QYES, QNO]) {
+      const yes = b === QYES;
+      const hot = KD.UI.inside(b.x, b.y, b.w, b.h);
+      R(b.x, b.y, b.w, b.h, hot ? (yes ? 'BLOOD.0' : 'DEEP.1') : 'INK.0');
+      KD.Screen.frame(b.x, b.y, b.w, b.h, yes ? 'BLOOD.2' : 'INK.3');
+      KD.Text.draw(yes ? (KD.touch ? 'LEAVE' : 'ESC  LEAVE')
+                       : (KD.touch ? 'STAY'  : 'SPACE  STAY'),
+                   b.x + (b.w >> 1), b.y + 4,
+                   yes ? 'BLOOD.3' : 'BONE.1', { tiny: true, align: 'center' });
+    }
+  }
+
   /* ---- the card at the end ------------------------------------------- */
   function endCard() {
     const w = Math.min(280, KD.W - 40), h = 96;
@@ -798,6 +929,21 @@ KD.Scenes.battle = (function () {
     else if (phase === 'time') timing();
     else if (phase === 'done') endCard();
 
+    /* the way out, and the plate that asks whether you meant it */
+    if (phase !== 'done') {
+      const lab = KD.touch ? 'LEAVE' : 'ESC  LEAVE';
+      const lw = KD.Text.width(lab, { tiny: true }) + 10;
+      const lx = KD.W - lw - 4, ly = KD.H - 12;
+      const hot = KD.UI.inside(lx, ly, lw, 11);
+      if (hot && KD.In.mouse.click && !KD.UI.blocked()) {
+        KD.In.consumedClick(); quitting = true; KD.Sfx.play('deny');
+      }
+      R(lx, ly, lw, 11, 'INK.0');
+      KD.Screen.frame(lx, ly, lw, 11, hot ? 'BLOOD.3' : 'INK.2');
+      KD.Text.draw(lab, lx + (lw >> 1), ly + 3, hot ? 'BLOOD.3' : 'INK.3',
+                   { tiny: true, align: 'center' });
+    }
+    if (quitting) quitCard();
     if (KD.touch) KD.UI.touchPad([], { noStick: true });
     KD.Coach.draw();
   }
