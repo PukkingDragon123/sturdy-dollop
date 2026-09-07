@@ -88,8 +88,10 @@ KD.Feed = (function () {
   }
   function staMax(d) {
     /* a fitter animal has a longer working day, so STAMINA the stat and
-       stamina the resource are the same idea at two time scales */
-    return Math.round(60 + (d && d.sta ? d.sta : 10) * 1.1);
+       stamina the resource are the same idea at two time scales.
+       SECOND WIND on the board adds to it. */
+    const sk = (KD.Tree && d) ? KD.Tree.val(d, 'stamax') : 0;
+    return Math.round(60 + (d && d.sta ? d.sta : 10) * 1.1 + sk);
   }
   function stam(d) {
     if (!d) return 0;
@@ -118,8 +120,10 @@ KD.Feed = (function () {
     if (fed(d) >= FED_MAX - 2) return { full: true, food: f };
     if (!take(id, 1)) return null;
     const before = fed(d);
-    d.fed = Math.min(FED_MAX, before + f.fed);
-    if (f.sta) d.stam = Math.min(staMax(d), stam(d) + f.sta);
+    /* APPETITE on the board gets more out of the same fish */
+    const app = KD.Tree ? KD.Tree.val(d, 'eat') : 0;
+    d.fed = Math.min(FED_MAX, before + Math.round(f.fed * (1 + app)));
+    if (f.sta) d.stam = Math.min(staMax(d), stam(d) + Math.round(f.sta * (1 + app)));
     /* a well-fed animal warms to whoever is holding the bucket */
     if (KD.Pod && KD.Pod.bondUp) KD.Pod.bondUp(d, 1);
     d.xp = (d.xp || 0) + 2;
@@ -131,20 +135,29 @@ KD.Feed = (function () {
      The one call the tracks and the gym make. Work costs FED and
      STAMINA together; if either is short it says which, and the scene
      that asked can put that on screen instead of a red X. */
+  /* what a session actually costs THIS animal - EASY KEEPER on the board
+     discounts it, so the two food nodes are worth real points */
+  function bill(d, need) {
+    const th = (KD.Tree && d) ? KD.Tree.val(d, 'thrift') : 0;
+    const k = Math.max(0.4, 1 - th);
+    return { fed: Math.round(need.fed * k), stam: Math.round(need.stam * k) };
+  }
   function canWork(d, need) {
     if (!d) return { ok: false, why: 'Nobody is up.' };
     if (!KD.Pod.fit(d)) return { ok: false, why: d.name + ' is still mending.' };
-    if (fed(d) < need.fed) {
+    const b = bill(d, need);
+    if (fed(d) < b.fed) {
       return { ok: false, why: d.name + ' is too hungry to work. Feed it.' };
     }
-    if (stam(d) < need.stam) {
+    if (stam(d) < b.stam) {
       return { ok: false, why: d.name + ' has nothing left today. Sleep on it.' };
     }
     return { ok: true };
   }
   function work(d, need) {
-    d.fed = Math.max(0, fed(d) - need.fed);
-    d.stam = Math.max(0, stam(d) - need.stam);
+    const b = bill(d, need);
+    d.fed = Math.max(0, fed(d) - b.fed);
+    d.stam = Math.max(0, stam(d) - b.stam);
     KD.State.save();
   }
 
@@ -164,5 +177,5 @@ KD.Feed = (function () {
 
   return { FOOD, BY_ID, FED_MAX,
            basket, count, total, give, take, rows,
-           fed, stam, staMax, mood, eat, canWork, work, newDay };
+           fed, stam, staMax, mood, eat, bill, canWork, work, newDay };
 })();

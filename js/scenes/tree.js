@@ -32,17 +32,26 @@ KD.Scenes.tree = (function () {
   /* ---- where every node sits ------------------------------------------
      The grid in rpg/tree.js is cells; this turns it into pixels once, so
      the wires and the hit tests agree with the drawing by construction. */
-  const CELL = 46, NODE = 26;
+  /* the grid comes out of the TABLE, so adding a node to rpg/tree.js
+     never means editing a size in here */
+  let COLS = 1, ROWS = 1;
+  for (const n of KD.Tree.NODES) {
+    COLS = Math.max(COLS, n.x + 1);
+    ROWS = Math.max(ROWS, n.y + 1);
+  }
   function board() {
-    const cols = 5, rows = 4;
-    const bw = cols * CELL, bh = rows * CELL;
-    const ox = Math.round((KD.W - bw) / 2) + 4;
-    const oy = 30;
-    return { ox, oy, bw, bh };
+    const cell = Math.max(24, Math.min(46,
+                   Math.floor((KD.W - 30) / COLS),
+                   Math.floor((KD.H - 74) / ROWS)));
+    const node = Math.max(16, Math.round(cell * 0.56));
+    const bw = (COLS - 1) * cell + node, bh = (ROWS - 1) * cell + node;
+    const ox = Math.round((KD.W - bw) / 2);
+    const oy = 26;
+    return { ox, oy, bw, bh, cell, node };
   }
   function at(n) {
     const B = board();
-    return { x: B.ox + n.x * CELL, y: B.oy + n.y * CELL };
+    return { x: B.ox + n.x * B.cell, y: B.oy + n.y * B.cell };
   }
 
   function update(dt) {
@@ -88,7 +97,7 @@ KD.Scenes.tree = (function () {
     if (KD.In.mouse.click && !KD.UI.blocked()) {
       for (let i = 0; i < N.length; i++) {
         const p = at(N[i]);
-        if (KD.UI.inside(p.x, p.y, NODE, NODE)) {
+        if (KD.UI.inside(p.x, p.y, board().node, board().node)) {
           KD.In.consumedClick();
           if (i === sel) buy(); else { sel = i; KD.Sfx.play('click'); }
           break;
@@ -134,26 +143,40 @@ KD.Scenes.tree = (function () {
   }
 
   function wires() {
-    for (const n of T.NODES) {
-      if (!n.req) continue;
-      const from = at(T.BY_ID[n.req]), to = at(n);
-      const live = T.rank(d, n.req) > 0;
+    const NODE = board().node;
+    /* one run per prerequisite. `req2` gets a wire too, otherwise the
+       cross-branch node looks like it hangs off one parent. */
+    const run = (n, reqId, dashed) => {
+      const from = at(T.BY_ID[reqId]), to = at(n);
+      const live = T.rank(d, reqId) > 0;
       const on = T.rank(d, n.id) > 0;
-      const col = on ? T.BRANCH[n.branch].col : (live ? T.BRANCH[n.branch].dim : 'INK.2');
+      const col = on ? T.BRANCH[n.branch].col
+                     : (live ? T.BRANCH[n.branch].dim : 'INK.2');
       const fx = from.x + NODE / 2, fy = from.y + NODE / 2;
       const tx = to.x + NODE / 2, ty = to.y + NODE / 2;
       /* elbow: down out of the parent, across, then down into the child.
          Solid two-pixel runs - a diagonal of single pixels at this size
          reads as dust. */
       const my = Math.round((fy + ty) / 2);
-      R(fx - 1, fy, 2, my - fy, col);
-      R(Math.min(fx, tx) - 1, my - 1, Math.abs(tx - fx) + 2, 2, col);
-      R(tx - 1, my, 2, ty - my, col);
+      const seg = (x, y, w, h) => {
+        if (!dashed) { R(x, y, w, h, col); return; }
+        /* the second prerequisite is dashed, so which parent is which
+           is readable without reading the panel */
+        if (w > h) { for (let i = 0; i < w; i += 6) R(x + i, y, 3, h, col); }
+        else { for (let i = 0; i < h; i += 6) R(x, y + i, w, 3, col); }
+      };
+      seg(fx - 1, fy, 2, my - fy);
+      seg(Math.min(fx, tx) - 1, my - 1, Math.abs(tx - fx) + 2, 2);
+      seg(tx - 1, my, 2, ty - my);
       /* a spark running down a live wire you have not bought yet */
-      if (live && !on) {
+      if (live && !on && !dashed) {
         const k = (t * 0.7 + n.y * 0.3) % 1;
         R(tx - 1, my + (ty - my) * k, 2, 3, 'BONE.2');
       }
+    };
+    for (const n of T.NODES) {
+      if (n.req) run(n, n.req, false);
+      if (n.req2) run(n, n.req2, true);
     }
   }
 
@@ -168,7 +191,7 @@ KD.Scenes.tree = (function () {
       const on = i === sel;
       const BR = T.BRANCH[n.branch];
       const pop = (popT > 0 && popId === n.id) ? Math.round(popT * 8) : 0;
-      const x = p.x - pop, y = p.y - pop, sz = NODE + pop * 2;
+      const x = p.x - pop, y = p.y - pop, sz = board().node + pop * 2;
 
       R(x - 1, y - 1, sz + 2, sz + 2, 'INK.0');
       R(x, y, sz, sz, rk > 0 ? 'DEEP.1' : (open ? 'INK.1' : 'INK.0'));
@@ -223,13 +246,23 @@ KD.Scenes.tree = (function () {
     const n = T.NODES[sel];
     const rk = T.rank(d, n.id);
     const BR = T.BRANCH[n.branch];
-    const h = 40;
+    const h = 48;
     const y = KD.H - h;
     R(0, y - 1, KD.W, h + 1, 'INK.0');
     R(0, y - 1, KD.W, 1, BR.col);
     if (KD.PX.has(n.icon)) KD.PX.blit(ctx, n.icon, 7, y + 8, { anchor: false });
     KD.Text.draw(n.name, 29, y + 5, BR.col, { shadow: 'INK.0' });
     KD.Text.draw(n.note, 29, y + 18, 'BONE.1', { tiny: true, max: KD.W - 100 });
+    /* if it is shut, say WHY on the line under it rather than making
+       somebody work the prerequisites out of the wires */
+    const stop = T.why(d, n.id);
+    if (stop) {
+      KD.Text.draw(stop, 29, y + 27, rk >= n.max ? BR.col : 'BLOOD.3',
+                   { tiny: true, max: KD.W - 100 });
+    } else if (rk > 0) {
+      KD.Text.draw('BOUGHT ' + rk + ' OF ' + n.max + '. NEXT RANK IS THE SAME AGAIN.',
+                   29, y + 27, 'STONE.3', { tiny: true, max: KD.W - 100 });
+    }
     /* rank, and what it costs, as pips - no numbers */
     const rx = KD.W - 8;
     KD.Text.draw(rk + '/' + n.max, rx, y + 5, rk >= n.max ? BR.col : 'BONE.0',

@@ -319,13 +319,15 @@ KD.Scenes.gym = (function () {
     KD.Text.draw(b.s.name, cx, y + 3, on ? 'INK.0' : 'INK.1',
                  { align: 'center', tiny: true, max: w - 6 });
     if (on) {
+      /* the price THIS animal pays, after EASY KEEPER */
+      const bill = d ? F.bill(d, b.s.need) : b.s.need;
       R(x + 2, y + 12, w - 4, 11, 'INK.1');
-      KD.Text.draw('-' + b.s.need.fed + ' FED', x + 5, y + 14,
-                   (d && F.fed(d) < b.s.need.fed) ? 'BLOOD.3' : 'KELP.2', { tiny: true });
+      KD.Text.draw('-' + bill.fed + ' FED', x + 5, y + 14,
+                   (d && F.fed(d) < bill.fed) ? 'BLOOD.3' : 'KELP.2', { tiny: true });
       KD.Text.draw('+' + b.s.stat.toUpperCase(), cx, y + 14, 'GOLD.3',
                    { align: 'center', tiny: true });
-      KD.Text.draw('-' + b.s.need.stam + ' WIND', x + w - 5, y + 14,
-                   (d && F.stam(d) < b.s.need.stam) ? 'BLOOD.3' : 'WATER.2',
+      KD.Text.draw('-' + bill.stam + ' WIND', x + w - 5, y + 14,
+                   (d && F.stam(d) < bill.stam) ? 'BLOOD.3' : 'WATER.2',
                    { tiny: true, align: 'right' });
     }
   }
@@ -337,6 +339,14 @@ KD.Scenes.gym = (function () {
     R(0, 0, KD.W, 11, 'INK.0');
     R(0, 11, KD.W, 1, 'INK.1');
     KD.Text.draw(room.name, 4, 2, 'BONE.2', { tiny: true });
+    /* a point waiting on the board is the one thing worth interrupting
+       you for, so it gets a blinking pip and the key that spends it */
+    const dd = KD.Pod.active();
+    if (dd && KD.Tree && KD.Tree.points(dd) > 0 && Math.sin(t * 4) > -0.3) {
+      const px = KD.W - 132;
+      R(px, 3, 5, 5, 'GOLD.3');
+      KD.Text.draw('T', px + 7, 2, 'GOLD.2', { tiny: true });
+    }
     KD.Text.draw((KD.State.S.clams || 0) + ' CLAMS', 90, 2, 'GOLD.2', { tiny: true });
     if (d) {
       const mo = F.mood(d);

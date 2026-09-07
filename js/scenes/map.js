@@ -272,6 +272,14 @@ KD.Scenes.map = (function () {
     R(0, 0, KD.W, 11, 'INK.0');
     R(0, 11, KD.W, 1, 'INK.1');
     KD.Text.draw('DAY ' + KD.Day.day(), 4, 2, 'BONE.1', { tiny: true });
+    /* a point waiting on the board is the one thing worth interrupting
+       you for, so it gets a blinking pip and the key that spends it */
+    const dd = KD.Pod.active();
+    if (dd && KD.Tree && KD.Tree.points(dd) > 0 && Math.sin(t * 4) > -0.3) {
+      const px = KD.W - 132;
+      R(px, 3, 5, 5, 'GOLD.3');
+      KD.Text.draw('T', px + 7, 2, 'GOLD.2', { tiny: true });
+    }
     KD.Text.draw((KD.State.S.clams || 0) + ' CLAMS', 46, 2, 'GOLD.2', { tiny: true });
     if (d) {
       const mo = KD.Feed.mood(d);

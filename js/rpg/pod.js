@@ -138,7 +138,7 @@ KD.Pod = (function () {
     const t = temperOf(d.temper);
     return Math.round((58 + (d.sta || 10) * 0.9) * (t.breath || 1) + sk(d, 'airmax'));
   }
-  const dodge = (d) => Math.min(0.34, (d.spd || 10) * 0.0042);
+  const dodge = (d) => Math.min(0.42, (d.spd || 10) * 0.0042 + sk(d, 'dodge'));
   function crit(d) {
     const t = temperOf(d.temper);
     return Math.min(0.55, (d.spi || 10) * 0.0038 * (t.spi || 1) + sk(d, 'crit'));
