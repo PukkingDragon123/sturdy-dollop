@@ -339,19 +339,22 @@ KD.Dolph = (function () {
     return c;
   }
 
-  /* Drawn at 1:1. No lens, no scale - the detail IS the resolution. */
+  /* Drawn at 1:1 by default - the detail IS the resolution. `dw`/`dh`
+     shrink it for the small side-stall windows, which is the one place
+     a whole animal has to fit in 46 pixels. */
   function draw(ctx, d, pose, x, y, o) {
     o = o || {};
     const c = get(d, pose);
+    const dw = o.dw || W, dh = o.dh || H;
     ctx.imageSmoothingEnabled = false;
     if (o.flip) {
       ctx.save();
-      ctx.translate(Math.round(x) + W, Math.round(y));
+      ctx.translate(Math.round(x) + dw, Math.round(y));
       ctx.scale(-1, 1);
-      ctx.drawImage(c, 0, 0);
+      ctx.drawImage(c, 0, 0, W, H, 0, 0, dw, dh);
       ctx.restore();
     } else {
-      ctx.drawImage(c, Math.round(x), Math.round(y));
+      ctx.drawImage(c, 0, 0, W, H, Math.round(x), Math.round(y), dw, dh);
     }
   }
 

@@ -20,14 +20,20 @@ KD.Coach = (function () {
      `at` is a function returning {x, y} in buffer space, or null for a
      tip that is not about anywhere in particular. */
   const TIPS = {
-    pens_hero: { text: 'This one fights. Pick a pen to change it.',
+    barn_feed: { text: 'Drag a fish out of the basket onto it.',
+                 at: () => ({ x: 40, y: KD.H - 26 }) },
+    barn_out:  { text: 'Through the door is the quarry.',
+                 at: () => ({ x: KD.W - 27, y: KD.H * 0.42 }) },
+    barn_plate: { text: 'Top bar is food. Bottom bar is what it has left today.',
+                  at: () => ({ x: KD.W / 2, y: Math.round(KD.H * 0.66) }) },
+    barn_tree: { text: 'It levelled. T spends the point.',
                  at: () => ({ x: KD.W / 2, y: 44 }) },
-    pens_keys: { text: 'FIGHT takes you down to tonight\'s card.',
-                 at: () => ({ x: KD.W * 0.16, y: 150 }) },
-    pens_tree: { text: 'It levelled. TRAIN spends the point.',
-                 at: () => ({ x: KD.W * 0.62, y: 150 }) },
-    pens_swim: { text: 'Bond unlocks moves. SWIM raises it.',
-                 at: () => ({ x: KD.W * 0.39, y: 150 }) },
+    map_walk:  { text: 'Walk to a door and press SPACE.',
+                 at: () => ({ x: KD.W / 2, y: Math.round(KD.H * 0.84) - 30 }) },
+    map_chef:  { text: 'The chef sells what they eat.',
+                 at: () => ({ x: KD.W * 0.6, y: Math.round(KD.H * 0.84) - 40 }) },
+    gym_cost:  { text: 'Training spends food and wind, not money.',
+                 at: () => ({ x: KD.W / 2, y: 44 }) },
 
     fight_ring: { text: 'They wind up first. That is what they will throw.',
                   at: () => ({ x: KD.W - 60, y: 74 }) },

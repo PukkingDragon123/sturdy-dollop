@@ -3,6 +3,10 @@
    ============================================================ */
 KD.Game = (function () {
   let cur = null, curName = '', next = null, nextArgs = null;
+  /* the last place you were standing, so ESC out of a menu puts you back
+     there instead of always dumping you in the barn */
+  let room = 'barn', roomArgs = {};
+  const OVERLAY = { pause: 1, tree: 1, sleep: 1, title: 1, yard: 1, victory: 1, drill: 1, battle: 1, swim: 1 };
   let last = 0, acc = 0, t = 0, fps = 60, fpsT = 0, frames = 0;
 
   function go(name, args) {
@@ -15,6 +19,9 @@ KD.Game = (function () {
     cur = KD.Scenes[next];
     curName = next;
     next = null;
+    if (!OVERLAY[curName]) { room = curName; roomArgs = nextArgs || {}; }
+    /* a new scene has no thumbstick until it asks for one */
+    if (KD.In.stickZone) KD.In.stickZone(false);
     KD.Fx.reset();
     KD.UI.guard(0.18);
     if (cur.enter) cur.enter(nextArgs);
@@ -86,6 +93,7 @@ KD.Game = (function () {
     go('title', {});
     requestAnimationFrame(frame);
   }
-  return { boot, go, win, get scene() { return curName; }, get t() { return t; }, get fps() { return fps; } };
+  const backToRoom = () => go(room, roomArgs);
+  return { boot, go, win, backToRoom, room: () => room, get scene() { return curName; }, get t() { return t; }, get fps() { return fps; } };
 })();
 window.addEventListener('load', () => KD.Game.boot());

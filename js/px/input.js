@@ -5,10 +5,20 @@
    ============================================================ */
 KD.In = (function () {
   const down = new Set(), hit = new Set(), rel = new Set();
-  const M = { x: 0, y: 0, down: false, click: false, up: false, rdown: false, rclick: false, wheel: 0 };
+  /* px, py are WHERE THE PRESS LANDED, not where the pointer is now. A
+     drag reads them: the browser can deliver a mousedown and the first
+     mousemove inside one frame, and then a scene that hit-tests M.x has
+     already lost the thing you grabbed. */
+  const M = { x: 0, y: 0, px: 0, py: 0, down: false, click: false, up: false,
+              rdown: false, rclick: false, wheel: 0 };
   const pad = { on: false, id: null, cx: 0, cy: 0, dx: 0, dy: 0, mag: 0, ox: 0, oy: 0, moved: false };
   const btn = {};                 // name -> { down, hit }
   let DEFS = [];                  // laid out by the active scene each frame
+  /* Whether the left of the screen is a thumbstick. It used to be ALWAYS,
+     which meant a scene with something to touch down there - the barn's
+     basket, say - could never be touched on a phone: the stick claimed
+     the finger and the scene never saw a press. Scenes opt in. */
+  let stickOn = false;
   const TAP = 6;                  // px of travel before a touch counts as a drag
   let anyInput = false;
 
@@ -26,7 +36,8 @@ KD.In = (function () {
     canvas.addEventListener('mousemove', (e) => mv(e.clientX, e.clientY));
     canvas.addEventListener('mousedown', (e) => {
       mv(e.clientX, e.clientY);
-      if (e.button === 2) { M.rdown = true; M.rclick = true; } else { M.down = true; M.click = true; }
+      if (e.button === 2) { M.rdown = true; M.rclick = true; }
+      else { M.down = true; M.click = true; M.px = M.x; M.py = M.y; }
       anyInput = true; e.preventDefault();
     });
     window.addEventListener('mouseup', (e) => {
@@ -51,12 +62,15 @@ KD.In = (function () {
             claimed = true; break;
           }
         }
-        if (!claimed && !pad.on && p.x < KD.W * 0.42) {
+        if (!claimed && stickOn && !pad.on && p.x < KD.W * 0.42) {
           pad.on = true; pad.id = t.identifier;
           pad.cx = p.x; pad.cy = p.y; pad.ox = p.x; pad.oy = p.y;
           pad.dx = 0; pad.dy = 0; pad.mag = 0; pad.moved = false;
           M.x = p.x; M.y = p.y;
-        } else if (!claimed) { M.x = p.x; M.y = p.y; M.down = true; M.click = true; }
+        } else if (!claimed) {
+          M.x = p.x; M.y = p.y; M.px = p.x; M.py = p.y;
+          M.down = true; M.click = true;
+        }
         anyInput = true;
       }
       if (e.cancelable) e.preventDefault();
@@ -96,6 +110,12 @@ KD.In = (function () {
 
   /* scenes declare their on-screen buttons once per frame */
   function buttons(list) { DEFS = list || []; }
+  /* called by UI.touchPad every frame; a scene that never calls it gets
+     no stick, which is the right default for a room you point at */
+  function stickZone(on) {
+    stickOn = !!on;
+    if (!stickOn && pad.on) { pad.on = false; pad.id = null; pad.mag = 0; pad.dx = 0; pad.dy = 0; }
+  }
   function stick() {
     if (pad.on && pad.moved) return { x: pad.dx, y: pad.dy };
     let x = 0, y = 0;
@@ -127,5 +147,5 @@ KD.In = (function () {
   }
   const any = () => { const v = anyInput; anyInput = false; return v; };
   return { attach, buttons, stick, isDown, isHit, act, actHit, endFrame, mouse: M,
-           padState, consumedClick, eat, any, DEFS: () => DEFS };
+           padState, consumedClick, eat, any, stickZone, DEFS: () => DEFS };
 })();

@@ -30,7 +30,7 @@ KD.Scenes.drill = (function () {
                                               Math.round(w), Math.round(h), c);
   const BEATS = 6;
 
-  let t = 0, d = null, drill = null, phase = 'in', pt = 0;
+  let t = 0, d = null, drill = null, phase = 'in', pt = 0, back = 'map';
   let beat = 0, bt = 0, gap = 1, hits = [], scored = false;
   let flash = 0, shake = 0, gained = 0, lvl = 0, pos = 0.5, nextPos = 0.5;
 
@@ -50,7 +50,9 @@ KD.Scenes.drill = (function () {
     pos = 0.5; nextPos = 0.5;
     d = P.active();
     drill = (args && args.drill) || P.DRILLS[0];
-    if (!d) { KD.Game.go('pens', {}); return; }
+    /* the room that sent us here is the room we go back to */
+    back = (args && args.room) || 'map';
+    if (!d) { KD.Game.go('map', {}); return; }
     gap = shape().gap;
     KD.Sfx.play('open');
   }
@@ -99,7 +101,11 @@ KD.Scenes.drill = (function () {
     }
 
     if (phase === 'done') {
-      if (pt > 0.7 && press()) { KD.State.save(); KD.Game.go('pens', {}); }
+      if (pt > 0.7 && press()) {
+        KD.State.save();
+        KD.Game.go(back === 'map' ? 'map' : 'gym',
+                   back === 'map' ? {} : { room: back });
+      }
       return;
     }
   }

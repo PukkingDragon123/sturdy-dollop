@@ -425,7 +425,7 @@ KD.Scenes.title = (function () {
           /* Somebody who quit halfway through Act One goes back to the
              prologue; anybody past it goes back to the pens. */
           const a = KD.State.S.act1;
-          KD.Game.go(a && !a.done ? 'castle' : 'pens', {});
+          KD.Game.go(a && !a.done ? 'castle' : 'barn', {});
         } else KD.State.say('That save is broken.', 'BLOOD.2');
       } });
       items.push({ label: 'START OVER', act: () => {
@@ -535,7 +535,7 @@ KD.Scenes.yard = (function () {
     if (t > 1.1) ready = true;
     if (ready && (KD.In.isHit('Space', 'Enter', 'KeyE') || KD.In.mouse.click || t > 5.5)) {
       KD.In.consumedClick();
-      KD.Game.go('pens', {});
+      KD.Game.go('barn', {});
     }
   }
   function draw() {
@@ -570,7 +570,7 @@ KD.Scenes.yard = (function () {
 KD.Scenes.pause = (function () {
   function enter() { KD.UI.guard(0.2); }
   function update(dt) {
-    if (KD.In.isHit('Escape')) KD.Game.go('pens', {});
+    if (KD.In.isHit('Escape')) KD.Game.backToRoom();
   }
   function draw(ctx) {
     KD.Screen.clear('INK.0');
@@ -598,7 +598,7 @@ KD.Scenes.pause = (function () {
       KD.Text.draw(r[0], x + 6, p.iy + i * 10, 'BONE.0', { tiny: true });
       KD.Text.draw(r[1], x + w - 6, p.iy + i * 10, 'BONE.2', { tiny: true, align: 'right' });
     });
-    if (KD.UI.button(x + 6, y + h - 15, (w - 18) / 2, 12, 'BACK', {})) KD.Game.go('pens', {});
+    if (KD.UI.button(x + 6, y + h - 15, (w - 18) / 2, 12, 'BACK', {})) KD.Game.backToRoom();
     if (KD.UI.button(x + 12 + (w - 18) / 2, y + h - 15, (w - 18) / 2, 12, 'SAVE + QUIT', {})) {
       KD.State.save(); KD.Game.go('title', {});
     }

@@ -82,7 +82,26 @@ async function main() {
       }
       await page.waitForTimeout(step[5] || 400);
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      /* the release needs a frame to be seen - without this the next op
+         runs before the game has processed the touchend */
+      await page.waitForTimeout(160);
       await cdp.detach();
+    }
+    /* a MOUSE drag: press at one point, travel, release at another. The
+       barn's drag-to-feed needs this - hold_mouse presses and releases in
+       the same place, which is a click and not a drag. */
+    else if (op === 'mdrag') {
+      const p0 = toPage(step[1], step[2]), p1 = toPage(step[3], step[4]);
+      await page.mouse.move(p0.x, p0.y);
+      await page.mouse.down();
+      for (let i = 1; i <= 10; i++) {
+        await page.mouse.move(p0.x + (p1.x - p0.x) * i / 10,
+                              p0.y + (p1.y - p0.y) * i / 10);
+        await page.waitForTimeout(26);
+      }
+      await page.waitForTimeout(step[5] || 120);
+      await page.mouse.up();
+      await page.waitForTimeout(160);
     }
   }
   const state = await page.evaluate(() => ({

@@ -31,7 +31,7 @@ KD.Scenes.swim = (function () {
     arc = 0; arcT = 0; chain = 0; best = 0; leaps = 0;
     bonded = 0; gained = []; flash = 0; missT = 0; hitT = 0; camX = 0;
     d = P.active();
-    if (!d) { KD.Game.go('pens', {}); return; }
+    if (!d) { KD.Game.go('barn', {}); return; }
     KD.Day.spend(20);
     period = 1.55 - Math.min(0.55, (d.spd || 10) * 0.012);
     KD.Sfx.play('open');
@@ -86,7 +86,7 @@ KD.Scenes.swim = (function () {
       return;
     }
     if (phase === 'done') {
-      if (pt > 0.8 && press()) { KD.State.save(); KD.Game.go('pens', {}); }
+      if (pt > 0.8 && press()) { KD.State.save(); KD.Game.go('barn', {}); }
       return;
     }
   }

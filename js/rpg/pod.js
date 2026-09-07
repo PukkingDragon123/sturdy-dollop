@@ -182,6 +182,8 @@ KD.Pod = (function () {
       spi: Math.max(3, Math.round(B.spi * j() * q)),
       lvl: o.lvl || 1, xp: 0, bond: o.bond || 0,
       hurt: 0, wins: 0, losses: 0,
+      /* it arrives half fed and rested, so a new animal can work today */
+      fed: 50, stam: 999,
       /* its own skill board, and a point to open it with - a board you
          cannot touch until level two is a board nobody looks at */
       sk: {}, pts: 1 + Math.max(0, (o.lvl || 1) - 1)
@@ -431,6 +433,8 @@ KD.Pod = (function () {
       if (d.hurt > 0) d.hurt--;
       levelCheck(d);
     }
+    /* the night puts the wind back and takes the breakfast away */
+    if (KD.Feed) KD.Feed.newDay();
     restock();
   }
 

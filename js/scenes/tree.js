@@ -24,7 +24,7 @@ KD.Scenes.tree = (function () {
     t = 0; sel = 0; msg = ''; msgT = 0;
     P.init();
     d = P.active();
-    if (!d) { KD.Game.go('pens', {}); return; }
+    if (!d) { KD.Game.go('barn', {}); return; }
     KD.UI.guard(0.15);
   }
   const say = (s2) => { msg = s2; msgT = 2.6; };
@@ -55,7 +55,7 @@ KD.Scenes.tree = (function () {
        return, so a tip on screen swallowed Escape and the skill board
        became a room you could not leave. Nothing may ever be checked
        before the exit. */
-    if (KD.In.isHit('Escape') || KD.In.isHit('KeyT')) { KD.Game.go('pens', {}); return; }
+    if (KD.In.isHit('Escape') || KD.In.isHit('KeyT')) { KD.Game.backToRoom(); return; }
 
     if (KD.Coach.update(dt)) return;
     if (!KD.Coach.active() && !T.open(d, T.NODES[sel].id) &&

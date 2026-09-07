@@ -167,6 +167,9 @@ KD.UI = (function () {
   function touchPad(defs, o) {
     if (!KD.touch) return;
     const pad = KD.In.padState();
+    /* the stick only exists in scenes that draw it - otherwise it eats
+       every touch on the left of the screen and the scene never sees it */
+    KD.In.stickZone(!(o && o.noStick));
     if (o && o.noStick) { /* buttons only */ }
     else if (pad.on) {
       octo(Math.round(pad.cx), Math.round(pad.cy), 20, null, 'BONE.0');

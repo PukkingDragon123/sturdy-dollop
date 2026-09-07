@@ -40,7 +40,7 @@ KD.Scenes.sleep = (function () {
       if (go || t > 9) {
         KD.In.consumedClick();
         KD.State.save();
-        KD.Game.go('pens', {});
+        KD.Game.go('barn', {});
       }
     }
   }

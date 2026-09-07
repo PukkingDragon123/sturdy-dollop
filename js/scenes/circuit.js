@@ -39,7 +39,7 @@ KD.Scenes.circuit = (function () {
       }
       return;
     }
-    if (KD.In.isHit('Escape') || KD.In.isHit('KeyQ')) { KD.Game.go('pens', {}); return; }
+    if (KD.In.isHit('Escape') || KD.In.isHit('KeyQ')) { KD.Game.go('map', { from: 'stadium' }); return; }
     const card = P.tierCard(tier);
     if (KD.In.isHit('ArrowUp', 'KeyW')) { sel = (sel + card.length - 1) % card.length; KD.Sfx.play('click'); }
     if (KD.In.isHit('ArrowDown', 'KeyS')) { sel = (sel + 1) % card.length; KD.Sfx.play('click'); }
